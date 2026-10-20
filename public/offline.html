@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1A1025" />
+    <title>You're offline · Purple Haze</title>
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(ellipse at 80% 15%, rgba(124, 58, 237, 0.25), transparent 45%),
+          radial-gradient(ellipse at 20% 90%, rgba(245, 185, 66, 0.15), transparent 45%),
+          #130b1d;
+        color: #faf8ff;
+        font-family: Inter, system-ui, sans-serif;
+        padding: 24px;
+      }
+      .card {
+        max-width: 440px;
+        text-align: center;
+        padding: 44px 30px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        background: rgba(30, 19, 44, 0.82);
+        backdrop-filter: blur(16px);
+      }
+      .mark {
+        width: 64px; height: 64px; margin: 0 auto 24px;
+        display: grid; place-items: center; border-radius: 50%;
+        color: #f5b942; border: 1px solid rgba(245, 185, 66, 0.4);
+        font-family: Georgia, serif; font-size: 20px; letter-spacing: 1px;
+      }
+      h1 { font-family: Georgia, serif; font-size: 32px; margin: 0 0 12px; font-weight: 500; }
+      p { color: rgba(250, 248, 255, 0.65); line-height: 1.7; font-size: 14px; margin: 0 0 24px; }
+      a {
+        display: inline-block; background: #f5b942; color: #241800;
+        text-decoration: none; font-weight: 700; font-size: 14px;
+        padding: 13px 22px; border-radius: 10px;
+      }
+      small { display: block; margin-top: 22px; color: rgba(250, 248, 255, 0.35); font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="mark">PH</div>
+      <h1>The garden can wait.</h1>
+      <p>
+        You're offline right now. Reconnect to browse the menu, place an order or
+        check your booking. Your cart is saved on this device.
+      </p>
+      <a href="/">Try again</a>
+      <small>Purple Haze Restro &amp; Garden · Biratnagar</small>
+    </main>
+  </body>
+</html>

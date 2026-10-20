@@ -1,0 +1,684 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-lavender: var(--lavender);
+  --color-ink: var(--ink);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-playfair);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+  --shadow-soft: 0 18px 60px -28px rgb(76 29 149 / 0.28);
+  --shadow-lift: 0 24px 70px -28px rgb(26 16 37 / 0.35);
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+}
+
+:root {
+  --background: #faf8ff;
+  --foreground: #1a1025;
+  --card: #ffffff;
+  --card-foreground: #1a1025;
+  --popover: #ffffff;
+  --popover-foreground: #1a1025;
+  --primary: #5b21b6;
+  --primary-foreground: #ffffff;
+  --secondary: #ede9fe;
+  --secondary-foreground: #3b0764;
+  --muted: #f3effc;
+  --muted-foreground: #655c72;
+  --accent: #f5b942;
+  --accent-foreground: #2b1b00;
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --border: #e5dcf6;
+  --input: #ddd2f2;
+  --ring: #7c3aed;
+  --gold: #f5b942;
+  --gold-foreground: #2b1b00;
+  --lavender: #ede9fe;
+  --ink: #1a1025;
+  --success: #15803d;
+  --warning: #b45309;
+  --chart-1: #7c3aed;
+  --chart-2: #f5b942;
+  --chart-3: #2dd4bf;
+  --chart-4: #f472b6;
+  --chart-5: #60a5fa;
+  --radius: 0.9rem;
+}
+
+.dark {
+  --background: #130b1d;
+  --foreground: #f7f2ff;
+  --card: #1e132c;
+  --card-foreground: #f7f2ff;
+  --popover: #211530;
+  --popover-foreground: #f7f2ff;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: #2a1941;
+  --secondary-foreground: #ede9fe;
+  --muted: #261838;
+  --muted-foreground: #b9aec8;
+  --accent: #f5b942;
+  --accent-foreground: #241800;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #352347;
+  --input: #3c2950;
+  --ring: #a78bfa;
+  --gold: #f5b942;
+  --gold-foreground: #241800;
+  --lavender: #2a1941;
+  --ink: #1a1025;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --chart-1: #a78bfa;
+  --chart-2: #f5b942;
+  --chart-3: #2dd4bf;
+  --chart-4: #f472b6;
+  --chart-5: #60a5fa;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+  }
+
+  ::selection {
+    background: #7c3aed;
+    color: #ffffff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.24em] text-primary;
+  }
+
+  .display-title {
+    @apply font-display text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl;
+  }
+
+  .text-gradient {
+    background: linear-gradient(105deg, #5b21b6 10%, #7c3aed 48%, #b45309 110%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .dark .text-gradient {
+    background: linear-gradient(105deg, #c4b5fd 10%, #a78bfa 48%, #f5b942 110%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .hero-mesh {
+    background:
+      radial-gradient(ellipse at 10% 5%, rgb(245 185 66 / 0.2), transparent 38%),
+      radial-gradient(ellipse at 90% 15%, rgb(124 58 237 / 0.24), transparent 42%),
+      radial-gradient(ellipse at 50% 100%, rgb(237 233 254 / 0.9), transparent 58%),
+      #faf8ff;
+  }
+
+  .dark .hero-mesh {
+    background:
+      radial-gradient(ellipse at 10% 5%, rgb(245 185 66 / 0.12), transparent 38%),
+      radial-gradient(ellipse at 90% 15%, rgb(124 58 237 / 0.26), transparent 42%),
+      radial-gradient(ellipse at 50% 100%, rgb(42 25 65 / 0.9), transparent 58%),
+      #130b1d;
+  }
+
+  .glass {
+    background: rgb(255 255 255 / 0.82);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgb(255 255 255 / 0.5);
+  }
+
+  .dark .glass {
+    background: rgb(30 19 44 / 0.78);
+    border-color: rgb(255 255 255 / 0.08);
+  }
+
+  .paper-texture {
+    background-image: radial-gradient(rgb(91 33 182 / 0.12) 0.6px, transparent 0.6px);
+    background-size: 18px 18px;
+  }
+
+  .gold-underline {
+    position: relative;
+  }
+
+  .gold-underline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -0.35rem;
+    height: 3px;
+    width: 3rem;
+    border-radius: 999px;
+    background: var(--gold);
+  }
+
+  .hover-lift {
+    @apply transition duration-300 ease-out hover:-translate-y-1 hover:shadow-[var(--shadow-lift)];
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .print-only {
+    display: none;
+  }
+
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    .print-only {
+      display: block !important;
+    }
+    body {
+      background: white !important;
+      color: #111 !important;
+    }
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Recharts tooltip keeps its own light surface in both themes. */
+.recharts-default-tooltip {
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-soft) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Receipts and kitchen order tickets
+   The print routes render outside the site chrome. Everything here uses
+   physical units where possible so A4 and 80mm thermal printers both scale
+   predictably. The actual @page size is emitted by each print route.
+--------------------------------------------------------------------------- */
+.print-root {
+  min-height: 100dvh;
+  background: #eef0f3;
+  color: #111827;
+  padding: 1.25rem 1rem 3rem;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-toolbar {
+  width: min(100%, 210mm);
+  margin: 0 auto 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 0.7rem 0.9rem;
+  box-shadow: 0 16px 40px -34px rgb(0 0 0 / 0.45);
+}
+
+.receipt-document,
+.kot-sheet {
+  margin: 0 auto;
+  background: #fff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 26px 70px -44px rgb(0 0 0 / 0.55);
+}
+
+.receipt-document {
+  width: min(100%, 190mm);
+  padding: 9mm;
+  font-size: 10pt;
+  line-height: 1.5;
+}
+
+.receipt-thermal {
+  width: min(100%, 80mm);
+  padding: 4mm;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 9.5pt;
+  line-height: 1.35;
+}
+
+.receipt-screen {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  font-size: 12px;
+}
+
+.receipt-brand {
+  margin-bottom: 7px;
+  border-bottom: 1px dashed #9ca3af;
+  padding-bottom: 7px;
+  text-align: center;
+}
+
+.receipt-brand p {
+  margin: 1px 0;
+}
+
+.receipt-brand-name {
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 1.55em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.receipt-cancelled {
+  margin: 6px 0 8px;
+  border: 2px solid #111827;
+  padding: 3px 6px;
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.receipt-meta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 1px 12px;
+  margin: 7px 0;
+  font-size: 0.94em;
+}
+
+.receipt-meta dt {
+  color: #4b5563;
+}
+
+.receipt-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-weight: 600;
+}
+
+.receipt-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.receipt-items th {
+  border-bottom: 1px solid #6b7280;
+  padding: 3px 0;
+  text-align: left;
+  font-size: 0.8em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.receipt-items td {
+  border-bottom: 1px dotted #d1d5db;
+  padding: 4px 0;
+  vertical-align: top;
+}
+
+.receipt-items .receipt-amount,
+.receipt-items th:last-child {
+  padding-left: 8px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.receipt-item-variant,
+.receipt-item-note {
+  display: block;
+  color: #4b5563;
+  font-size: 0.88em;
+}
+
+.receipt-item-note {
+  font-style: italic;
+}
+
+.receipt-totals {
+  display: grid;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.receipt-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.receipt-grand-total {
+  margin-top: 3px;
+  border-top: 1px solid #111827;
+  padding-top: 4px;
+  font-size: 1.12em;
+  font-weight: 700;
+}
+
+.receipt-payment {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin-top: 9px;
+  border: 1px solid #6b7280;
+  padding: 3px 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.receipt-notes {
+  margin-top: 8px;
+  border: 1px dashed #6b7280;
+  padding: 4px 6px;
+  font-size: 0.9em;
+}
+
+.receipt-footer {
+  margin-top: 10px;
+  border-top: 1px dashed #9ca3af;
+  padding-top: 7px;
+  text-align: center;
+  font-size: 0.9em;
+}
+
+.receipt-footer strong {
+  display: block;
+  margin-bottom: 1px;
+}
+
+.kot-sheet {
+  width: min(100%, 80mm);
+  padding: 4mm;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11pt;
+  line-height: 1.4;
+}
+
+.kot-header {
+  border-bottom: 2px solid #111827;
+  padding-bottom: 7px;
+  text-align: center;
+}
+
+.kot-title {
+  margin: 0;
+  font-size: 1.3em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.kot-order {
+  margin: 3px 0;
+  font-size: 1.2em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.kot-header p {
+  margin: 1px 0;
+}
+
+.kot-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 8px;
+  margin: 9px 0;
+}
+
+.kot-meta > div {
+  min-width: 0;
+}
+
+.kot-meta dt {
+  color: #4b5563;
+  font-size: 0.8em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.kot-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.kot-items {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kot-item {
+  border-top: 1px dashed #6b7280;
+  padding: 7px 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.kot-item-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.kot-qty {
+  display: inline-flex;
+  min-width: 1.8em;
+  justify-content: center;
+  border: 2px solid #111827;
+  padding: 0 4px;
+  font-size: 1.1em;
+  font-weight: 800;
+}
+
+.kot-name {
+  font-size: 1.08em;
+  font-weight: 800;
+}
+
+.kot-detail {
+  margin: 2px 0 0 2.9em;
+  color: #374151;
+  font-size: 0.92em;
+}
+
+.kot-sheet .kot-instructions {
+  margin: 3px 0 0 2.9em;
+  border: 1px solid #111827;
+  padding: 3px 5px;
+  font-weight: 700;
+}
+
+.kot-sheet > .kot-instructions {
+  margin-left: 0;
+}
+
+.kot-footer {
+  margin-top: 10px;
+  border-top: 2px solid #111827;
+  padding-top: 6px;
+  text-align: center;
+  font-size: 0.82em;
+}
+
+.kot-footer p {
+  margin: 1px 0;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    height: auto !important;
+  }
+
+  body {
+    min-height: 0 !important;
+  }
+
+  .print-root {
+    min-height: 0;
+    background: #fff;
+    color: #000;
+    padding: 0;
+  }
+
+  .receipt-document,
+  .kot-sheet {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .receipt-document {
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  .receipt-thermal {
+    font-size: 9.5pt;
+    line-height: 1.35;
+  }
+
+  .receipt-brand-name {
+    font-size: 18pt;
+  }
+
+  .kot-sheet {
+    font-size: 11pt;
+    line-height: 1.4;
+  }
+
+  .receipt-items tr,
+  .kot-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .receipt-items thead {
+    display: table-header-group;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}

@@ -1,0 +1,562 @@
+// Purple Haze Restro & Garden
+// Local development and production use PostgreSQL. The local Supabase stack
+// exposes PostgreSQL on 127.0.0.1:54322; production must use its own isolated
+// database and must never point at the local stack.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  image          String?
+  passwordHash   String?
+  phone          String?
+  role           String    @default("CUSTOMER")
+  isBlocked      Boolean   @default(false)
+  isTest         Boolean   @default(false)
+  sessionVersion Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  addresses         Address[]
+  orders            Order[]
+  reviews           Review[]
+  favorites         Favorite[]
+  carts             Cart[]
+  eventBookings     EventBooking[]
+  reservations      Reservation[]
+  notifications     Notification[]
+  notificationReads NotificationRead[]
+  passwordResets    PasswordResetToken[]
+  auditLogs         AuditLog[]
+
+  @@index([role])
+  @@index([role, isTest])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expires   DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  label      String   @default("Home")
+  fullName   String
+  phone      String
+  line1      String
+  line2      String?
+  city       String   @default("Biratnagar")
+  state      String   @default("Koshi")
+  postalCode String?
+  country    String   @default("Nepal")
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId])
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  image       String?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  dishes Dish[]
+}
+
+model Dish {
+  id           String   @id @default(cuid())
+  categoryId   String
+  name         String
+  slug         String   @unique
+  description  String
+  details      String?
+  price        Int
+  comparePrice Int?
+  image        String?
+  isVeg        Boolean  @default(false)
+  isSpicy      Boolean  @default(false)
+  isFeatured   Boolean  @default(false)
+  isAvailable  Boolean  @default(true)
+  prepTime     Int      @default(20)
+  calories     Int?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  category   Category      @relation(fields: [categoryId], references: [id])
+  variants   DishVariant[]
+  addOns     DishAddOn[]
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+  favorites  Favorite[]
+
+  @@index([categoryId])
+  @@index([isFeatured, isAvailable])
+}
+
+model DishVariant {
+  id          String  @id @default(cuid())
+  dishId      String
+  name        String
+  priceDelta  Int     @default(0)
+  isDefault   Boolean @default(false)
+  isAvailable Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  dish Dish @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@index([dishId])
+}
+
+model AddOn {
+  id        String  @id @default(cuid())
+  name      String
+  price     Int
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  dishes DishAddOn[]
+}
+
+model DishAddOn {
+  dishId  String
+  addOnId String
+
+  dish  Dish  @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  addOn AddOn @relation(fields: [addOnId], references: [id], onDelete: Cascade)
+
+  @@id([dishId, addOnId])
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String?
+  sessionId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model CartItem {
+  id           String  @id @default(cuid())
+  cartId       String
+  dishId       String
+  variantName  String?
+  addOns       String  @default("[]")
+  instructions String?
+  quantity     Int     @default(1)
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  dish Dish @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+}
+
+model DeliveryZone {
+  id        String  @id @default(cuid())
+  name      String
+  fee       Int     @default(0)
+  minOrder  Int     @default(0)
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  orders Order[]
+}
+
+model Order {
+  id              String    @id @default(cuid())
+  orderNumber     String    @unique
+  publicToken     String    @unique
+  userId          String?
+  idempotencyKey  String?   @unique
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  type            String    @default("DELIVERY")
+  status          String    @default("PENDING")
+  paymentStatus   String    @default("UNPAID")
+  paymentMethod   String    @default("COD")
+  subtotal        Int
+  deliveryFee     Int       @default(0)
+  taxAmount       Int       @default(0)
+  discountAmount  Int       @default(0)
+  total           Int
+  couponId        String?
+  couponCode      String?
+  addressId       String?
+  zoneId          String?
+  deliveryAddress String?
+  tableNumber     String?
+  notes           String?
+  scheduledFor    DateTime?
+  acceptedAt      DateTime?
+  acceptedBy      String?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  isTest          Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user          User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  coupon        Coupon?              @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  address       Address?             @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  zone          DeliveryZone?        @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+  payments      Payment[]
+  review        Review?
+  notifications Notification[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([customerPhone])
+  @@index([isTest, createdAt])
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  dishId       String?
+  name         String
+  variantName  String?
+  addOns       String  @default("[]")
+  instructions String?
+  unitPrice    Int
+  quantity     Int
+  lineTotal    Int
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  dish  Dish? @relation(fields: [dishId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model OrderStatusHistory {
+  id        String   @id @default(cuid())
+  orderId   String
+  status    String
+  note      String?
+  changedBy String?
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  orderId       String
+  provider      String
+  transactionId String?  @unique
+  amount        Int
+  status        String   @default("INITIATED")
+  payload       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model Coupon {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  description String?
+  type        String    @default("PERCENT")
+  value       Int
+  minOrder    Int       @default(0)
+  maxDiscount Int?
+  startsAt    DateTime?
+  expiresAt   DateTime?
+  maxUses     Int?
+  usedCount   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  orders Order[]
+
+  @@index([code])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  userId     String?
+  orderId    String?  @unique
+  rating     Int
+  title      String?
+  comment    String?
+  isApproved Boolean  @default(false)
+  isFeatured Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([isApproved, createdAt])
+}
+
+model Venue {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String
+  longDescription String?
+  image           String?
+  capacity        Int?
+  priceFrom       Int?
+  features        String   @default("[]")
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bookings EventBooking[]
+}
+
+model EventBooking {
+  id         String   @id @default(cuid())
+  userId     String?
+  venueId    String?
+  name       String
+  email      String
+  phone      String
+  eventType  String
+  eventDate  DateTime
+  guests     Int
+  message    String?
+  status     String   @default("PENDING")
+  adminNotes String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  venue Venue? @relation(fields: [venueId], references: [id], onDelete: SetNull)
+
+  @@index([status, eventDate])
+}
+
+model Reservation {
+  id          String   @id @default(cuid())
+  userId      String?
+  name        String
+  email       String
+  phone       String
+  date        DateTime
+  guests      Int
+  occasion    String?
+  notes       String?
+  status      String   @default("PENDING")
+  tableNumber String?
+  adminNotes  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, date])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+model GalleryImage {
+  id        String   @id @default(cuid())
+  url       String
+  title     String
+  category  String   @default("Restaurant")
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Banner {
+  id        String    @id @default(cuid())
+  title     String
+  subtitle  String?
+  image     String?
+  ctaLabel  String?
+  ctaHref   String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  location  String?
+  quote     String
+  rating    Int      @default(5)
+  image     String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Favorite {
+  userId    String
+  dishId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dish Dish @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@id([userId, dishId])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  group     String   @default("general")
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  orderId   String?
+  eventKey  String?  @unique
+  type      String   @default("SYSTEM")
+  title     String
+  message   String
+  link      String?
+  isTest    Boolean  @default(false)
+  // Legacy global flag retained for backwards compatibility. Per-user read
+  // state is stored in NotificationRead; new code must not use this field.
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  reads NotificationRead[]
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@index([orderId])
+  @@index([isTest, createdAt])
+}
+
+model NotificationRead {
+  notificationId String
+  userId         String
+  readAt         DateTime @default(now())
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([notificationId, userId])
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  actorEmail String?
+  action     String
+  entity     String
+  entityId   String?
+  details    String?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
