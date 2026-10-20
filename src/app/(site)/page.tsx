@@ -88,7 +88,15 @@ export default async function HomePage() {
   return (
     <>
       <section className="hero-mesh relative overflow-hidden">
-        <video
+        {/* overlay */}
+        <div
+          className="pointer-events-none absolute -right-20 top-1/3
+    size-96 overflow-hidden rounded-full
+    border border-gold/20 hero-float"
+          aria-hidden="true"
+        >
+          <SmartImage
+            <video
           className="absolute inset-0 size-full object-cover"
           src="/images/hero/gemini_generated_video_4cb2aad1.mp4"
           autoPlay
@@ -98,20 +106,7 @@ export default async function HomePage() {
           preload="metadata"
           aria-hidden="true"
         />
-        <div className="absolute inset-0 bg-purple-950/60" />
-        {/* overlay */}
-        <div
-          className="pointer-events-none absolute -right-20 top-1/3
-    size-96 overflow-hidden rounded-full
-    border border-gold/20 hero-float"
-          aria-hidden="true"
-        >
-          <SmartImage
-            src="/images/menu/nepolitana-pizza.jpg"
-            alt=""
-            fill
-            sizes="384px"
-            className="object-cover opacity-90"
+        <div className="absolute inset-0 bg-purple-950/40" />
           />
         </div>
 
