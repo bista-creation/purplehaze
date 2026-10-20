@@ -4,7 +4,10 @@ import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <main className="container-page grid min-h-[65vh] place-items-center py-16">
+    <main
+      id="main-content"
+      className="container-page grid min-h-[65vh] place-items-center py-16"
+    >
       <div className="max-w-lg rounded-3xl border border-border bg-card p-8 text-center shadow-xl sm:p-12">
         <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-secondary text-primary">
           <SearchX className="size-6" aria-hidden />

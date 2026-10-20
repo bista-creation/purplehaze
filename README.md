@@ -36,7 +36,7 @@ npm run db:seed
 npm run db:local:verify
 ```
 
-Or run `npm run db:local:setup`, which chains the database steps. `db:local:env` reads `supabase status -o env`, writes the local database URL, anon key, API URL, and JWT secret to the untracked `.env.local`, and never reads or writes the service-role key.
+Or run `npm run db:local:setup`, which chains the database steps. `db:local:env` reads `supabase status -o env`, writes the local database URL, anon key, API URL, and JWT secret to the untracked `.env.local`, and never reads or writes the service-role key. `db:local:verify` temporarily inserts one non-test notification to prove staff Realtime visibility, then deletes it in a `finally` block.
 
 Then:
 
@@ -52,11 +52,13 @@ Open <http://localhost:3000>. The admin is at `/admin`.
 
 The Supabase migration directory is the source of truth for the database. The Prisma schema is the application/client source of truth. Do not run both `supabase db reset` and a separate Prisma baseline migration against the same fresh database.
 
+Prisma Client automatically appends `pgbouncer=true` to its runtime datasource URL. Supabase transaction pooling/PgBouncer does not support Prisma's named prepared statements, and without this flag concurrent builds or serverless requests can fail with `prepared statement "s7" does not exist`. The setting is harmless on a direct connection. `DIRECT_URL` remains unmodified and is used for migrations.
+
 For an existing hosted/production database, do not apply this baseline blindly. A reviewed baseline strategy and backup are required before any migration. No hosted Supabase project, production database, or production data was modified while building this local setup.
 
 ### Test data and seeding
 
-The TypeScript seed runs only against local SQLite or loopback PostgreSQL on `127.0.0.1:54322`. It refuses every non-local database with no override, and demo accounts are blocked outside local development.
+The TypeScript seed runs only against loopback Supabase PostgreSQL on `127.0.0.1:54322`. It refuses every other database with no override.
 
 Seeded orders use `isTest = true` and the `PH-SEED-` prefix. Test records are excluded from:
 
@@ -87,6 +89,7 @@ Payment status is separate from fulfilment status.
 - Connection state is shown as connecting, live, polling fallback, or offline. If Realtime is unavailable, the app polls. The monitor shows the last successful check time and provides a manual refresh.
 - The Realtime JWT is short-lived, signed server-side, and issued only after an Auth.js staff/admin check. RLS requires a valid staff `app_role` claim. New-order notification rows are saved in the same database transaction as the order before any event can be emitted.
 - If an event is missed, the polling refresh or a manual refresh reloads the authoritative database state. Test notifications are not broadcast to staff browsers.
+- Loading skeletons, route-level error boundaries (root, public site, and admin), and a branded 404 are included so slow or failed pages have an explicit state instead of a blank screen.
 
 ## Payments (eSewa and Khalti)
 

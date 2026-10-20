@@ -17,7 +17,10 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <main className="container-page grid min-h-[60vh] place-items-center py-16">
+    <main
+      id="main-content"
+      className="container-page grid min-h-[60vh] place-items-center py-16"
+    >
       <div className="max-w-lg rounded-3xl border border-border bg-card p-8 text-center shadow-xl sm:p-12">
         <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
           <AlertTriangle className="size-6" aria-hidden />

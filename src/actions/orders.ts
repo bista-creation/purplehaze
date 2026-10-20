@@ -463,12 +463,8 @@ export async function createOrderAction(
             ...(selectedCoupon.maxUses !== null
               ? { usedCount: { lt: selectedCoupon.maxUses } }
               : {}),
-            ...(selectedCoupon.startsAt
-              ? { startsAt: { lte: now } }
-              : {}),
-            ...(selectedCoupon.expiresAt
-              ? { expiresAt: { gt: now } }
-              : {}),
+            ...(selectedCoupon.startsAt ? { startsAt: { lte: now } } : {}),
+            ...(selectedCoupon.expiresAt ? { expiresAt: { gt: now } } : {}),
           },
           data: { usedCount: { increment: 1 } },
         });
@@ -735,7 +731,8 @@ export async function trackOrderAction(
     // Compare the final ten digits, which is the full Nepali mobile number.
     // Accept shorter stored landlines only when the whole number matches; do
     // not accept a 7-digit suffix of a mobile number.
-    const storedPhone = order?.customerPhone.replace(/\D/g, "").slice(-10) ?? "";
+    const storedPhone =
+      order?.customerPhone.replace(/\D/g, "").slice(-10) ?? "";
     const providedPhone = phone.slice(-10);
     const matches =
       storedPhone.length >= 7 &&

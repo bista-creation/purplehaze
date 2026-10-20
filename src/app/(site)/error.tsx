@@ -18,7 +18,7 @@ export default function SiteError({
   }, [error]);
 
   return (
-    <main className="container-page py-16 lg:py-24">
+    <div className="container-page py-16 lg:py-24">
       <div className="mx-auto max-w-2xl rounded-3xl border border-border bg-card p-8 text-center shadow-xl sm:p-12">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
           Purple Haze
@@ -55,6 +55,6 @@ export default function SiteError({
           </p>
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }

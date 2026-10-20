@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 
 export default function GlobalError({
   error,
@@ -16,6 +15,10 @@ export default function GlobalError({
 
   return (
     <html lang="en-NP">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Something went wrong | Purple Haze</title>
+      </head>
       <body
         style={{
           margin: 0,
@@ -70,7 +73,9 @@ export default function GlobalError({
             >
               Try again
             </button>
-            <Link
+            {/* A full reload is intentional when the root tree has failed. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a
               href="/"
               style={{
                 borderRadius: 999,
@@ -82,7 +87,7 @@ export default function GlobalError({
               }}
             >
               Home
-            </Link>
+            </a>
           </div>
           {error.digest ? (
             <p style={{ marginTop: 20, fontSize: 11, color: "#8f849d" }}>

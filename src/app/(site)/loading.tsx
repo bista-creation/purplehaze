@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SiteLoading() {
   return (
-    <main className="container-page py-12 lg:py-20" aria-busy="true">
+    <div className="container-page py-12 lg:py-20" aria-busy="true">
       <div className="mx-auto max-w-3xl text-center">
         <Skeleton className="mx-auto h-3 w-28" />
         <Skeleton className="mx-auto mt-4 h-10 w-full max-w-xl" />
@@ -27,6 +27,6 @@ export default function SiteLoading() {
       <span className="sr-only" role="status">
         Loading page
       </span>
-    </main>
+    </div>
   );
 }

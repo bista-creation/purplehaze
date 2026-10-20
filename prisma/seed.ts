@@ -11,8 +11,11 @@ import "dotenv/config";
 import { randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { prismaDatasourceUrl } from "../src/lib/database-url";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasourceUrl: prismaDatasourceUrl(),
+});
 const now = Date.now();
 const daysAgo = (days: number, hour = 19, minute = 0) =>
   new Date(now - days * 86_400_000 + (hour - 12) * 3_600_000 + minute * 60_000);
@@ -534,19 +537,17 @@ const dishes: DishSeed[] = [
 
 async function main() {
   const databaseUrl = process.env.DATABASE_URL ?? "";
-  const isLocalSqlite = databaseUrl.startsWith("file:");
   const isLocalSupabasePostgres =
     /^postgres(ql)?:\/\/[^@\s]+@(?:127\.0\.0\.1|localhost|\[::1\]):54322\//i.test(
       databaseUrl,
     );
-  const isLocalDatabase = isLocalSqlite || isLocalSupabasePostgres;
   const isProductionSeed =
     process.env.NODE_ENV === "production" ||
     process.env.VERCEL_ENV === "production" ||
-    !isLocalDatabase;
+    !isLocalSupabasePostgres;
 
   // This seed deletes every row. Refuse to run it against any database that is
-  // not the local SQLite file or the loopback Supabase PostgreSQL instance.
+  // not the loopback Supabase PostgreSQL instance.
   if (isProductionSeed) {
     throw new Error(
       "Refusing to run the destructive seed against a non-local database. " +

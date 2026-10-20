@@ -19,7 +19,21 @@ if (
   process.exit(1);
 }
 
-const prisma = new PrismaClient();
+// Keep the local verifier compatible with a pooler if the Supabase stack is
+// fronted by PgBouncer/Supavisor. Named prepared statements do not survive
+// transaction pooling.
+function prismaDatasourceUrl(raw) {
+  if (!raw) return undefined;
+  if (/[?&]pgbouncer=/i.test(raw)) return raw;
+  const hashIndex = raw.indexOf("#");
+  const base = hashIndex === -1 ? raw : raw.slice(0, hashIndex);
+  const hash = hashIndex === -1 ? "" : raw.slice(hashIndex);
+  return `${base}${base.includes("?") ? "&" : "?"}pgbouncer=true${hash}`;
+}
+
+const prisma = new PrismaClient({
+  datasourceUrl: prismaDatasourceUrl(process.env.DATABASE_URL),
+});
 const failures = [];
 let verificationNotificationId = null;
 

@@ -8,41 +8,48 @@
 
 The application has a strong security baseline. I found no evidence of SQL injection, command injection, unsafe deserialization, or a server-side payment-forgery flaw. Authorization is consistently enforced across admin pages, admin actions, export routes, print routes, and uploads. Payment callbacks verify provider signatures/lookups plus amount, order reference, and provider reference.
 
-However, there are **four high-priority issues** that should be fixed before a public launch. Most are deployment/configuration or client-cache problems rather than exploitable server-side code flaws:
+However, I found **four high-priority issues**; all four are now fixed in source (H1–H4). Most were deployment/configuration or client-cache problems rather than exploitable server-side code flaws:
 
 1. A production deployment using `PAYMENT_MODE=sandbox` (the current local value) can record sandbox payments as paid, and explicit `mock` mode allows free orders.
 2. The seed script is destructive and creates a staff account with a fixed, known password. It has no production guard and logs the password.
 3. The service worker caches order, receipt, password-reset, and email-verification pages, including bearer tokens and customer PII, after logout.
 4. The local SQLite database containing users, password hashes, orders, and audit data is not excluded by `.gitignore`.
 
-`npm audit` reports **20 advisories** overall (2 critical, 15 high, 3 moderate). A production-only audit reports **7 high** advisories, mainly UploadThing/`effect` and Prisma/`deepmerge-ts`. The two critical advisories are in `vitest`/`tinypool` and are development-only. `next@16.4.2` itself is not flagged.
+`npm audit` reports **18 advisories** overall (2 critical, 13 high, 3 moderate). A production-only audit reports **7 high** advisories, mainly UploadThing/`effect` and Prisma/`deepmerge-ts`. The two critical advisories are in `vitest`/`tinypool` and are development-only. `next@16.4.2` itself is not flagged.
 
-**Recommendation:** do not deploy publicly until H1–H4 below are resolved. The remaining items are important hardening and should follow in the first hardening sprint.
+**Recommendation:** H1–H4 are now fixed in source. Before public launch, complete the remaining medium items (shared rate limiting, CSP, MFA, dependency review) and the outstanding provider/backup configuration. This review is not a substitute for a deployment-specific security assessment.
 
 ## Remediation status (20 October 2026)
 
 The first hardening pass is implemented:
 
 - **H1 fixed** — mock/sandbox payments are disabled whenever `NODE_ENV=production` unless `ALLOW_TEST_PAYMENTS=true` is explicitly set for a preview. Sandbox provider configs, checkout availability, payment initiation, and the mock-payment action all fail closed. Existing pending orders show an “online payment unavailable” state instead of a broken payment button.
-- **H2 fixed** — the seed refuses every non-local database with no override. It accepts local SQLite or loopback Supabase PostgreSQL on `127.0.0.1:54322` only. Demo staff/customer accounts are blocked and receive a random password outside local development, and demo passwords are not logged in that case.
+- **H2 fixed** — the seed refuses every database except loopback Supabase PostgreSQL on `127.0.0.1:54322`, with no override. This removes the previous SQLite path entirely; the legacy `dev.db` is not used.
 - **H3 fixed** — the service worker now caches an allowlist of public marketing pages only. Order, print, tracking, reset/verification, account, checkout, and auth pages are excluded; responses with `no-store`, `private`, or `Set-Cookie` are never cached. The cache version was bumped so old caches are purged on activation, and sign-out paths clear cached pages.
 - **H4 fixed** — `prisma/*.db*` and `public/images/uploads/` are ignored by Git.
 - **M1 fixed** — `safeNextPath` now rejects backslashes, encoded separators/control characters, and non-origin URLs using URL parsing.
 - **M2 fixed** — CSV cells beginning with spreadsheet formula prefixes are neutralised with a leading apostrophe; numeric values are left intact.
+- **M4 fixed** — when Resend is not configured, production logs only a generic delivery failure; full email bodies, reset/verification tokens, and recipients are logged only in development.
+- **L4 fixed** — track-order lookup compares normalized final ten digits, so a short suffix of a mobile number is no longer accepted.
+- **L5 fixed** — payment failure uses conditional updates that cannot overwrite `PAID` or `REFUNDED`.
+- **L6 fixed** — coupons are claimed with a conditional update inside the order transaction, preventing concurrent checkouts from exceeding `maxUses` or using a disabled/expired coupon.
+- **L7 fixed** — profile image values must be `https:` URLs or local uploaded paths, with a length cap.
+- **L9 fixed** — provider and transaction identifiers are HTML-escaped in admin notification emails.
+- **L10 fixed** — private testing mailbox values exist only in untracked local configuration; tracked templates/fallbacks use placeholders/public contacts.
 
 ## Local Supabase, RLS and order-hardening pass (20 October 2026)
 
-- **Local database:** development now targets local Supabase PostgreSQL. `prisma/schema.prisma` uses PostgreSQL with `directUrl`; `supabase/migrations/` contains the baseline schema and a default-deny RLS/Realtime migration. No hosted Supabase or production database was touched. The old `prisma/dev.db` was not deleted or imported.
-- **RLS:** every public table has RLS enabled. `anon` and `authenticated` lose table/sequence privileges. `authenticated` can only `SELECT` non-test `Notification` rows when the server-signed short-lived JWT contains a staff/admin `app_role`; writes remain server-only through Prisma. Only `Notification` is in the Realtime publication. Local `scripts/verify-local-supabase.mjs` checks these controls; it has not yet been run because Docker Desktop is unavailable on this machine.
+- **Local database:** development now targets local Supabase PostgreSQL. `prisma/schema.prisma` uses PostgreSQL with `directUrl`; `supabase/migrations/` contains the baseline schema and a default-deny RLS/Realtime migration. No hosted Supabase or production database was touched. The old `prisma/dev.db` was not deleted or imported. Prisma Client now appends `pgbouncer=true` at runtime so Supabase transaction pooling/PgBouncer cannot break named prepared statements during concurrent builds or serverless requests; `DIRECT_URL` stays direct for migrations.
+- **RLS:** every public table has RLS enabled. `anon` and `authenticated` lose table/sequence privileges. `authenticated` can only `SELECT` non-test `Notification` rows when the server-signed short-lived JWT contains a staff/admin `app_role`; writes remain server-only through Prisma. Only `Notification` is in the Realtime publication. Local `scripts/verify-local-supabase.mjs` checks these controls, including a temporary non-test notification and seeded test-visibility checks. Execution is blocked because Docker Desktop is unavailable; the script reached Prisma but could not connect to `127.0.0.1:54322`.
 - **Order acceptance:** online orders cannot be accepted until the trusted provider path marks payment `PAID`. COD orders can be accepted unpaid and are explicitly labelled collect-on-delivery. Manual “mark paid” is COD-only. Declines are separate, confirmed actions with audit records; a paid declined order stays `PAID` and is flagged `Refund required`. Only an admin can record the refund after completing it manually.
 - **Idempotency and concurrency:** order creation uses a client idempotency key, status/payment transitions use conditional updates and transactions, and notification event keys deduplicate retries. Notifications are written in the same transaction as the order/status change where applicable.
 - **Notifications:** `/admin/notifications` provides per-user read state, unread counts, mark-all-read, filters, order links, and deliberate test-data visibility. Browser/desktop notification bodies are limited to a safe title and a generic inbox call-to-action; customer PII stays in the app. Realtime has polling fallback, connection state, last-check time, manual refresh, optional sound, and explicit desktop-permission handling.
-- **Test data:** `Order.isTest`, `Notification.isTest`, `User.isTest`, and the `PH-SEED-` prefix identify seeded records. They are excluded by default from metrics, reports, CSV, lists, unread badges, and Realtime notifications; admin toggles can reveal them deliberately.
+- **Test data:** `Order.isTest`, `Notification.isTest`, `User.isTest`, and the `PH-SEED-` prefix identify seeded records. They are excluded by default from metrics, reports, CSV, lists, unread badges, and Realtime notifications. Deliberate reveal controls are rendered only outside production; `?test=1` is ignored in a production build.
 - **Residual risk:** these are source and local-policy changes, not a full security audit. RLS has not been executed against a running local stack in this environment. A production baseline migration, MFA, CSP, dependency upgrades, and a verified email/upload provider configuration remain outstanding.
 
-**Verification (20 October 2026):** `npm run lint` and `npm run typecheck` pass; `npm test` passes 37 tests. `npm run build` compiled and passed TypeScript, then failed during static prerender because local Supabase PostgreSQL at `127.0.0.1:54322` is not running (Docker Desktop is not installed). The RLS verification script has not run. This is not a complete security audit.
+**Verification (20 October 2026):** `npm run lint` and `npm run typecheck` pass; `npm test` passes 43 tests, including datasource URL normalization for PgBouncer/Supavisor. `npm run build` compiled and passed TypeScript, then failed during static prerender because local Supabase PostgreSQL at `127.0.0.1:54322` is not running. `npm run db:local:start` fails with `DockerLifecycleInspectError` because Docker/Podman is not installed; `npm run db:local:verify` therefore fails at the database connection before any RLS check runs. The new error/loading/not-found routes compiled successfully. This is not a complete security audit.
 
-M3–M7 remain open and should be handled before or immediately after launch. H2 still uses the destructive seed for initial local/demo data; a separate production bootstrap script is still recommended.
+M3, M5, M6, M7 and low items L1–L3, L8, L11–L12 remain open and should be handled before or immediately after launch. H2 still uses the destructive seed for initial local/demo data; a separate production bootstrap script is still recommended.
 
 ## Findings
 
@@ -168,7 +175,9 @@ An attacker can send a login link with `?next=/\evil.com`; after a successful lo
 
 ### M4 — One-time email tokens are written to logs when Resend is not configured
 
-**Evidence:** `src/lib/email.ts:76-83`.
+**Status:** Fixed 20 October 2026. Production now logs only a generic delivery failure; full message bodies and recipients are development-only logs.
+
+**Evidence:** `src/lib/email.ts:76-88`.
 
 `sendEmail` logs the full text body whenever `RESEND_API_KEY` is absent, in **every** environment. Password-reset and email-verification messages contain one-time tokens. If production is deployed without a Resend key, reset/verification links are written to server/Vercel logs, where project members or log integrations can read them. `.env.example` describes this as local logging, but the code does not restrict it to development.
 
@@ -196,7 +205,7 @@ An admin account takeover gives full control of catalogue, prices, customers, co
 
 **Evidence:** `npm audit` / `npm audit --omit=dev`.
 
-- Overall: **20 advisories** — 2 critical, 15 high, 3 moderate.
+- Overall: **18 advisories** — 2 critical, 13 high, 3 moderate.
 - Production-only: **7 high**.
 - Critical: `vitest@2.1.9` / `tinypool` — development test tooling, not shipped.
 - High runtime-related: `uploadthing@7.7.4` and `@uploadthing/react@7.3.3` through `effect<3.20.0` (AsyncLocalStorage context contamination under concurrent RPC). UploadThing is optional and currently used for profile/admin uploads.
@@ -212,13 +221,13 @@ An admin account takeover gives full control of catalogue, prices, customers, co
 | L1  | `trustHost: true` is unconditional                                           | `src/auth.ts:22`                                     | Derive from `AUTH_TRUST_HOST`/Vercel, require `AUTH_URL`, and validate the host in self-hosted deployments.                                                                                                                                       |
 | L2  | `assertSameOrigin` fails open without `Origin` and trusts `x-forwarded-host` | `src/lib/security.ts:91-106`                         | Keep Next.js's built-in action protection; for custom routes, require a trusted origin or a CSRF token, and only trust proxy headers from known proxies.                                                                                          |
 | L3  | Order token is a long-lived bearer credential in URLs                        | `src/lib/security.ts:108-110`, order/print pages     | Tokens are strong (24 bytes), but they appear in history/logs/screenshots and authorize view/cancel/print/review. Consider short-lived/scoped tokens, `Referrer-Policy: no-referrer` on token pages, and phone/OTP confirmation for cancellation. |
-| L4  | Track-order phone match accepts any suffix                                   | `src/actions/orders.ts:609-617`                      | Compare normalized full numbers (last 10 digits) rather than `endsWith`; keep the IP rate limit.                                                                                                                                                  |
-| L5  | Payment success/failure race could overwrite `PAID` with `FAILED`            | `src/lib/payments.ts:479-515`                        | Use conditional updates (`where paymentStatus != PAID`) and re-check the row inside the transaction.                                                                                                                                              |
-| L6  | Coupon usage limit is checked before an unconditional increment              | `src/actions/orders.ts:402-406`                      | Use a conditional `updateMany` with `usedCount < maxUses` and roll back if no row was updated; consider per-customer limits.                                                                                                                      |
-| L7  | Profile image URL accepts any URL scheme and has no length cap               | `src/lib/validations.ts:83-86`                       | Require `https://` (or a local upload path) and a max length; restrict to known image hosts.                                                                                                                                                      |
+| L4  | **Fixed** — track-order phone match accepted any suffix                      | `src/actions/orders.ts:681-704`                      | Final ten normalized digits are compared; keep the IP rate limit.                                                                                                                                                                                |
+| L5  | **Fixed** — payment success/failure race could overwrite `PAID` with `FAILED` | `src/lib/payments.ts:541-584`                        | Conditional updates cannot overwrite `PAID`/`REFUNDED`.                                                                                                                                                                                           |
+| L6  | **Fixed** — coupon usage limit was checked before an unconditional increment | `src/actions/orders.ts:302-340,436-465`              | Coupon claimed with a conditional `updateMany` inside the order transaction; consider per-customer limits separately.                                                                                                                             |
+| L7  | **Fixed** — profile image URL accepted any scheme and had no length cap      | `src/lib/validations.ts:83-104`                      | Requires `https:` or a local upload path, with a 2,048-character cap.                                                                                                                                                                             |
 | L8  | Profile uploads are available to any signed-in user without a per-user limit | `src/lib/uploadthing.ts` (`profileImage`)            | Add per-user rate limits and cleanup/replacement so storage cannot be filled anonymously.                                                                                                                                                         |
-| L9  | Provider transaction ID is interpolated into admin email HTML unescaped      | `src/lib/payments.ts:465-470`                        | Wrap `transactionId` and `provider` in `escapeHtml`; treat provider strings as untrusted.                                                                                                                                                         |
-| L10 | Personal admin email appears in committed template/fallback code             | `.env.example`, `src/lib/email.ts`, `prisma/seed.ts` | Use a placeholder in `.env.example`, require the real value from server env, and keep the admin mailbox out of the repository. The public UI correctly uses the public contact address.                                                           |
+| L9  | **Fixed** — provider transaction ID was interpolated into admin email HTML unescaped | `src/lib/payments.ts:505-511`                        | Provider and transaction strings are HTML-escaped.                                                                                                                                                                                                |
+| L10 | **Fixed** — personal admin email appeared in committed template/fallback code | `.env.example`, `src/lib/email.ts`, `prisma/seed.ts` | Tracked fallbacks use placeholders; the private mailbox exists only in untracked local config. The public UI uses the public contact address.                                                                                                     |
 | L11 | Account enumeration and login timing                                         | `src/actions/auth.ts:68-86`, registration            | Registration reveals an existing email; login returns immediately for unknown emails and runs bcrypt for known ones. Use a generic registration response and a dummy bcrypt hash for unknown accounts if enumeration is a concern.                |
 | L12 | In-memory rate-limit buckets are never pruned                                | `src/lib/rate-limit.ts:93-98`                        | Call the cleanup periodically or use Upstash only.                                                                                                                                                                                                |
 

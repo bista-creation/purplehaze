@@ -28,8 +28,8 @@ export default function AdminError({
         </h1>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">
           This can happen during a database restart or a brief connection
-          interruption. The live queue falls back to polling when Realtime is
-          unavailable; no order state was changed by this error.
+          interruption. No order state was changed by this error. Try again, or
+          open the dashboard home if the problem continues.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <Button type="button" onClick={() => retry()}>

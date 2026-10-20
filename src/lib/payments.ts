@@ -494,7 +494,13 @@ export async function markOrderPaid({
   if (!changed) {
     const fresh = await prisma.order.findUnique({
       where: { id: order.id },
-      select: { id: true, orderNumber: true, total: true, paymentStatus: true, status: true },
+      select: {
+        id: true,
+        orderNumber: true,
+        total: true,
+        paymentStatus: true,
+        status: true,
+      },
     });
     if (fresh?.paymentStatus === "PAID") {
       return { ok: true as const, alreadyPaid: true, order: fresh };

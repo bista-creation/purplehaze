@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 export default function Loading() {
   return (
     <main
+      id="main-content"
       className="grid min-h-[60vh] place-items-center px-6 py-16"
       aria-busy="true"
       aria-live="polite"

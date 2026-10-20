@@ -230,10 +230,13 @@ export function AdminLiveMonitor({
         // Desktop/browser notification text is deliberately limited to the
         // order reference/category and a generic call to action. Customer
         // names, addresses, notes and payment details stay in the admin UI.
-        const browserNotification = new Notification(browserAlertTitle(payload), {
-          body: "Open the admin inbox for details.",
-          tag: payload.id,
-        });
+        const browserNotification = new Notification(
+          browserAlertTitle(payload),
+          {
+            body: "Open the admin inbox for details.",
+            tag: payload.id,
+          },
+        );
         if (href) {
           browserNotification.onclick = () => {
             window.focus();
