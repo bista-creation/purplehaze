@@ -14,7 +14,7 @@ export function AccountSignOutButton() {
       type="button"
       variant="ghost"
       size="sm"
-      className="w-full justify-center text-muted-foreground lg:justify-start"
+      className="h-10 w-full justify-center text-muted-foreground lg:justify-start"
       disabled={pending}
       onClick={() =>
         startTransition(async () => {

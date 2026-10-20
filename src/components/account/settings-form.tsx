@@ -182,7 +182,7 @@ function ProfileForm({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="flex-1 sm:flex-none"
+                  className="h-10 flex-1 sm:flex-none"
                   disabled={uploading}
                   onClick={() => fileInput.current?.click()}
                 >
@@ -200,7 +200,7 @@ function ProfileForm({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="flex-1 sm:flex-none"
+                className="h-10 flex-1 sm:flex-none"
                 onClick={() =>
                   form.setValue("image", "", { shouldDirty: true })
                 }
@@ -284,7 +284,7 @@ function ProfileForm({
 
         <Button
           type="submit"
-          className="w-full sm:w-auto"
+          className="h-11 w-full sm:h-10 sm:w-auto"
           disabled={pending || uploading}
         >
           {pending ? <Loader2 className="size-4 animate-spin" /> : null}
@@ -390,7 +390,7 @@ function PasswordForm() {
         <Button
           type="submit"
           variant="outline"
-          className="w-full sm:w-auto"
+          className="h-11 w-full sm:h-10 sm:w-auto"
           disabled={pending}
         >
           {pending ? <Loader2 className="size-4 animate-spin" /> : null}

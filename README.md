@@ -119,6 +119,17 @@ These are test credentials only. Replace all sandbox keys and hosts before switc
 - Configure a verified email sending domain; Resend cannot deliver production mail from `onboarding@resend.dev`.
 - Configure UploadThing, or keep local disk uploads only where the host supports them. Vercel/read-only/serverless filesystems require UploadThing.
 
+### Google sign-in
+
+Google sign-in is optional and only appears when both `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are present at runtime. To enable it on Vercel:
+
+1. In Google Cloud Console, add the production JavaScript origin: `https://purplehaze-nine.vercel.app`.
+2. Add the authorized redirect URI exactly as `https://purplehaze-nine.vercel.app/api/auth/callback/google`. Use one slash before `api`; a URL such as `https://purplehaze-nine.vercel.app//api/auth/callback/google` will fail with `redirect_uri_mismatch`.
+3. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `AUTH_URL=https://purplehaze-nine.vercel.app`, and `NEXT_PUBLIC_APP_URL=https://purplehaze-nine.vercel.app` in Vercel. Do not include a trailing slash in either URL.
+4. Redeploy. `https://purplehaze-nine.vercel.app/api/auth/providers` must list `google`; until it does, the buttons stay hidden by design.
+
+The app normalizes trailing and duplicate path slashes in `AUTH_URL` and derives `NEXT_PUBLIC_APP_URL` from the Vercel deployment host when it is unset. A `localhost` value is ignored on Vercel so production never emits local links. The value registered in Google Cloud Console must still use the exact single-slash callback above.
+
 ## Checks
 
 ```bash
@@ -145,6 +156,8 @@ The following are intentionally not fabricated in this repository and must be su
 - UploadThing project credentials (or an approved persistent upload host)
 - Upstash Redis credentials for distributed rate limiting
 - live eSewa/Khalti merchant credentials and approved refund procedure
+- Google OAuth client credentials and the exact single-slash redirect URI (see above)
+- explicit production `AUTH_URL` and `NEXT_PUBLIC_APP_URL` values on Vercel
 - official menu, prices, venue capacities/packages, and owner-authorized photography
 - hosted PostgreSQL backup/migration plan and a reviewed baseline strategy
 

@@ -376,7 +376,7 @@ function UserMenu({
           type="button"
           aria-label={signedIn ? "Open account menu" : "Sign in or register"}
           className={cn(
-            "relative grid size-9 shrink-0 place-items-center rounded-full transition duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "relative grid size-10 shrink-0 place-items-center rounded-full transition duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             signedIn
               ? "bg-[conic-gradient(from_140deg,#f5b942,#7c3aed,#5b21b6,#f5b942)] p-[2px] shadow-[0_6px_18px_-8px_rgba(91,33,182,0.8)]"
               : "hover:bg-secondary",

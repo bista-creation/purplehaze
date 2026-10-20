@@ -42,19 +42,19 @@ export default function AuthLayout({
       </aside>
 
       <div className="flex min-h-dvh flex-col bg-background">
-        <div className="flex h-20 items-center justify-between px-5 sm:px-8">
+        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:h-20 sm:px-8">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-primary"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-primary"
           >
             <ArrowLeft className="size-4" /> Back to restaurant
           </Link>
           <ThemeToggle />
         </div>
-        <div className="flex flex-1 items-center justify-center px-5 pb-14 sm:px-8">
+        <div className="flex flex-1 justify-center px-4 pb-10 pt-3 sm:px-8 sm:pt-6 lg:items-center lg:py-14">
           <div className="w-full max-w-md">{children}</div>
         </div>
-        <div className="px-5 pb-6 text-center text-xs text-muted-foreground sm:px-8">
+        <div className="px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[11px] leading-5 text-muted-foreground sm:px-8 sm:text-xs">
           Purple Haze Restro &amp; Garden · Airport Road, Biratnagar
         </div>
       </div>

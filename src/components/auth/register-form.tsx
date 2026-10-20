@@ -22,8 +22,15 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
-export function RegisterForm({ next }: { next: string }) {
+export function RegisterForm({
+  next,
+  googleEnabled,
+}: {
+  next: string;
+  googleEnabled: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState("");
@@ -70,7 +77,7 @@ export function RegisterForm({ next }: { next: string }) {
         <div className="grid size-14 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
           <CheckCircle2 className="size-7" />
         </div>
-        <h1 className="mt-6 font-display text-4xl font-semibold">
+        <h1 className="mt-6 font-display text-3xl font-semibold leading-[1.12] sm:text-4xl">
           Check your inbox.
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -111,12 +118,29 @@ export function RegisterForm({ next }: { next: string }) {
   return (
     <div>
       <p className="eyebrow">Join the table</p>
-      <h1 className="mt-3 font-display text-4xl font-semibold">
+      <h1 className="mt-3 font-display text-3xl font-semibold leading-[1.12] sm:text-4xl">
         Create your account.
       </h1>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">
         Faster checkout, saved addresses and a record of every good meal.
       </p>
+
+      {googleEnabled ? (
+        <>
+          <GoogleSignInButton
+            next={next}
+            label="Sign up with Google"
+            className="mt-6"
+          />
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              or use your email
+            </span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      ) : null}
 
       {serverError ? (
         <Alert variant="destructive" className="mt-6">
@@ -126,7 +150,7 @@ export function RegisterForm({ next }: { next: string }) {
 
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="mt-7 space-y-4"
+        className="mt-6 space-y-4"
         noValidate
       >
         <FormField

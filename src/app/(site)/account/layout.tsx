@@ -28,13 +28,13 @@ export default async function AccountLayout({
 
   return (
     <div className="border-b border-border/60 bg-muted/20">
-      <div className="container-page py-5 sm:py-8 lg:py-12">
-        <div className="grid gap-5 sm:gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-8">
+      <div className="container-page py-4 sm:py-8 lg:py-12">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start lg:gap-8">
           <aside className="min-w-0 lg:sticky lg:top-32">
-            <div className="rounded-2xl border border-border bg-card p-4 shadow-[0_18px_50px_-40px_rgba(76,29,149,0.55)] sm:p-5">
+            <div className="rounded-2xl border border-border bg-card p-3.5 shadow-[0_18px_50px_-40px_rgba(76,29,149,0.55)] sm:p-5">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-[conic-gradient(from_140deg,#f5b942,#7c3aed,#5b21b6,#f5b942)] p-[2px]">
-                  <Avatar className="size-12 border-2 border-card">
+                  <Avatar className="size-11 border-2 border-card sm:size-12">
                     {user.image ? (
                       <AvatarImage
                         src={user.image}
@@ -62,16 +62,16 @@ export default async function AccountLayout({
                   ) : null}
                 </div>
               </div>
-              <div className="mt-4">
+              <div className="mt-3.5">
                 <AccountNav />
               </div>
-              <div className="mt-4 space-y-2 border-t pt-4">
+              <div className="mt-3 space-y-2 border-t pt-3 sm:mt-4 sm:pt-4">
                 {isStaffRole(user.role) ? (
                   <Button
                     asChild
                     variant="outline"
                     size="sm"
-                    className="w-full justify-center border-primary/20 bg-primary/[0.04] text-primary hover:bg-primary/10 lg:justify-start"
+                    className="h-10 w-full justify-center border-primary/20 bg-primary/[0.04] text-primary hover:bg-primary/10 lg:justify-start"
                   >
                     <Link href="/admin">
                       <ShieldCheck className="size-4" />

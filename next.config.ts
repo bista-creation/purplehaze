@@ -1,7 +1,27 @@
 import type { NextConfig } from "next";
+import { isLocalhostAppUrl, normalizeAppUrl } from "./src/lib/app-url";
+
+const vercelHost =
+  process.env.VERCEL_ENV === "production"
+    ? process.env.VERCEL_PROJECT_PRODUCTION_URL
+    : (process.env.VERCEL_URL ?? process.env.VERCEL_PROJECT_PRODUCTION_URL);
+const vercelUrl = vercelHost
+  ? normalizeAppUrl(
+      vercelHost.startsWith("http") ? vercelHost : `https://${vercelHost}`,
+    )
+  : undefined;
+const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+const appUrl = normalizeAppUrl(
+  vercelUrl && (!configuredAppUrl || isLocalhostAppUrl(configuredAppUrl))
+    ? vercelUrl
+    : configuredAppUrl,
+);
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: {
+    NEXT_PUBLIC_APP_URL: appUrl,
+  },
   turbopack: {
     rules: {
       "*.css": {

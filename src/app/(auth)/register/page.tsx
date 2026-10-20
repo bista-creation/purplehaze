@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isGoogleAuthEnabled } from "@/auth";
 import { RegisterForm } from "@/components/auth/register-form";
 import { safeNextPath } from "@/lib/utils";
 
@@ -15,5 +16,5 @@ export default async function RegisterPage({
 }) {
   const params = await searchParams;
   const next = safeNextPath(params.next, "/account");
-  return <RegisterForm next={next} />;
+  return <RegisterForm next={next} googleEnabled={isGoogleAuthEnabled} />;
 }

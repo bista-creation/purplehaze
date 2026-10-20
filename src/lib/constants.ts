@@ -1,10 +1,12 @@
+import { normalizeAppUrl } from "@/lib/app-url";
+
 export const SITE = {
   name: "Purple Haze Restro & Garden",
   shortName: "Purple Haze",
   tagline: "Good food. Golden evenings. Garden memories.",
   description:
     "A garden restaurant, banquet venue and meeting space on Airport Road, Biratnagar. Nepali, Indian, Asian and continental favourites, served in a warm, leafy setting.",
-  url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+  url: normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL),
   phone: "+977 9851150987",
   phoneRaw: "+9779851150987",
   landline: "+977 21 464193",
@@ -131,7 +133,11 @@ export const CUSTOMER_CANCELLABLE: OrderStatus[] = ["PENDING", "CONFIRMED"];
 
 export const STATUS_META: Record<
   OrderStatus,
-  { label: string; description: string; tone: "amber" | "violet" | "blue" | "gold" | "green" | "red" }
+  {
+    label: string;
+    description: string;
+    tone: "amber" | "violet" | "blue" | "gold" | "green" | "red";
+  }
 > = {
   PENDING: {
     label: "Pending",
@@ -260,7 +266,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   "payment.esewaEnabled": "true",
   "payment.khaltiEnabled": "true",
   "content.heroEyebrow": "Biratnagar's garden table",
-  "content.heroTitle": "Dinner under the stars. Memories made around the table.",
+  "content.heroTitle":
+    "Dinner under the stars. Memories made around the table.",
   "content.heroSubtitle":
     "Nepali comfort food, Indian classics, Asian favourites and continental plates — served in a leafy garden on Airport Road.",
   "content.aboutTitle": "A little purple, a lot of heart.",

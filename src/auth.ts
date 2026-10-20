@@ -6,6 +6,15 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { normalizeAppUrl } from "@/lib/app-url";
+
+// Normalise configured origins before Auth.js reads them. A trailing slash (or
+// an accidental double slash) would otherwise produce a redirect URI that does
+// not exactly match the one registered in Google Cloud Console.
+for (const key of ["AUTH_URL", "NEXTAUTH_URL"] as const) {
+  const configured = normalizeAppUrl(process.env[key], "");
+  if (configured) process.env[key] = configured;
+}
 
 const googleEnabled =
   Boolean(process.env.GOOGLE_CLIENT_ID) &&

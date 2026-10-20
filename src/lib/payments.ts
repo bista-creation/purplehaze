@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { SITE } from "@/lib/constants";
+import { normalizeAppUrl } from "@/lib/app-url";
 import { formatNPR } from "@/lib/money";
 import { sendAdminNotification } from "@/lib/email";
 import { createStaffNotification } from "@/lib/notifications";
@@ -227,7 +228,7 @@ export function paymentModeLabel(mode = getPaymentMode()) {
 }
 
 export function appUrl() {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? SITE.url).replace(/\/$/, "");
+  return normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL ?? SITE.url);
 }
 
 export function asAbsoluteUrl(path: string) {
