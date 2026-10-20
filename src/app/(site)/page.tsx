@@ -89,21 +89,20 @@ export default async function HomePage() {
     <>
       <section className="hero-mesh relative overflow-hidden">
         {/* overlay */}
-        <div
-  className="pointer-events-none absolute -right-20 top-1/3 size-96 overflow-hidden rounded-full border border-gold/20 hero-float"
-  aria-hidden="true"
->
-  <video
-    className="absolute inset-0 size-full object-cover"
-    src="/images/hero/gemini_generated_video_4cb2aad1.mp4"
-    autoPlay
-    muted
-    loop
-    playsInline
-    preload="metadata"
-  />
-  <div className="absolute inset-0 bg-purple-950/40" />
-</div>
+         <div
+          className="pointer-events-none absolute -right-20 top-1/3
+    size-96 overflow-hidden rounded-full
+    border border-gold/20 hero-float"
+          aria-hidden="true"
+        >
+          <SmartImage
+            src="/images/menu/nepolitana-pizza.jpg"
+            alt=""
+            fill
+            sizes="384px"
+            className="object-cover opacity-90"
+          />
+        </div>
 
         <div className="container-page relative grid items-center gap-12 pb-20 pt-14 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16 lg:pb-28 lg:pt-20">
           <div>
@@ -169,14 +168,17 @@ export default async function HomePage() {
                 <p className="mt-0.5 text-sm font-medium">Biratnagar 56613</p>
               </div>
               <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border-[6px] border-white/70 shadow-[0_35px_90px_-40px_rgba(26,16,37,0.6)] dark:border-white/10">
-                <SmartImage
-                  src="/images/venues/garden-sitting-area.jpg"
-                  alt="Warm, leafy dining at Purple Haze Restro & Garden"
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 90vw, 45vw"
-                  className="object-cover"
-                />
+                <video
+          className="absolute inset-0 size-full object-cover"
+          src="/images/hero/gemini_generated_video_4cb2aad1.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+        />
+<div className="absolute inset-0 bg-purple-950/60" />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">
