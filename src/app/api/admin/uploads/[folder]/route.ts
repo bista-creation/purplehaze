@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -14,13 +15,21 @@ import type { ImageFolder } from "@/lib/upload-types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_BYTES = 4 * 1024 * 1024;
 const FOLDER_NAMES: Record<ImageFolder, string> = {
   menu: "menu",
   venues: "venues",
 };
 
 type ImageKind = "jpg" | "png" | "webp" | "avif" | "gif";
+
+const MIME_TYPES: Record<ImageKind, string> = {
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  avif: "image/avif",
+  gif: "image/gif",
+};
 
 function detectImage(bytes: Uint8Array): ImageKind | null {
   if (bytes.length < 12) return null;
@@ -91,9 +100,10 @@ export async function POST(
         { status: 403 },
       );
     }
-    if (getImageUploadMode() !== "local") {
+    const mode = getImageUploadMode();
+    if (mode !== "local" && mode !== "blob") {
       return NextResponse.json(
-        { error: "Local uploads are disabled in this environment." },
+        { error: "Image uploads are not enabled in this environment." },
         { status: 403 },
       );
     }
@@ -124,7 +134,7 @@ export async function POST(
     }
     if (file.size <= 0 || file.size > MAX_BYTES) {
       return NextResponse.json(
-        { error: "Choose an image smaller than 10 MB." },
+        { error: "Choose an image smaller than 4 MB." },
         { status: 400 },
       );
     }
@@ -138,6 +148,26 @@ export async function POST(
       );
     }
 
+    const fileName = safeFileName(file.name, kind);
+
+    if (mode === "blob") {
+      const blob = await put(
+        `${FOLDER_NAMES[folder as ImageFolder]}/${fileName}`,
+        Buffer.from(bytes),
+        {
+          access: "public",
+          contentType: MIME_TYPES[kind],
+          addRandomSuffix: false,
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+        },
+      );
+
+      return NextResponse.json({
+        url: blob.url,
+        size: bytes.byteLength,
+      });
+    }
+
     const relativeFolder = path.join(
       "uploads",
       FOLDER_NAMES[folder as ImageFolder],
@@ -149,8 +179,6 @@ export async function POST(
       relativeFolder,
     );
     await mkdir(directory, { recursive: true });
-
-    const fileName = safeFileName(file.name, kind);
     await writeFile(path.join(directory, fileName), bytes);
 
     return NextResponse.json({

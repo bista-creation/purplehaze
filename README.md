@@ -135,7 +135,7 @@ These are test credentials only. Replace all sandbox keys and hosts before switc
 - Replace `KHALTI_SECRET_KEY` with the production key and set the live Khalti base URL.
 - The app refuses to start a gateway when the configured base URL points at a different environment than `PAYMENT_MODE`.
 - Configure a verified email sending domain; Resend cannot deliver production mail from `onboarding@resend.dev`.
-- Configure UploadThing, or keep local disk uploads only where the host supports them. Vercel/read-only/serverless filesystems require UploadThing.
+- Connect a Vercel Blob store to the project for production image uploads. Vercel adds `BLOB_READ_WRITE_TOKEN` automatically; redeploy after connecting it. UploadThing is still supported, and local disk uploads remain available only where the host has a persistent filesystem.
 
 ### Google sign-in
 
@@ -171,7 +171,7 @@ npm run build
 The following are intentionally not fabricated in this repository and must be supplied by the owner/operator:
 
 - verified email sending domain and production Resend credentials
-- UploadThing project credentials (or an approved persistent upload host)
+- a connected Vercel Blob store (or UploadThing project credentials) for production image uploads
 - Upstash Redis credentials for distributed rate limiting
 - live eSewa/Khalti merchant credentials and approved refund procedure
 - Google OAuth client credentials and the exact single-slash redirect URI (see above)

@@ -25,6 +25,7 @@ import {
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SmartImage } from "@/components/ui/smart-image";
+import type { ImageUploadMode } from "@/lib/upload-types";
 import { galleryAdminSchema, type GalleryAdminInput } from "@/lib/validations";
 
 export type GalleryRow = {
@@ -38,10 +39,10 @@ export type GalleryRow = {
 
 export function GalleryAdmin({
   images,
-  uploadEnabled,
+  uploadMode,
 }: {
   images: GalleryRow[];
-  uploadEnabled: boolean;
+  uploadMode: ImageUploadMode;
 }) {
   const [dialog, setDialog] = useState<{ open: boolean; image?: GalleryRow }>({
     open: false,
@@ -122,7 +123,7 @@ export function GalleryAdmin({
           key={dialog.image?.id ?? "new-gallery"}
           image={dialog.image}
           categories={categories}
-          uploadEnabled={uploadEnabled}
+          uploadMode={uploadMode}
           onClose={() => setDialog({ open: false })}
         />
       ) : null}
@@ -133,12 +134,12 @@ export function GalleryAdmin({
 function GalleryDialog({
   image,
   categories,
-  uploadEnabled,
+  uploadMode,
   onClose,
 }: {
   image?: GalleryRow;
   categories: string[];
-  uploadEnabled: boolean;
+  uploadMode: ImageUploadMode;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -193,7 +194,7 @@ function GalleryDialog({
                 shouldValidate: true,
               })
             }
-            uploadEnabled={uploadEnabled}
+            uploadMode={uploadMode}
             error={form.formState.errors.url?.message}
           />
           <FormField

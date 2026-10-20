@@ -4,6 +4,7 @@ import { ContentNav } from "@/components/admin/content-nav";
 import { BannerAdmin } from "@/components/admin/banner-admin";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/security";
+import { getImageUploadMode } from "@/lib/uploads";
 
 export const metadata: Metadata = { title: "Banners" };
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export default async function AdminBannersPage() {
           startsAt: banner.startsAt?.toISOString() ?? null,
           endsAt: banner.endsAt?.toISOString() ?? null,
         }))}
-        uploadEnabled={Boolean(process.env.UPLOADTHING_TOKEN)}
+        uploadMode={getImageUploadMode()}
       />
     </>
   );

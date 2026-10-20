@@ -23,6 +23,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { SmartImage } from "@/components/ui/smart-image";
 import { Textarea } from "@/components/ui/textarea";
+import type { ImageUploadMode } from "@/lib/upload-types";
 import { bannerAdminSchema, type BannerAdminInput } from "@/lib/validations";
 import { formatDateTime, toNepalDateTimeLocal } from "@/lib/utils";
 
@@ -41,10 +42,10 @@ export type BannerRow = {
 
 export function BannerAdmin({
   banners,
-  uploadEnabled,
+  uploadMode,
 }: {
   banners: BannerRow[];
-  uploadEnabled: boolean;
+  uploadMode: ImageUploadMode;
 }) {
   const [dialog, setDialog] = useState<{ open: boolean; banner?: BannerRow }>({
     open: false,
@@ -151,7 +152,7 @@ export function BannerAdmin({
         <BannerDialog
           key={dialog.banner?.id ?? "new-banner"}
           banner={dialog.banner}
-          uploadEnabled={uploadEnabled}
+          uploadMode={uploadMode}
           onClose={() => setDialog({ open: false })}
         />
       ) : null}
@@ -161,11 +162,11 @@ export function BannerAdmin({
 
 function BannerDialog({
   banner,
-  uploadEnabled,
+  uploadMode,
   onClose,
 }: {
   banner?: BannerRow;
-  uploadEnabled: boolean;
+  uploadMode: ImageUploadMode;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -244,7 +245,7 @@ function BannerDialog({
             onChange={(value) =>
               form.setValue("image", value, { shouldDirty: true })
             }
-            uploadEnabled={uploadEnabled}
+            uploadMode={uploadMode}
             error={form.formState.errors.image?.message}
           />
           <div className="grid gap-4 sm:grid-cols-3">

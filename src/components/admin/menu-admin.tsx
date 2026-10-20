@@ -2,7 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import {
+  Controller,
+  useFieldArray,
+  useForm,
+  useWatch,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Check,
@@ -554,7 +559,11 @@ function DishDialog({
     defaultValues: {
       name: dish?.name ?? "",
       slug: dish?.slug ?? "",
-      categoryId: dish?.categoryId ?? categories[0]?.id ?? "",
+      categoryId:
+        dish?.categoryId ??
+        categories.find((category) => category.isActive)?.id ??
+        categories[0]?.id ??
+        "",
       description: dish?.description ?? "",
       details: dish?.details ?? "",
       price: dish ? paisaToRupees(dish.price) : 0,
@@ -578,7 +587,6 @@ function DishDialog({
     },
   });
   const image = useWatch({ control: form.control, name: "image" });
-  const categoryId = useWatch({ control: form.control, name: "categoryId" });
   const variants = useWatch({ control: form.control, name: "variants" });
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -618,21 +626,51 @@ function DishDialog({
               <Input id="dish-name" {...form.register("name")} />
             </FormField>
             <FormField label="Category" htmlFor="dish-category" required error={form.formState.errors.categoryId?.message}>
-              <Select
-                value={categoryId}
-                onValueChange={(value) => form.setValue("categoryId", value, { shouldValidate: true })}
-              >
-                <SelectTrigger id="dish-category">
-                  <SelectValue placeholder="Choose category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Controller
+                  control={form.control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        void form.trigger("categoryId");
+                      }}
+                      disabled={categories.length === 0}
+                    >
+                      <SelectTrigger
+                        id="dish-category"
+                        aria-invalid={Boolean(form.formState.errors.categoryId)}
+                      >
+                        <SelectValue
+                          placeholder={
+                            categories.length === 0
+                              ? "No categories available"
+                              : "Choose category"
+                          }
+                        />
+                      </SelectTrigger>
+                      {categories.length > 0 ? (
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                              {category.isActive ? "" : " (hidden)"}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      ) : null}
+                    </Select>
+                  )}
+                />
+                {categories.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                    Add a category first from the Categories tab, then come back
+                    to create this dish.
+                  </p>
+                ) : null}
+              </div>
             </FormField>
           </div>
 

@@ -2,6 +2,7 @@ import "server-only";
 
 import { readdir } from "node:fs/promises";
 import path from "node:path";
+import { list } from "@vercel/blob";
 import type { ImageFolder, ImageUploadMode } from "@/lib/upload-types";
 
 const FOLDERS: Record<ImageFolder, string[]> = {
@@ -9,21 +10,21 @@ const FOLDERS: Record<ImageFolder, string[]> = {
   venues: ["venues", path.join("uploads", "venues")],
 };
 
-const IMAGE_EXTENSIONS = new Set([
-  ".jpg",
-  ".jpeg",
-  ".png",
-  ".webp",
-  ".avif",
-]);
+const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
 
 /**
- * Local disk uploads are a development/self-hosted convenience. Serverless
- * deployments should configure UploadThing because their filesystem is
- * ephemeral.
+ * Local disk uploads are a development/self-hosted convenience. Vercel Blob
+ * is used for production because the serverless filesystem is ephemeral.
+ * UploadThing remains supported for existing deployments.
  */
 export function getImageUploadMode(): ImageUploadMode {
-  if (process.env.UPLOADTHING_TOKEN) return "uploadthing";
+  if (process.env.UPLOADTHING_TOKEN?.trim()) return "uploadthing";
+  if (
+    process.env.BLOB_READ_WRITE_TOKEN?.trim() &&
+    process.env.VERCEL_ENV === "production"
+  ) {
+    return "blob";
+  }
   if (process.env.UPLOADS_LOCAL === "true") return "local";
   if (process.env.VERCEL === "1") return "none";
   return "local";
@@ -55,6 +56,22 @@ export async function listImageOptions(folder: ImageFolder) {
       if (code !== "ENOENT") {
         console.error(`Could not list ${folder} images`, error);
       }
+    }
+  }
+
+  if (
+    process.env.BLOB_READ_WRITE_TOKEN?.trim() &&
+    process.env.VERCEL_ENV === "production"
+  ) {
+    try {
+      const { blobs } = await list({
+        prefix: `${folder}/`,
+        limit: 100,
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
+      for (const blob of blobs) options.add(blob.url);
+    } catch (error) {
+      console.error(`Could not list ${folder} Blob images`, error);
     }
   }
 

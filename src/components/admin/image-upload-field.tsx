@@ -73,9 +73,9 @@ export function ImageUploadField({
   const canUpload = mode !== "none";
   const resolvedHint =
     hint ??
-    (mode === "uploadthing"
-      ? "Upload a JPG, PNG or WebP, choose an existing photo, or paste an image path."
-      : "Upload a JPG, PNG or WebP, choose an existing photo, or paste a path under /images.");
+    (mode === "uploadthing" || mode === "blob"
+      ? "Upload a JPG, PNG or WebP under 4 MB, choose an existing photo, or paste an image path."
+      : "Upload a JPG, PNG or WebP under 4 MB, choose an existing photo, or paste a path under /images.");
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
@@ -83,8 +83,8 @@ export function ImageUploadField({
       toast.error("Choose an image file.");
       return;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      toast.error("Please choose an image under 8 MB.");
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Please choose an image under 4 MB.");
       return;
     }
 
@@ -94,7 +94,7 @@ export function ImageUploadField({
       return;
     }
 
-    if (mode === "local") {
+    if (mode === "local" || mode === "blob") {
       setUploading(true);
       try {
         const body = new FormData();
@@ -208,7 +208,8 @@ export function ImageUploadField({
           </div>
           {mode === "none" ? (
             <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
-              Uploads are unavailable on this serverless deployment. Configure{" "}
+              Uploads are unavailable on this serverless deployment. Connect a
+              Vercel Blob store, configure{" "}
               <code className="font-mono">UPLOADTHING_TOKEN</code>, or add the
               photo under <code className="font-mono">public/images</code> and
               paste its path.

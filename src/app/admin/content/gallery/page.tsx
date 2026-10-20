@@ -4,6 +4,7 @@ import { ContentNav } from "@/components/admin/content-nav";
 import { GalleryAdmin } from "@/components/admin/gallery-admin";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/security";
+import { getImageUploadMode } from "@/lib/uploads";
 
 export const metadata: Metadata = { title: "Gallery" };
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function AdminGalleryPage() {
       <AdminPageHeader
         eyebrow="Website content"
         title="Gallery"
-        description="Real photography only. Upload images under public/images or connect UploadThing, then describe them for screen readers. Facebook images require permission from the restaurant owner."
+        description="Real photography only. Upload photos directly, choose an existing image, or place files under public/images, then describe them for screen readers. Facebook images require permission from the restaurant owner."
       />
       <ContentNav />
       <GalleryAdmin
@@ -31,7 +32,7 @@ export default async function AdminGalleryPage() {
           sortOrder: image.sortOrder,
           isActive: image.isActive,
         }))}
-        uploadEnabled={Boolean(process.env.UPLOADTHING_TOKEN)}
+        uploadMode={getImageUploadMode()}
       />
     </>
   );
