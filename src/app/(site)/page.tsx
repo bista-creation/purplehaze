@@ -90,25 +90,20 @@ export default async function HomePage() {
       <section className="hero-mesh relative overflow-hidden">
         {/* overlay */}
         <div
-          className="pointer-events-none absolute -right-20 top-1/3
-    size-96 overflow-hidden rounded-full
-    border border-gold/20 hero-float"
-          aria-hidden="true"
-        >
-          <SmartImage
-            <video
-          className="absolute inset-0 size-full object-cover"
-          src="/images/hero/gemini_generated_video_4cb2aad1.mp4"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          aria-hidden="true"
-        />
-        <div className="absolute inset-0 bg-purple-950/40" />
-          />
-        </div>
+  className="pointer-events-none absolute -right-20 top-1/3 size-96 overflow-hidden rounded-full border border-gold/20 hero-float"
+  aria-hidden="true"
+>
+  <video
+    className="absolute inset-0 size-full object-cover"
+    src="/images/hero/gemini_generated_video_4cb2aad1.mp4"
+    autoPlay
+    muted
+    loop
+    playsInline
+    preload="metadata"
+  />
+  <div className="absolute inset-0 bg-purple-950/40" />
+</div>
 
         <div className="container-page relative grid items-center gap-12 pb-20 pt-14 lg:grid-cols-[1.02fr_0.98fr] lg:gap-16 lg:pb-28 lg:pt-20">
           <div>
