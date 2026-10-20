@@ -9,18 +9,22 @@
  *
  * The password is read from the environment and is never printed.
  */
+import { existsSync } from "node:fs";
 import { config } from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { prismaDatasourceUrl } from "../src/lib/database-url";
 
-const envFile = process.env.ADMIN_BOOTSTRAP_ENV_FILE?.trim();
-config(envFile ? { path: envFile, override: true } : {});
-
 function fail(message: string): never {
   console.error(`Admin provisioning stopped: ${message}`);
   process.exit(1);
 }
+
+const envFile = process.env.ADMIN_BOOTSTRAP_ENV_FILE?.trim();
+if (envFile && !existsSync(envFile)) {
+  fail(`ADMIN_BOOTSTRAP_ENV_FILE does not exist: ${envFile}`);
+}
+config(envFile ? { path: envFile, override: true } : {});
 
 async function main() {
   if (process.env.ADMIN_BOOTSTRAP_CONFIRM !== "APPLY") {
@@ -30,6 +34,19 @@ async function main() {
   }
   if (!process.env.DATABASE_URL) {
     fail("DATABASE_URL is not set.");
+  }
+
+  let databaseHost = "unknown";
+  try {
+    databaseHost = new URL(process.env.DATABASE_URL).hostname || "unknown";
+  } catch {
+    // Do not print the connection string; it contains credentials.
+  }
+  console.log(`Target database host: ${databaseHost}`);
+  if (["localhost", "127.0.0.1", "::1"].includes(databaseHost)) {
+    console.warn(
+      "WARNING: this is a local database. Set ADMIN_BOOTSTRAP_ENV_FILE to the production environment file if you intended to provision production.",
+    );
   }
 
   const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
