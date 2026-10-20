@@ -467,6 +467,11 @@ export function MenuAdmin({
           addOns={addOns}
           uploadMode={uploadMode}
           imageOptions={imageOptions}
+          onAddCategory={() => {
+            setDishDialog({ open: false });
+            setTab("categories");
+            setCategoryDialog({ open: true });
+          }}
           onClose={() => setDishDialog({ open: false })}
         />
       ) : null}
@@ -543,6 +548,7 @@ function DishDialog({
   addOns,
   uploadMode,
   imageOptions,
+  onAddCategory,
   onClose,
 }: {
   dish?: MenuDishRow;
@@ -550,6 +556,7 @@ function DishDialog({
   addOns: MenuAddOnRow[];
   uploadMode: ImageUploadMode;
   imageOptions: string[];
+  onAddCategory: () => void;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -665,10 +672,18 @@ function DishDialog({
                   )}
                 />
                 {categories.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                    Add a category first from the Categories tab, then come back
-                    to create this dish.
-                  </p>
+                  <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                    <p>No categories yet. Add one before creating this dish.</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={onAddCategory}
+                    >
+                      <Plus className="size-3.5" /> Add category
+                    </Button>
+                  </div>
                 ) : null}
               </div>
             </FormField>
