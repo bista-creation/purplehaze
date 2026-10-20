@@ -83,7 +83,21 @@ export const changePasswordSchema = z
 export const profileSchema = z.object({
   name: z.string().trim().min(2, "Enter your full name.").max(80),
   phone: phoneSchema,
-  image: z.string().trim().url("Enter a valid image URL.").optional().or(z.literal("")),
+  image: z
+    .string()
+    .trim()
+    .max(2048, "That image URL is too long.")
+    .refine((value) => {
+      if (!value) return true;
+      if (value.startsWith("/images/uploads/") && !value.includes("..")) {
+        return true;
+      }
+      try {
+        return new URL(value).protocol === "https:";
+      } catch {
+        return false;
+      }
+    }, "Use an https image URL or an uploaded image path."),
 });
 
 export const addressSchema = z.object({

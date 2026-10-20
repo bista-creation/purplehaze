@@ -42,6 +42,13 @@ import { createStaffNotification } from "@/lib/notifications";
 import { ORDER_TYPE_LABELS } from "@/lib/constants";
 import { paymentPresentation } from "@/lib/order-state";
 
+class CouponUnavailableError extends Error {
+  constructor() {
+    super("Coupon is no longer available.");
+    this.name = "CouponUnavailableError";
+  }
+}
+
 export type CreateOrderResult =
   | {
       success: true;
@@ -302,6 +309,12 @@ export async function createOrderAction(
     let couponId: string | null = null;
     let couponCode: string | null = null;
     let discountAmount = 0;
+    let selectedCoupon: {
+      id: string;
+      maxUses: number | null;
+      startsAt: Date | null;
+      expiresAt: Date | null;
+    } | null = null;
     if (details.couponCode) {
       const coupon = await prisma.coupon.findUnique({
         where: { code: details.couponCode.trim().toUpperCase() },
@@ -316,6 +329,12 @@ export async function createOrderAction(
           message: `${discount.reason} Remove the coupon and try again.`,
         };
       }
+      selectedCoupon = {
+        id: coupon.id,
+        maxUses: coupon.maxUses,
+        startsAt: coupon.startsAt,
+        expiresAt: coupon.expiresAt,
+      };
       couponId = coupon.id;
       couponCode = coupon.code;
       discountAmount = discount.discount;
@@ -432,11 +451,28 @@ export async function createOrderAction(
         include: { items: true },
       });
 
-      if (couponId) {
-        await tx.coupon.update({
-          where: { id: couponId },
+      if (selectedCoupon) {
+        const now = new Date();
+        // Claim the coupon inside the order transaction. The conditional
+        // update prevents two concurrent checkouts from exceeding maxUses or
+        // using a coupon that expired/was disabled after the initial check.
+        const claimed = await tx.coupon.updateMany({
+          where: {
+            id: selectedCoupon.id,
+            isActive: true,
+            ...(selectedCoupon.maxUses !== null
+              ? { usedCount: { lt: selectedCoupon.maxUses } }
+              : {}),
+            ...(selectedCoupon.startsAt
+              ? { startsAt: { lte: now } }
+              : {}),
+            ...(selectedCoupon.expiresAt
+              ? { expiresAt: { gt: now } }
+              : {}),
+          },
           data: { usedCount: { increment: 1 } },
         });
+        if (claimed.count !== 1) throw new CouponUnavailableError();
       }
 
       const payment = paymentPresentation(
@@ -520,6 +556,12 @@ export async function createOrderAction(
       confirmationUrl,
     };
   } catch (error) {
+    if (error instanceof CouponUnavailableError) {
+      return {
+        success: false,
+        message: "That coupon is no longer available. Remove it and try again.",
+      };
+    }
     if (input.idempotencyKey && isUniqueConstraintError(error)) {
       const existing = await prisma.order.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
