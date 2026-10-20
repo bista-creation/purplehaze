@@ -16,6 +16,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "admin:ensure": "tsx prisma/ensure-admin.ts",
     "db:local:start": "npx supabase start",
     "db:local:stop": "npx supabase stop",
     "db:local:reset": "npx supabase db reset",

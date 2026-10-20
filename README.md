@@ -71,6 +71,24 @@ Outside production, admins can deliberately reveal test orders, customers, and a
 
 Do not import `prisma/dev.db` or real customer/order data into local development. The old SQLite file is left untouched and is not used by the current PostgreSQL schema.
 
+### Create or reset a production admin
+
+Adding `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` to Vercel does **not** create or change a user by itself. Those variables only feed the scripts. Never run the destructive demo seed (`npm run db:seed`) against production.
+
+Use the non-destructive provisioning script instead. It creates the configured email as an admin, or updates that existing account's password and restores access. It never deletes data, invalidates existing sessions, and never prints the password. It requires an explicit confirmation value.
+
+With a locally loaded production environment (after `vercel login` and `vercel link`):
+
+```powershell
+npx vercel env pull .env.production.local --environment=production
+$env:ADMIN_BOOTSTRAP_ENV_FILE = ".env.production.local"
+$env:ADMIN_BOOTSTRAP_CONFIRM = "APPLY"
+npm run admin:ensure
+Remove-Item Env:ADMIN_BOOTSTRAP_ENV_FILE, Env:ADMIN_BOOTSTRAP_CONFIRM
+```
+
+`SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `SEED_ADMIN_NAME`, and `SEED_ADMIN_PHONE` must be present in that environment file. If your host marks secrets as sensitive and does not export them, set `DATABASE_URL`, `DIRECT_URL`, and those four values explicitly for the one command. Remove `.env.production.local` afterwards, and rotate/remove the bootstrap password once the account works.
+
 ## Order acceptance and payment policy
 
 Payment status is separate from fulfilment status.
