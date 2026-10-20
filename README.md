@@ -117,7 +117,7 @@ Payment behaviour is controlled by `PAYMENT_MODE`:
 - `sandbox` – real provider test environments. Use sandbox merchant credentials and sandbox hosts.
 - `live` – real money. Use live merchant keys and production base URLs.
 
-When `NODE_ENV=production`, `mock` and `sandbox` are disabled automatically. The only exception is an explicit `ALLOW_TEST_PAYMENTS=true` on a non-production preview; never set it on the production deployment. Sandbox providers, checkout options, payment initiation, and the mock-payment action all fail closed.
+When `NODE_ENV=production`, `mock` and `sandbox` are disabled automatically. Mock payments are never available on Vercel production. Sandbox payments can be enabled on Vercel production only for a temporary window by setting `ALLOW_TEST_PAYMENTS=true` and a future ISO 8601 `PAYMENT_SANDBOX_UNTIL`; the window closes automatically at that timestamp. Sandbox providers, checkout options, payment initiation, and the mock-payment action all fail closed outside the allowed window. Use this only for controlled testing, not for real orders.
 
 Both gateways are verified server-side before an order is marked paid: the eSewa callback signature is rebuilt from `signed_field_names` and checked with HMAC-SHA256, then the transaction is confirmed against the status API; Khalti payments are confirmed with the ePayment lookup API. Amount, product/merchant code, order reference, and provider reference are compared against the stored order.
 

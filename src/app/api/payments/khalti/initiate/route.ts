@@ -5,7 +5,7 @@ import {
   asAbsoluteUrl,
   getKhaltiConfig,
   isAllowedKhaltiPaymentUrl,
-  isTestPaymentModeAllowed,
+  isPaymentModeAllowed,
 } from "@/lib/payments";
 
 type KhaltiInitResponse = {
@@ -63,10 +63,7 @@ export async function POST(request: Request) {
         "This order is not set to pay with Khalti.",
       );
     }
-    if (
-      !isTestPaymentModeAllowed() &&
-      (PAYMENT_MODE === "mock" || PAYMENT_MODE === "sandbox")
-    ) {
+    if (!isPaymentModeAllowed(PAYMENT_MODE)) {
       return redirectToOrder(
         order.orderNumber,
         token,

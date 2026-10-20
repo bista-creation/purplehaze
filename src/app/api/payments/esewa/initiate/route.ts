@@ -6,7 +6,7 @@ import {
   asAbsoluteUrl,
   escapeHtml,
   getEsewaConfig,
-  isTestPaymentModeAllowed,
+  isPaymentModeAllowed,
   signEsewa,
 } from "@/lib/payments";
 
@@ -55,10 +55,7 @@ export async function POST(request: Request) {
         "This order is not set to pay with eSewa.",
       );
     }
-    if (
-      !isTestPaymentModeAllowed() &&
-      (PAYMENT_MODE === "mock" || PAYMENT_MODE === "sandbox")
-    ) {
+    if (!isPaymentModeAllowed(PAYMENT_MODE)) {
       return redirectToOrder(
         order.orderNumber,
         token,

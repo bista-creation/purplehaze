@@ -22,7 +22,7 @@ import {
   getEsewaConfig,
   getKhaltiConfig,
   getPaymentMode,
-  isTestPaymentModeAllowed,
+  isMockPaymentAllowed,
   lookupEsewaTransaction,
   lookupKhaltiPayment,
   markOrderPaid,
@@ -987,7 +987,7 @@ export async function mockPayAction(
   orderId: string,
   token: string,
 ): Promise<{ success: boolean; message: string }> {
-  if (getPaymentMode() !== "mock" || !isTestPaymentModeAllowed()) {
+  if (getPaymentMode() !== "mock" || !isMockPaymentAllowed()) {
     return { success: false, message: "Demo payment is not enabled." };
   }
   try {

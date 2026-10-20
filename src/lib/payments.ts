@@ -8,12 +8,22 @@ import { formatNPR } from "@/lib/money";
 import { sendAdminNotification } from "@/lib/email";
 import { createStaffNotification } from "@/lib/notifications";
 import {
+  getSandboxPaymentExpiry,
+  isMockPaymentAllowed,
+  isPaymentModeAllowed,
+  isSandboxPaymentAllowed,
   isTestPaymentModeAllowed,
   type PaymentDisplayMode,
   type PaymentMode,
 } from "@/lib/payment-mode";
 
-export { isTestPaymentModeAllowed };
+export {
+  getSandboxPaymentExpiry,
+  isMockPaymentAllowed,
+  isPaymentModeAllowed,
+  isSandboxPaymentAllowed,
+  isTestPaymentModeAllowed,
+};
 export type { PaymentDisplayMode, PaymentMode };
 
 export function getPaymentMode(): PaymentMode {
@@ -117,7 +127,7 @@ function khaltiEnvironment(baseUrl: string): "sandbox" | "live" | "unknown" {
 export function getEsewaConfig(): EsewaConfig | null {
   const mode = getPaymentMode();
   if (mode === "mock") return null;
-  if (mode === "sandbox" && !isTestPaymentModeAllowed()) return null;
+  if (mode === "sandbox" && !isSandboxPaymentAllowed()) return null;
 
   const merchantCode =
     process.env.ESEWA_MERCHANT_CODE?.trim() ||
@@ -160,7 +170,7 @@ export function getEsewaConfig(): EsewaConfig | null {
 export function getKhaltiConfig(): KhaltiConfig | null {
   const mode = getPaymentMode();
   if (mode === "mock") return null;
-  if (mode === "sandbox" && !isTestPaymentModeAllowed()) return null;
+  if (mode === "sandbox" && !isSandboxPaymentAllowed()) return null;
 
   const secretKey =
     process.env.KHALTI_SECRET_KEY?.trim() ||
@@ -203,11 +213,11 @@ export function isKhaltiDemoKey() {
  */
 export function onlinePaymentAvailability() {
   const mode = getPaymentMode();
-  const testAllowed = isTestPaymentModeAllowed();
+  const mockAllowed = isMockPaymentAllowed();
   return {
     mode,
-    esewa: mode === "mock" ? testAllowed : Boolean(getEsewaConfig()),
-    khalti: mode === "mock" ? testAllowed : Boolean(getKhaltiConfig()),
+    esewa: mode === "mock" ? mockAllowed : Boolean(getEsewaConfig()),
+    khalti: mode === "mock" ? mockAllowed : Boolean(getKhaltiConfig()),
   };
 }
 
@@ -217,8 +227,7 @@ export function onlinePaymentAvailability() {
  */
 export function paymentModeForDisplay(): PaymentDisplayMode {
   const mode = getPaymentMode();
-  if (mode === "live") return "live";
-  return isTestPaymentModeAllowed() ? mode : "unavailable";
+  return isPaymentModeAllowed(mode) ? mode : "unavailable";
 }
 
 export function paymentModeLabel(mode = getPaymentMode()) {

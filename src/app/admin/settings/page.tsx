@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   Banknote,
   CheckCircle2,
+  CircleAlert,
   CircleDashed,
   CreditCard,
   FileText,
@@ -22,11 +23,12 @@ import {
   getEsewaConfig,
   getKhaltiConfig,
   getPaymentMode,
+  getSandboxPaymentExpiry,
   isKhaltiDemoKey,
-  isTestPaymentModeAllowed,
+  isPaymentModeAllowed,
 } from "@/lib/payments";
 import { paisaToRupees } from "@/lib/money";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -53,7 +55,13 @@ export default async function AdminSettingsPage({
   ) as Tab;
   const settings = await getSettings();
   const paymentMode = getPaymentMode();
-  const testPaymentsAllowed = isTestPaymentModeAllowed();
+  const paymentModeAllowed = isPaymentModeAllowed(paymentMode);
+  const sandboxExpiry = getSandboxPaymentExpiry();
+  const isProductionSandbox =
+    paymentMode === "sandbox" &&
+    paymentModeAllowed &&
+    process.env.VERCEL_ENV === "production" &&
+    Boolean(sandboxExpiry);
   const esewaConfig = getEsewaConfig();
   const khaltiConfig = getKhaltiConfig();
   const zones = await prisma.deliveryZone.findMany({
@@ -70,16 +78,16 @@ export default async function AdminSettingsPage({
     },
     {
       label: "Payment mode",
-      ok:
-        paymentMode === "live" ||
-        (testPaymentsAllowed && paymentMode === "sandbox"),
+      ok: paymentMode === "live" || paymentModeAllowed,
       detail:
         paymentMode === "live"
           ? "Live gateways — real money moves"
-          : !testPaymentsAllowed
+          : !paymentModeAllowed
             ? "Test payment modes are disabled in this production runtime — configure live gateways"
             : paymentMode === "sandbox"
-              ? "Sandbox gateways — test money only"
+              ? isProductionSandbox && sandboxExpiry
+                ? `Sandbox gateways — test money only. Automatically disabled ${formatDateTime(sandboxExpiry)}.`
+                : "Sandbox gateways — test money only"
               : "Demo payments — no real money moves",
     },
     {
@@ -382,6 +390,18 @@ export default async function AdminSettingsPage({
                 },
               ]}
             />
+            {isProductionSandbox && sandboxExpiry ? (
+              <div className="mt-5 flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-[11px] leading-5 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                <CircleAlert className="mt-0.5 size-3.5 shrink-0" />
+                <p>
+                  <strong>Production sandbox window is active.</strong> eSewa
+                  and Khalti use test money until{" "}
+                  {formatDateTime(sandboxExpiry)}. Do not treat these payments
+                  as real revenue, and do not accept real orders that depend on
+                  them.
+                </p>
+              </div>
+            ) : null}
           </AdminCard>
 
           <AdminCard className="p-5">
