@@ -41,7 +41,10 @@ export default async function AccountSettingsPage() {
           Contact the restaurant
         </Link>{" "}
         and we will help. See our{" "}
-        <Link href="/privacy" className="font-medium text-primary underline">
+        <Link
+          href="/privacy-policy"
+          className="font-medium text-primary underline"
+        >
           privacy policy
         </Link>
         .

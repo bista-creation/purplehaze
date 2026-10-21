@@ -3,7 +3,14 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, Loader2, Mail, Phone, Send, UserRound } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  Mail,
+  Phone,
+  Send,
+  UserRound,
+} from "lucide-react";
 import { submitContactAction } from "@/actions/public";
 import { contactSchema, type ContactInput } from "@/lib/validations";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -150,12 +157,19 @@ export function ContactForm() {
         />
       </FormField>
       <Button type="submit" size="lg" disabled={pending}>
-        {pending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+        {pending ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Send className="size-4" />
+        )}
         Send message
       </Button>
       <p className="text-xs leading-5 text-muted-foreground">
         We use your details only to reply to this enquiry. See our{" "}
-        <a href="/privacy" className="font-medium text-primary underline">
+        <a
+          href="/privacy-policy"
+          className="font-medium text-primary underline"
+        >
           privacy policy
         </a>
         .

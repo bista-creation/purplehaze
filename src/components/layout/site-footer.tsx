@@ -11,6 +11,7 @@ import { Logo } from "@/components/layout/logo";
 import { NewsletterForm } from "@/components/layout/newsletter-form";
 import { Separator } from "@/components/ui/separator";
 import { PUBLIC_NAV, SITE } from "@/lib/constants";
+import { LEGAL_LINKS } from "@/lib/legal";
 
 const exploreLinks = [
   ...PUBLIC_NAV.filter((item) => item.href !== "/"),
@@ -23,6 +24,7 @@ const serviceLinks = [
   { href: "/events", label: "Weddings & receptions" },
   { href: "/events", label: "Corporate meetings" },
   { href: "/contact", label: "Private dining" },
+  { href: "/contact#accessibility", label: "Accessibility" },
   { href: "/account/bookings", label: "My bookings" },
 ];
 
@@ -188,23 +190,26 @@ export function SiteFooter() {
             © {new Date().getFullYear()} Purple Haze Restro &amp; Garden. All
             rights reserved.
           </p>
-          <div className="flex flex-wrap items-center gap-4">
-            <Link href="/privacy" className="transition hover:text-white">
-              Privacy
-            </Link>
-            <Link href="/terms" className="transition hover:text-white">
-              Terms
-            </Link>
-            <Link href="/contact" className="transition hover:text-white">
-              Accessibility
-            </Link>
+          <nav
+            aria-label="Policies and legal"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2"
+          >
+            {LEGAL_LINKS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="transition hover:text-white"
+              >
+                {item.label}
+              </Link>
+            ))}
             <Link
               href="/login?next=/admin"
               className="inline-flex items-center gap-1 transition hover:text-white"
             >
               Staff login <ArrowUpRight className="size-3" />
             </Link>
-          </div>
+          </nav>
         </div>
       </div>
     </footer>

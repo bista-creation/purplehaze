@@ -9,6 +9,7 @@ import {
   Send,
 } from "lucide-react";
 import { ContactForm } from "@/components/forms/contact-form";
+import { GrievanceDesk } from "@/components/legal/grievance-desk";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SITE } from "@/lib/constants";
@@ -16,7 +17,7 @@ import { SITE } from "@/lib/constants";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Call, email or visit Purple Haze Restro & Garden on Airport Road, Biratnagar. Questions about orders, reservations, events and accessibility are welcome.",
+    "Call, email or visit Purple Haze Restro & Garden on Airport Road, Biratnagar. Questions about orders, reservations, events, accessibility and grievances are welcome.",
   alternates: { canonical: "/contact" },
 };
 
@@ -117,8 +118,9 @@ export default function ContactPage() {
               </h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 If you use a wheelchair, have a service animal, need a quieter
-                table or have a dietary requirement, tell us in the form. We will
-                confirm what is possible before your visit rather than guess.
+                table or have a dietary requirement, tell us in the form. We
+                will confirm what is possible before your visit rather than
+                guess.
               </p>
             </div>
 
@@ -155,6 +157,10 @@ export default function ContactPage() {
             </div>
             <ContactForm />
           </div>
+        </div>
+
+        <div className="mt-12">
+          <GrievanceDesk />
         </div>
       </section>
     </>

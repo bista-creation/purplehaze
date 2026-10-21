@@ -626,7 +626,7 @@ export function CheckoutForm({
               Your details are used to prepare and deliver this order. By
               placing it you agree to our{" "}
               <Link
-                href="/terms"
+                href="/terms-and-conditions"
                 className="font-medium text-primary underline"
               >
                 ordering terms

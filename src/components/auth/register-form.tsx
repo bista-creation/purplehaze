@@ -272,14 +272,14 @@ export function RegisterForm({
             <span>
               I agree to the{" "}
               <Link
-                href="/terms"
+                href="/terms-and-conditions"
                 className="font-medium text-primary underline"
               >
                 terms
               </Link>{" "}
               and{" "}
               <Link
-                href="/privacy"
+                href="/privacy-policy"
                 className="font-medium text-primary underline"
               >
                 privacy policy
