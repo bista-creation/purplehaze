@@ -185,31 +185,36 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs text-white/35 sm:flex-row sm:items-center sm:justify-between">
-          <p>
+        <div className="mt-10 flex flex-col gap-5 border-t border-white/10 pt-6 text-xs text-white/35 sm:flex-row sm:items-start sm:justify-between">
+          <p className="sm:pt-1">
             © {new Date().getFullYear()} Purple Haze Restro &amp; Garden. All
             rights reserved.
           </p>
-          <nav
-            aria-label="Policies and legal"
-            className="flex flex-wrap items-center gap-x-4 gap-y-2"
-          >
-            {LEGAL_LINKS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="transition hover:text-white"
-              >
-                {item.label}
-              </Link>
-            ))}
+          <div className="sm:text-right">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/70">
+              Policies &amp; Legal
+            </p>
+            <nav
+              aria-label="Policies and legal"
+              className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:justify-end"
+            >
+              {LEGAL_LINKS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="transition hover:text-white"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
             <Link
               href="/login?next=/admin"
-              className="inline-flex items-center gap-1 transition hover:text-white"
+              className="mt-3 inline-flex items-center gap-1 transition hover:text-white"
             >
               Staff login <ArrowUpRight className="size-3" />
             </Link>
-          </nav>
+          </div>
         </div>
       </div>
     </footer>
