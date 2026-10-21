@@ -163,10 +163,10 @@ export function SiteFooter() {
               </a>
               <a
                 href={`mailto:${SITE.email}`}
-                className="flex items-center gap-3 text-sm text-white/55 transition hover:text-white"
+                className="flex items-start gap-3 text-sm text-white/55 transition hover:text-white"
               >
-                <Mail className="size-4 shrink-0 text-gold" />
-                {SITE.email}
+                <Mail className="mt-0.5 size-4 shrink-0 text-gold" />
+                <span className="min-w-0 break-all">{SITE.email}</span>
               </a>
               <p className="flex items-center gap-3 text-sm text-white/55">
                 <Clock className="size-4 shrink-0 text-gold" />

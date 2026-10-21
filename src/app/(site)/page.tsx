@@ -474,13 +474,15 @@ export default async function HomePage() {
                 >
                   <Link
                     href={`/events#${venue.slug}`}
-                    className="group relative block aspect-[4/3] overflow-hidden rounded-2xl"
+                    className={`group relative block overflow-hidden rounded-2xl ${
+                      venues.length === 1 ? "aspect-[16/9]" : "aspect-[4/3]"
+                    }`}
                   >
                     <SmartImage
                       src={venue.image}
                       alt={venue.name}
                       fill
-                      sizes="30vw"
+                      sizes={venues.length === 1 ? "60vw" : "30vw"}
                       className="object-cover opacity-80 transition duration-700 group-hover:scale-105 group-hover:opacity-100"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/25 to-transparent" />
