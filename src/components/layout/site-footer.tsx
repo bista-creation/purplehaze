@@ -40,7 +40,7 @@ export function SiteFooter() {
         aria-hidden
       />
       <div className="container-page relative py-14 lg:py-20">
-        <div className="grid gap-12 lg:grid-cols-[1.3fr_0.8fr_1fr_1.1fr]">
+        <div className="grid gap-10 lg:grid-cols-[1.2fr_0.7fr_0.8fr_0.9fr_0.95fr] lg:gap-8">
           <div>
             <Logo variant="light" />
             <p className="mt-5 max-w-xs text-sm leading-7 text-white/55">
@@ -120,6 +120,24 @@ export function SiteFooter() {
 
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-[0.22em] text-gold">
+              Policies &amp; Legal
+            </h2>
+            <ul className="mt-5 space-y-3">
+              {LEGAL_LINKS.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="text-sm text-white/55 transition hover:text-white"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.22em] text-gold">
               Find us
             </h2>
             <address className="mt-5 space-y-4 not-italic">
@@ -185,36 +203,17 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-5 border-t border-white/10 pt-6 text-xs text-white/35 sm:flex-row sm:items-start sm:justify-between">
-          <p className="sm:pt-1">
+        <div className="mt-10 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs text-white/35 sm:flex-row sm:items-center sm:justify-between">
+          <p>
             © {new Date().getFullYear()} Purple Haze Restro &amp; Garden. All
             rights reserved.
           </p>
-          <div className="sm:text-right">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-gold/70">
-              Policies &amp; Legal
-            </p>
-            <nav
-              aria-label="Policies and legal"
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:justify-end"
-            >
-              {LEGAL_LINKS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="transition hover:text-white"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-            <Link
-              href="/login?next=/admin"
-              className="mt-3 inline-flex items-center gap-1 transition hover:text-white"
-            >
-              Staff login <ArrowUpRight className="size-3" />
-            </Link>
-          </div>
+          <Link
+            href="/login?next=/admin"
+            className="inline-flex items-center gap-1 transition hover:text-white"
+          >
+            Staff login <ArrowUpRight className="size-3" />
+          </Link>
         </div>
       </div>
     </footer>

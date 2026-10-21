@@ -421,7 +421,7 @@ export default async function HomePage() {
           aria-hidden
         />
         <div className="container-page relative">
-          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+          <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
             <Reveal>
               <p className="eyebrow !text-gold">Events &amp; venues</p>
               <h2 className="mt-2 font-display text-4xl font-semibold sm:text-5xl">
@@ -438,23 +438,49 @@ export default async function HomePage() {
               </Button>
             </Reveal>
             <div className="grid gap-4 sm:grid-cols-2">
-              {venues.slice(0, 3).map((venue, index) => (
+              <Reveal className="sm:col-span-2">
+                <Link
+                  href="/events"
+                  className="group relative block aspect-[16/9] overflow-hidden rounded-2xl"
+                >
+                  <SmartImage
+                    src="/images/venues/purplehaze-party.jpg"
+                    alt="Warmly lit outdoor celebration seating at Purple Haze Restro & Garden"
+                    fill
+                    sizes="(min-width: 1024px) 60vw, 100vw"
+                    className="object-cover opacity-90 transition duration-700 group-hover:scale-105 group-hover:opacity-100"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/20 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 sm:p-5">
+                    <div>
+                      <p className="font-display text-xl">
+                        Celebrations under the lights
+                      </p>
+                      <p className="mt-0.5 text-xs text-white/55">
+                        Birthdays, receptions and garden parties.
+                      </p>
+                    </div>
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white/20 text-white/70 transition group-hover:border-gold group-hover:text-gold">
+                      <ArrowRight className="size-3.5" />
+                    </span>
+                  </div>
+                </Link>
+              </Reveal>
+              {venues.slice(0, 2).map((venue, index) => (
                 <Reveal
                   key={venue.id}
-                  delay={index * 0.08}
-                  className={index === 0 ? "sm:col-span-2" : undefined}
+                  delay={0.08 + index * 0.08}
+                  className={venues.length === 1 ? "sm:col-span-2" : undefined}
                 >
                   <Link
                     href={`/events#${venue.slug}`}
-                    className={`group relative block overflow-hidden rounded-2xl ${
-                      index === 0 ? "aspect-[16/8]" : "aspect-[4/3]"
-                    }`}
+                    className="group relative block aspect-[4/3] overflow-hidden rounded-2xl"
                   >
                     <SmartImage
                       src={venue.image}
                       alt={venue.name}
                       fill
-                      sizes={index === 0 ? "60vw" : "30vw"}
+                      sizes="30vw"
                       className="object-cover opacity-80 transition duration-700 group-hover:scale-105 group-hover:opacity-100"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/25 to-transparent" />
