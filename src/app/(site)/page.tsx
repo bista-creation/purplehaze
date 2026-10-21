@@ -100,7 +100,7 @@ export default async function HomePage() {
             alt=""
             fill
             sizes="384px"
-            className="object-cover opacity-90"
+            className="object-cover opacity-70"
           />
         </div>
 
@@ -178,7 +178,7 @@ export default async function HomePage() {
           preload="metadata"
           aria-hidden="true"
         />
-<div className="absolute inset-0 bg-purple-950/60" />
+<div className="absolute inset-0 bg-purple-950/40" />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">
