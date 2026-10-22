@@ -701,7 +701,8 @@ elevenlabs-convai {
   --el-accent-primary: #ffffff;
   --elevenlabs-convai-widget-width: min(400px, calc(100vw - 2rem));
   --elevenlabs-convai-widget-height: min(620px, calc(100vh - 7rem));
-  z-index: 30;
+  --el-overlay-padding: 12px;
+  z-index: 45;
 }
 
 @supports (height: 100dvh) {
@@ -712,7 +713,8 @@ elevenlabs-convai {
 
 @media (max-width: 640px) {
   elevenlabs-convai {
-    --elevenlabs-convai-widget-width: calc(100vw - 1.5rem);
+    --elevenlabs-convai-widget-width: calc(100vw - 1.25rem);
+    --el-overlay-padding: 10px;
   }
 }
 
