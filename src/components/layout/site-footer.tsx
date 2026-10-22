@@ -47,6 +47,40 @@ export function SiteFooter() {
               A garden restaurant, banquet venue and meeting place on Airport
               Road. Made for everyday meals and once-in-a-lifetime evenings.
             </p>
+            <p className="mt-3 max-w-xs text-xs leading-6 text-white/60">
+              Prefer to talk to a person, or having trouble with the voice
+              assistant?{" "}
+              <a
+                href={`tel:${SITE.phoneRaw}`}
+                className="font-medium text-white/80 underline decoration-white/30 underline-offset-4 transition hover:text-gold"
+              >
+                Call {SITE.phone}
+              </a>{" "}
+              or{" "}
+              <a
+                href={`https://wa.me/${SITE.whatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-white/80 underline decoration-white/30 underline-offset-4 transition hover:text-gold"
+              >
+                WhatsApp us
+              </a>
+              . You can also browse the{" "}
+              <Link
+                href="/menu"
+                className="font-medium text-white/80 underline decoration-white/30 underline-offset-4 transition hover:text-gold"
+              >
+                menu
+              </Link>{" "}
+              or{" "}
+              <Link
+                href="/reservations"
+                className="font-medium text-white/80 underline decoration-white/30 underline-offset-4 transition hover:text-gold"
+              >
+                reserve a table
+              </Link>
+              .
+            </p>
             <div className="mt-6 flex gap-2">
               <a
                 href={SITE.facebook}

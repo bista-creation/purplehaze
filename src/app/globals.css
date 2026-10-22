@@ -682,3 +682,42 @@
     text-decoration: none !important;
   }
 }
+
+/* ElevenLabs public voice assistant */
+elevenlabs-convai {
+  /* Keep the widget on the public site's purple/gold/lavender palette. */
+  --el-base: #faf8ff;
+  --el-base-hover: #f3effc;
+  --el-base-active: #ede9fe;
+  --el-base-border: #e5dcf6;
+  --el-base-subtle: #655c72;
+  --el-base-primary: #1a1025;
+  --el-base-error: #b91c1c;
+  --el-accent: #5b21b6;
+  --el-accent-hover: #6d28d9;
+  --el-accent-active: #4c1d95;
+  --el-accent-border: #4c1d95;
+  --el-accent-subtle: #7c3aed;
+  --el-accent-primary: #ffffff;
+  --elevenlabs-convai-widget-width: min(400px, calc(100vw - 2rem));
+  --elevenlabs-convai-widget-height: min(620px, calc(100vh - 7rem));
+  z-index: 30;
+}
+
+@supports (height: 100dvh) {
+  elevenlabs-convai {
+    --elevenlabs-convai-widget-height: min(620px, calc(100dvh - 7rem));
+  }
+}
+
+@media (max-width: 640px) {
+  elevenlabs-convai {
+    --elevenlabs-convai-widget-width: calc(100vw - 1.5rem);
+  }
+}
+
+@media print {
+  elevenlabs-convai {
+    display: none !important;
+  }
+}
