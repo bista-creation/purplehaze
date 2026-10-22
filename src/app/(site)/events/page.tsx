@@ -149,7 +149,7 @@ export default async function EventsPage({
               <Reveal key={venue.id} delay={index * 0.06}>
                 <article
                   id={venue.slug}
-                  className="grid overflow-hidden rounded-2xl border border-border bg-card lg:grid-cols-[0.9fr_1.1fr]"
+                  className="grid min-w-0 overflow-hidden rounded-2xl border border-border bg-card lg:grid-cols-[0.9fr_1.1fr]"
                 >
                   <div className="relative min-h-64 lg:min-h-80">
                     <SmartImage
@@ -160,7 +160,7 @@ export default async function EventsPage({
                       className="object-cover"
                     />
                   </div>
-                  <div className="p-6 sm:p-8">
+                  <div className="min-w-0 p-6 sm:p-8">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-display text-2xl font-semibold sm:text-3xl">
                         {venue.name}
@@ -191,9 +191,12 @@ export default async function EventsPage({
                       ))}
                     </ul>
                     <div className="mt-6 flex flex-wrap items-center gap-3">
-                      <Button asChild size="sm">
-                        <Link href={`/events?venue=${venue.id}#enquire`}>
-                          Enquire about {venue.name}
+                      <Button asChild size="sm" className="w-full sm:w-auto">
+                        <Link
+                          href={`/events?venue=${venue.id}#enquire`}
+                          aria-label={`Enquire about ${venue.name}`}
+                        >
+                          Enquire about this venue
                         </Link>
                       </Button>
                       <span className="text-xs text-muted-foreground">

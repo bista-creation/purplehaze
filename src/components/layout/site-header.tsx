@@ -101,7 +101,7 @@ export function SiteHeader() {
               className="inline-flex items-center gap-1.5 font-medium text-gold transition hover:text-white"
             >
               <Phone className="size-3" aria-hidden />
-              {SITE.phone}
+              {SITE.topbarPhone}
             </a>
           </div>
         </div>

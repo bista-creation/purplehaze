@@ -1,8 +1,11 @@
+"use client";
+
+import { createElement, useEffect, useState } from "react";
 import Script from "next/script";
-import { createElement } from "react";
 
 const AGENT_ID = "agent_6301m5j07ysaft8bygkjb77bjwmr";
 const AVATAR_URL = "https://purplehaze-nine.vercel.app/images/brand/maya.png";
+const MOBILE_QUERY = "(max-width: 767px)";
 
 /**
  * Loads the public ElevenLabs conversation widget once for the public site.
@@ -13,6 +16,17 @@ const AVATAR_URL = "https://purplehaze-nine.vercel.app/images/brand/maya.png";
  * domain allowlist configured in ElevenLabs.
  */
 export function ElevenLabsWidget() {
+  const [variant, setVariant] = useState<"compact" | "tiny">("compact");
+
+  useEffect(() => {
+    const mobile = window.matchMedia(MOBILE_QUERY);
+    const syncVariant = () => setVariant(mobile.matches ? "tiny" : "compact");
+
+    syncVariant();
+    mobile.addEventListener("change", syncVariant);
+    return () => mobile.removeEventListener("change", syncVariant);
+  }, []);
+
   return (
     <>
       <Script
@@ -26,7 +40,7 @@ export function ElevenLabsWidget() {
         "avatar-orb-color-1": "#5b21b6",
         "avatar-orb-color-2": "#f5b942",
         "show-avatar-when-collapsed": "true",
-        variant: "compact",
+        variant,
         placement: "bottom-right",
         dismissible: "true",
         "text-input": "true",
