@@ -2,7 +2,7 @@ import { SessionProvider } from "next-auth/react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { CartSheet } from "@/components/cart/cart-sheet";
-import { ElevenLabsWidget } from "@/components/voice/elevenlabs-widget";
+import { PurpleHazeAssistant } from "@/components/voice/purple-haze-assistant";
 import { RestaurantJsonLd } from "@/components/seo/restaurant-json-ld";
 
 export default function SiteLayout({
@@ -17,7 +17,7 @@ export default function SiteLayout({
         </main>
         <SiteFooter />
         <CartSheet />
-        <ElevenLabsWidget />
+        <PurpleHazeAssistant />
         <RestaurantJsonLd />
       </div>
     </SessionProvider>
