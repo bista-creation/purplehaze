@@ -158,7 +158,7 @@ export default async function HomePage() {
               </div>
             </Reveal>
           </div>
-
+          
           <Reveal delay={0.18} className="relative">
             <div className="relative mx-auto max-w-xl">
               <div className="absolute -left-4 -top-5 hidden rounded-2xl border border-gold/30 bg-card/90 px-4 py-3 shadow-xl backdrop-blur sm:block">
