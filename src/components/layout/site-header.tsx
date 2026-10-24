@@ -55,9 +55,10 @@ type HeaderUser = {
 };
 
 export function SiteHeader() {
-  // Next can return null for the root path during server rendering. Normalize
-  // it so the active-link markup matches on the server and first client render.
-  const pathname = usePathname() ?? "/";
+  // Next can return null or an empty string for the root path during server
+  // rendering. Normalize it so the active-link markup matches on the server
+  // and first client render.
+  const pathname = usePathname() || "/";
   const { data: session, status } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const mounted = useMounted();
