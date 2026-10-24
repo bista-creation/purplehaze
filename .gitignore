@@ -46,7 +46,6 @@ yarn-error.log*
 
 # local database and uploaded files (never commit production data)
 /prisma/*.db*
-/public/images/uploads/
 
 # local Supabase CLI state
 /supabase/.branches/
