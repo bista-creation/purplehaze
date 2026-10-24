@@ -32,8 +32,6 @@ const launcherStyle: CSSProperties = {
   right: 20,
   bottom: 20,
   zIndex: 999999,
-  width: 60,
-  height: 60,
   padding: 0,
   border: "2px solid #f5b942",
   borderRadius: "9999px",
@@ -107,7 +105,7 @@ export function PurpleHazeAssistant() {
         title="Chat with Maya"
         style={launcherStyle}
         onClick={() => setIsOpen(true)}
-        className="rounded-full transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1025]"
+        className="h-[52px] w-[52px] rounded-full transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1025] sm:h-[60px] sm:w-[60px]"
       >
         <Image
           src={AVATAR_URL}
@@ -118,7 +116,7 @@ export function PurpleHazeAssistant() {
         />
         <span
           aria-hidden="true"
-          className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-[#1a1025] bg-[#22C55E]"
+          className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#1a1025] bg-[#22C55E] sm:h-3 sm:w-3"
         />
       </button>
     );
