@@ -40,7 +40,7 @@ const launcherStyle: CSSProperties = {
   background: "#1a1025",
   boxShadow: "0 10px 30px rgba(0, 0, 0, 0.35)",
   cursor: "pointer",
-  overflow: "hidden",
+  overflow: "visible",
   WebkitTapHighlightColor: "transparent",
 };
 
@@ -102,7 +102,7 @@ export function PurpleHazeAssistant() {
       <button
         ref={launcherRef}
         type="button"
-        aria-label="Open Maya assistant"
+        aria-label="Open Maya assistant (online)"
         aria-haspopup="dialog"
         title="Chat with Maya"
         style={launcherStyle}
@@ -114,7 +114,11 @@ export function PurpleHazeAssistant() {
           alt=""
           width={60}
           height={60}
-          className="h-full w-full object-cover"
+          className="h-full w-full rounded-full object-cover"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-[#1a1025] bg-[#22C55E]"
         />
       </button>
     );
