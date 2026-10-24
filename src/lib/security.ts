@@ -96,7 +96,8 @@ export async function assertSameOrigin() {
   if (!host) return;
   try {
     const originHost = new URL(origin).host;
-    if (originHost !== host) {
+    const normalizeHost = (h: string) => h.replace(/^127\.0\.0\.1/, "localhost");
+    if (originHost !== host && normalizeHost(originHost) !== normalizeHost(host)) {
       throw new AuthorizationError("Invalid request origin.");
     }
   } catch (error) {

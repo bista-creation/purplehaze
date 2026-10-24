@@ -40,13 +40,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = loginSchema.safeParse({
           email: credentials?.email,
           password: credentials?.password,
           remember: true,
         });
         if (!parsed.success) return null;
+
+        // The custom login form has an IP + email limit, but the Auth.js
+        // credentials endpoint can be called directly. Keep an IP-wide bucket
+        // here as well so that endpoint cannot be used to spray many emails.
+        const forwarded = request?.headers.get("x-forwarded-for") ?? "";
+        const ip =
+          request?.headers.get("x-real-ip")?.trim() ||
+          request?.headers.get("cf-connecting-ip")?.trim() ||
+          forwarded.split(",").at(-1)?.trim() ||
+          "";
+        if (ip) {
+          const ipLimit = await checkRateLimit(
+            `login-ip:${ip}`,
+            50,
+            10 * 60 * 1000,
+          );
+          if (!ipLimit.success) return null;
+        }
 
         const limit = await checkRateLimit(
           `login:${parsed.data.email}`,
@@ -106,7 +124,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = user.role ?? "CUSTOMER";
@@ -134,14 +152,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.role = currentUser.isBlocked ? "CUSTOMER" : currentUser.role;
           token.phone = currentUser.phone;
           token.sessionVersion = currentUser.sessionVersion;
-        }
-        if (session?.user) {
-          if (typeof session.user.name === "string") {
-            token.name = session.user.name;
-          }
-          if (typeof session.user.image === "string") {
-            token.picture = session.user.image;
-          }
         }
       }
       return token;
