@@ -12,6 +12,7 @@ import {
   Phone,
   Sparkles,
   UsersRound,
+  UtensilsCrossed,
 } from "lucide-react";
 import { EventBookingForm } from "@/components/forms/event-booking-form";
 import { Reveal } from "@/components/motion/reveal";
@@ -19,6 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SmartImage } from "@/components/ui/smart-image";
 import { getPublicVenues } from "@/lib/queries";
+import { getEventMenus } from "@/lib/event-menus-store";
+import { formatNPR } from "@/lib/money";
 import { EVENT_TYPES, FALLBACK_VENUE_IMAGE, SITE } from "@/lib/constants";
 import { parseJsonArray } from "@/lib/utils";
 import { todayInNepal } from "@/lib/time";
@@ -37,10 +40,11 @@ const eventTypeIcons = [PartyPopper, Building2, UsersRound, Sparkles, CalendarDa
 export default async function EventsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ venue?: string }>;
+  searchParams: Promise<{ venue?: string; package?: string; guests?: string }>;
 }) {
-  const [venues, { venue }] = await Promise.all([
+  const [venues, eventMenus, { venue, package: pkg, guests }] = await Promise.all([
     getPublicVenues(),
+    getEventMenus(),
     searchParams,
   ]);
   const minDate = todayInNepal();
@@ -75,6 +79,15 @@ export default async function EventsPage({
             <Button asChild variant="gold">
               <Link href="#enquire">
                 Send an enquiry <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="border-white/20 bg-white/10 text-white backdrop-blur-xs hover:bg-white/20 hover:text-white"
+            >
+              <Link href="/events/menu">
+                <UtensilsCrossed className="size-4" /> Explore Event Menus
               </Link>
             </Button>
             <Button
@@ -215,6 +228,78 @@ export default async function EventsPage({
         </div>
       </section>
 
+      {/* EVENT MENUS & CATERING SHOWCASE */}
+      <section className="border-b border-border/60 bg-gradient-to-b from-card/45 via-card to-background py-16 lg:py-24">
+        <div className="container-page">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <Reveal className="max-w-xl">
+              <Badge variant="gold" className="rounded-full px-3 py-1 text-[10px]">
+                <Sparkles className="size-3" /> Catering &amp; Banquets
+              </Badge>
+              <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
+                Curated celebration menus.
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                All-inclusive per-plate packages crafted with live tandoor counters, rich curries, and dessert bars for weddings, corporate buffets and birthdays.
+              </p>
+            </Reveal>
+            <Button asChild size="lg" className="w-fit">
+              <Link href="/events/menu">
+                View All Event Menus &amp; Estimate <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {eventMenus.slice(0, 3).map((pkgItem, idx) => (
+              <Reveal key={pkgItem.id} delay={idx * 0.08}>
+                <div className="group overflow-hidden rounded-2xl border border-border bg-card shadow-xs transition hover:border-primary/40 hover:shadow-md">
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+                    <SmartImage
+                      src={pkgItem.image || FALLBACK_VENUE_IMAGE}
+                      alt={pkgItem.name}
+                      fill
+                      sizes="350px"
+                      className="object-cover transition duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    <div className="absolute left-3 top-3 flex gap-1">
+                      <Badge variant="violet" className="text-[10px]">{pkgItem.eventType}</Badge>
+                      {pkgItem.isPopular ? <Badge variant="gold" className="text-[10px]">Popular</Badge> : null}
+                    </div>
+                    <div className="absolute bottom-3 left-3 right-3 flex items-baseline justify-between text-white">
+                      <span className="font-display text-xl font-bold text-gold">
+                        {formatNPR(pkgItem.pricePerPerson * 100)} <span className="text-xs font-normal text-white/70">/ person</span>
+                      </span>
+                      <span className="text-[11px] text-white/80">Min. {pkgItem.minGuests} guests</span>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <h3 className="font-display text-lg font-bold group-hover:text-primary">{pkgItem.name}</h3>
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{pkgItem.tagline || pkgItem.description}</p>
+                    <div className="mt-4 flex flex-wrap gap-1">
+                      {pkgItem.badges.slice(0, 3).map((b) => (
+                        <span key={b} className="rounded-md bg-secondary/80 px-2 py-0.5 text-[10px] text-muted-foreground">{b}</span>
+                      ))}
+                    </div>
+                    <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-3">
+                      <Link href={`/events/menu#${pkgItem.slug}`} className="text-xs font-semibold text-primary hover:underline">
+                        Explore courses &rarr;
+                      </Link>
+                      <Button asChild size="sm" variant="outline" className="h-8 text-xs">
+                        <Link href={`/events?package=${encodeURIComponent(pkgItem.slug)}#enquire`}>
+                          Select this menu
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="enquire" className="container-page scroll-mt-28 py-16 lg:py-24">
         <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
           <Reveal>
@@ -275,6 +360,8 @@ export default async function EventsPage({
                 initialVenueId={
                   venues.some((item) => item.id === venue) ? venue : ""
                 }
+                initialPackage={pkg ?? ""}
+                initialGuests={guests ? Number(guests) : undefined}
               />
             </div>
           </Reveal>

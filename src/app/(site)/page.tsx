@@ -161,7 +161,7 @@ export default async function HomePage() {
           
           <Reveal delay={0.18} className="relative">
             <div className="relative mx-auto max-w-xl">
-              <div className="absolute -left-4 -top-5 hidden rounded-2xl border border-gold/30 bg-card/90 px-4 py-3 shadow-xl backdrop-blur sm:block">
+              <div className="absolute -left-4 -top-5 z-20 hidden rounded-2xl border border-gold/30 bg-card/90 px-4 py-3 shadow-xl backdrop-blur sm:block">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                   On Airport Road
                 </p>
@@ -178,7 +178,7 @@ export default async function HomePage() {
           preload="metadata"
           aria-hidden="true"
         />
-<div className="absolute inset-0 bg-purple-950/40" />
+<div className="absolute inset-0 bg-purple-950/50" />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 text-white sm:p-7">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gold">
@@ -189,7 +189,7 @@ export default async function HomePage() {
                   </p>
                 </div>
               </div>
-              <div className="absolute -bottom-6 -right-3 max-w-[220px] rounded-2xl border border-border bg-card/95 p-4 shadow-xl backdrop-blur sm:-right-7 sm:p-5">
+              <div className="absolute -bottom-6 -right-3 z-20 max-w-[220px] rounded-2xl border border-border bg-card/95 p-4 shadow-xl backdrop-blur sm:-right-7 sm:p-5">
                 <div className="flex items-center gap-3">
                   <span className="grid size-9 place-items-center rounded-full bg-secondary text-primary">
                     <PartyPopper className="size-4" />
@@ -434,6 +434,15 @@ export default async function HomePage() {
               <Button asChild variant="gold" className="mt-7">
                 <Link href="/events">
                   Plan an event <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="mt-7 border-white/20 bg-white/10 text-white backdrop-blur-xs hover:bg-white/20 hover:text-white"
+              >
+                <Link href="/events/menu">
+                  <UtensilsCrossed className="size-4" /> Event Menus
                 </Link>
               </Button>
             </Reveal>
