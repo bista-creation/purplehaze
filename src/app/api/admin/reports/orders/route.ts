@@ -41,8 +41,8 @@ export async function GET(request: Request) {
       ...(q
         ? {
             OR: [
-              { orderNumber: { contains: q, mode: "insensitive" } },
-              { customerName: { contains: q, mode: "insensitive" } },
+              { orderNumber: { contains: q } },
+              { customerName: { contains: q } },
               { customerPhone: { contains: q } },
             ],
           }

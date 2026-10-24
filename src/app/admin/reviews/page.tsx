@@ -10,6 +10,7 @@ import { ReviewControls } from "@/components/admin/review-controls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { requireStaff } from "@/lib/security";
 import { formatDateTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -39,7 +40,21 @@ export default async function AdminReviewsPage({
           ? { isApproved: true, isFeatured: true }
           : {};
 
-  const [reviews, total, pendingCount, featuredCount, average] = await Promise.all([
+  type ReviewItem = Prisma.ReviewGetPayload<{
+    include: {
+      user: { select: { name: true; email: true } };
+      order: { select: { orderNumber: true } };
+    };
+  }>;
+
+  let reviews: ReviewItem[] = [];
+  let total = 0;
+  let pendingCount = 0;
+  let featuredCount = 0;
+  let average = { _avg: { rating: null as number | null }, _count: { _all: 0 } };
+
+  try {
+    const [rList, tot, pCount, fCount, avg] = await Promise.all([
     prisma.review.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -58,7 +73,15 @@ export default async function AdminReviewsPage({
       _avg: { rating: true },
       _count: { _all: true },
     }),
-  ]);
+    ]);
+    reviews = rList;
+    total = tot;
+    pendingCount = pCount;
+    featuredCount = fCount;
+    average = avg;
+  } catch {
+    console.warn("Database offline in AdminReviewsPage; using empty list.");
+  }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function href(nextPage: number, nextStatus = status) {

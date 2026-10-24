@@ -88,11 +88,22 @@ export default async function AdminNotificationsPage({
     take: PAGE_SIZE,
     skip: (page - 1) * PAGE_SIZE,
   };
-  const [notifications, total, unreadCount] = await Promise.all([
+  let notifications: Awaited<ReturnType<typeof getNotificationInbox>> = [];
+  let total = 0;
+  let unreadCount = 0;
+
+  try {
+    const [nList, tot, uCount] = await Promise.all([
     getNotificationInbox(user.id, filters),
     getNotificationInboxCount(user.id, filters),
     getUnreadNotificationCount(user.id),
-  ]);
+    ]);
+    notifications = nList;
+    total = tot;
+    unreadCount = uCount;
+  } catch {
+    console.warn("Database offline in AdminNotificationsPage; using empty inbox.");
+  }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function href(next: {

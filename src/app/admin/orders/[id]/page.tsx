@@ -26,6 +26,7 @@ import { ConfirmActionButton } from "@/components/admin/confirm-action-button";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { OrderTimeline } from "@/components/orders/order-timeline";
 import { OrderPrintActions } from "@/components/print/order-print-actions";
+import { StaffOrderQuickActions } from "@/components/admin/staff-order-quick-actions";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,35 +103,48 @@ export default async function AdminOrderDetailPage({
             </Button>
             <OrderPrintActions
               orderNumber={order.orderNumber}
-              kot={user.role === "ADMIN"}
+              kot={true}
               className="no-print"
             />
           </>
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <StatusBadge status={order.status} />
-        <Badge variant={payment.tone === "muted" ? "muted" : payment.tone}>
-          <Wallet className="size-3" /> {payment.label}
-        </Badge>
-        <Badge variant="violet">
-          <TypeIcon className="size-3" />{" "}
-          {ORDER_TYPE_LABELS[order.type as OrderType] ?? order.type}
-        </Badge>
-        {order.scheduledFor ? (
-          <Badge variant="amber">
-            <CalendarClock className="size-3" /> Scheduled{" "}
-            {formatDateTime(order.scheduledFor)}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-muted/40 p-3.5 no-print">
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={order.status} />
+          <Badge variant={payment.tone === "muted" ? "muted" : payment.tone}>
+            <Wallet className="size-3" /> {payment.label}
           </Badge>
-        ) : null}
-        {order.tableNumber ? (
-          <Badge variant="muted">Table {order.tableNumber}</Badge>
-        ) : null}
-        {order.status === "CANCELLED" && order.paymentStatus === "PAID" ? (
-          <Badge variant="red">Refund required</Badge>
-        ) : null}
-        {order.isTest ? <Badge variant="amber">Test order</Badge> : null}
+          <Badge variant="violet">
+            <TypeIcon className="size-3" />{" "}
+            {ORDER_TYPE_LABELS[order.type as OrderType] ?? order.type}
+          </Badge>
+          {order.scheduledFor ? (
+            <Badge variant="amber">
+              <CalendarClock className="size-3" /> Scheduled{" "}
+              {formatDateTime(order.scheduledFor)}
+            </Badge>
+          ) : null}
+          {order.tableNumber ? (
+            <Badge variant="muted">Table {order.tableNumber}</Badge>
+          ) : null}
+          {order.status === "CANCELLED" && order.paymentStatus === "PAID" ? (
+            <Badge variant="red">Refund required</Badge>
+          ) : null}
+          {order.isTest ? <Badge variant="amber">Test order</Badge> : null}
+        </div>
+
+        <StaffOrderQuickActions
+          orderId={order.id}
+          orderNumber={order.orderNumber}
+          status={order.status}
+          type={order.type}
+          customerName={order.customerName}
+          customerPhone={order.customerPhone}
+          allowedAccept={acceptance.allowed}
+          blockedReason={acceptance.allowed ? undefined : acceptance.reason}
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">

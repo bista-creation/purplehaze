@@ -5,7 +5,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { resolveReportRange } from "@/lib/report-range";
 import { formatDateTime } from "@/lib/utils";
 import { paisaToRupees } from "@/lib/money";
-import { realOrderWhere, realOrdersWhere } from "@/lib/test-data";
+import { realOrdersWhere } from "@/lib/test-data";
 
 export async function GET(request: Request) {
   const { user, response } = await requireExportUser(["ADMIN"]);
@@ -25,8 +25,8 @@ export async function GET(request: Request) {
       ...(q
         ? {
             OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { email: { contains: q, mode: "insensitive" } },
+              { name: { contains: q } },
+              { email: { contains: q } },
               { phone: { contains: q } },
             ],
           }
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
       isBlocked: true,
       emailVerified: true,
       createdAt: true,
-      _count: { select: { orders: { where: realOrderWhere } } },
+      _count: { select: { orders: true } },
     },
   });
 

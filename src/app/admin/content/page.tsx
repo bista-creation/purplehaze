@@ -25,8 +25,16 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminContentPage() {
   await requireAdmin("/admin/content");
-  const [gallery, banners, testimonials, latestGallery, latestTestimonials] =
-    await Promise.all([
+  let gallery = 0;
+  let banners = 0;
+  let testimonials = 0;
+  type LatestGalleryItem = { id: string; title: string; category: string; isActive: boolean };
+  type LatestTestimonialItem = { id: string; name: string; isActive: boolean; createdAt: Date };
+  let latestGallery: LatestGalleryItem[] = [];
+  let latestTestimonials: LatestTestimonialItem[] = [];
+
+  try {
+    const [g, b, t, lg, lt] = await Promise.all([
       prisma.galleryImage.count(),
       prisma.banner.count(),
       prisma.testimonial.count(),
@@ -41,6 +49,14 @@ export default async function AdminContentPage() {
         select: { id: true, name: true, isActive: true, createdAt: true },
       }),
     ]);
+    gallery = g;
+    banners = b;
+    testimonials = t;
+    latestGallery = lg;
+    latestTestimonials = lt;
+  } catch {
+    console.warn("Database offline in AdminContentPage; using default empty counts.");
+  }
 
   const cards = [
     {

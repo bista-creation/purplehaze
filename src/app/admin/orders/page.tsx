@@ -16,7 +16,8 @@ import {
   AdminEmpty,
   AdminPageHeader,
 } from "@/components/admin/admin-page";
-import { LiveOrderActions } from "@/components/admin/live-order-actions";
+import { StaffLiveOrderListener } from "@/components/admin/staff-live-order-listener";
+import { StaffOrderQuickActions } from "@/components/admin/staff-order-quick-actions";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -107,8 +108,8 @@ export default async function AdminOrdersPage({
     ...(q
       ? {
           OR: [
-            { orderNumber: { contains: q, mode: "insensitive" } },
-            { customerName: { contains: q, mode: "insensitive" } },
+            { orderNumber: { contains: q } },
+            { customerName: { contains: q } },
             { customerPhone: { contains: q } },
           ],
         }
@@ -117,11 +118,47 @@ export default async function AdminOrdersPage({
   const where = includeTest ? filterWhere : realOrdersWhere(filterWhere);
   const baseWhere = includeTest ? {} : realOrderWhere;
   const queueWhere = includeTest
-    ? { status: "PENDING" }
-    : realOrdersWhere({ status: "PENDING" });
+    ? {
+        status: "PENDING",
+        OR: [{ paymentMethod: "COD" }, { paymentStatus: "PAID" }],
+      }
+    : realOrdersWhere({
+        status: "PENDING",
+        OR: [{ paymentMethod: "COD" }, { paymentStatus: "PAID" }],
+      });
 
-  const [orders, total, counts, activeCount, pendingCount, queue] =
-    await Promise.all([
+  type OrderRow = {
+    id: string;
+    orderNumber: string;
+    customerName: string;
+    customerPhone: string;
+    type: string;
+    status: string;
+    paymentStatus: string;
+    paymentMethod: string;
+    total: number;
+    createdAt: Date;
+    scheduledFor: Date | null;
+    isTest: boolean;
+  };
+
+  type QueueRow = OrderRow & {
+    deliveryAddress: string | null;
+    tableNumber: string | null;
+    notes: string | null;
+  };
+
+  type StatusCountRow = { status: string; _count: { _all: number } };
+
+  let orders: OrderRow[] = [];
+  let total = 0;
+  let counts: StatusCountRow[] = [];
+  let activeCount = 0;
+  let pendingCount = 0;
+  let queue: QueueRow[] = [];
+
+  try {
+    const [o, t, c, a, p, q] = await Promise.all([
       prisma.order.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -171,6 +208,7 @@ export default async function AdminOrdersPage({
           id: true,
           orderNumber: true,
           customerName: true,
+          customerPhone: true,
           type: true,
           status: true,
           paymentStatus: true,
@@ -185,6 +223,15 @@ export default async function AdminOrdersPage({
         },
       }),
     ]);
+    orders = o;
+    total = t;
+    counts = c;
+    activeCount = a;
+    pendingCount = p;
+    queue = q;
+  } catch {
+    console.warn("Database offline in AdminOrdersPage; using empty orders queue.");
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const countMap = new Map(counts.map((row) => [row.status, row._count._all]));
@@ -232,6 +279,8 @@ export default async function AdminOrdersPage({
           </>
         }
       />
+
+      <StaffLiveOrderListener />
 
       <AdminCard className="mb-4 border-primary/25 p-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -332,15 +381,14 @@ export default async function AdminOrdersPage({
                     </p>
                   ) : null}
                   <div className="mt-3">
-                    <LiveOrderActions
+                    <StaffOrderQuickActions
                       orderId={order.id}
                       orderNumber={order.orderNumber}
-                      serviceSummary={service}
-                      paymentLabel={payment.label}
-                      paymentDetail={payment.detail}
-                      totalLabel={formatNPR(order.total)}
-                      cashDue={payment.isCashDue}
-                      allowed={acceptance.allowed}
+                      status={order.status}
+                      type={order.type}
+                      customerName={order.customerName}
+                      customerPhone={order.customerPhone}
+                      allowedAccept={acceptance.allowed}
                       blockedReason={
                         acceptance.allowed ? undefined : acceptance.reason
                       }
@@ -503,6 +551,7 @@ export default async function AdminOrdersPage({
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Placed</TableHead>
+                  <TableHead className="text-right">Quick Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -511,6 +560,7 @@ export default async function AdminOrdersPage({
                     order.paymentMethod,
                     order.paymentStatus,
                   );
+                  const acceptance = evaluateOrderAcceptance(order);
                   return (
                     <TableRow key={order.id}>
                       <TableCell>
@@ -563,6 +613,20 @@ export default async function AdminOrdersPage({
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-[11px] text-muted-foreground">
                         {formatDateTime(order.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <StaffOrderQuickActions
+                          orderId={order.id}
+                          orderNumber={order.orderNumber}
+                          status={order.status}
+                          type={order.type}
+                          customerName={order.customerName}
+                          customerPhone={order.customerPhone}
+                          allowedAccept={acceptance.allowed}
+                          blockedReason={
+                            acceptance.allowed ? undefined : acceptance.reason
+                          }
+                        />
                       </TableCell>
                     </TableRow>
                   );

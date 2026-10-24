@@ -65,15 +65,34 @@ export default async function AdminCustomersPage({
     ...(q
       ? {
           OR: [
-            { name: { contains: q, mode: "insensitive" } },
-            { email: { contains: q, mode: "insensitive" } },
+            { name: { contains: q } },
+            { email: { contains: q } },
             { phone: { contains: q } },
           ],
         }
       : {}),
   };
 
-  const [customers, total, customerCount, blockedCount] = await Promise.all([
+  type CustomerItem = {
+    id: string;
+    name: string | null;
+    email: string;
+    phone: string | null;
+    image: string | null;
+    isBlocked: boolean;
+    isTest: boolean;
+    createdAt: Date;
+    emailVerified: Date | null;
+    _count: { orders: number };
+  };
+  let customers: CustomerItem[] = [];
+  let total = 0;
+  let customerCount = 0;
+  let blockedCount = 0;
+  let spendMap = new Map<string | null, number>();
+
+  try {
+    const [cList, tot, cCount, bCount] = await Promise.all([
     prisma.user.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -105,19 +124,29 @@ export default async function AdminCustomersPage({
     }),
   ]);
 
-  const ids = customers.map((customer) => customer.id);
-  const spend = await prisma.order.groupBy({
-    by: ["userId"],
-    where: realOrdersWhere({
-      userId: { in: ids },
-      paymentStatus: "PAID",
-      status: { not: "CANCELLED" },
-    }),
-    _sum: { total: true },
-  });
-  const spendMap = new Map(
-    spend.map((row) => [row.userId, row._sum.total ?? 0]),
-  );
+    customers = cList;
+    total = tot;
+    customerCount = cCount;
+    blockedCount = bCount;
+
+    const ids = customers.map((customer) => customer.id);
+    if (ids.length > 0) {
+      const spend = await prisma.order.groupBy({
+        by: ["userId"],
+        where: realOrdersWhere({
+          userId: { in: ids },
+          paymentStatus: "PAID",
+          status: { not: "CANCELLED" },
+        }),
+        _sum: { total: true },
+      });
+      spendMap = new Map(
+        spend.map((row) => [row.userId, row._sum.total ?? 0]),
+      );
+    }
+  } catch {
+    console.warn("Database offline in AdminCustomersPage; using empty list.");
+  }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function href(next: {

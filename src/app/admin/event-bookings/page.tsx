@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { requireStaff } from "@/lib/security";
 import { formatDateTime } from "@/lib/utils";
 import { BOOKING_STATUSES } from "@/lib/constants";
@@ -90,7 +91,28 @@ export default async function AdminEventBookingsPage({
       : {}),
   };
 
-  const [bookings, total, pendingCount, venues, calendarRows] = await Promise.all([
+  type BookingItem = Prisma.EventBookingGetPayload<{
+    include: { venue: { select: { name: true } } };
+  }>;
+  type VenueOption = { id: string; name: string };
+  type CalendarItem = {
+    id: string;
+    name: string;
+    eventType: string;
+    eventDate: Date;
+    guests: number;
+    status: string;
+    venue: { name: string } | null;
+  };
+
+  let bookings: BookingItem[] = [];
+  let total = 0;
+  let pendingCount = 0;
+  let venues: VenueOption[] = [];
+  let calendarRows: CalendarItem[] = [];
+
+  try {
+    const [b, t, p, v, c] = await Promise.all([
     prisma.eventBooking.findMany({
       where,
       orderBy: { eventDate: when === "past" ? "desc" : "asc" },
@@ -117,7 +139,15 @@ export default async function AdminEventBookingsPage({
         venue: { select: { name: true } },
       },
     }),
-  ]);
+    ]);
+    bookings = b;
+    total = t;
+    pendingCount = p;
+    venues = v;
+    calendarRows = c;
+  } catch {
+    console.warn("Database offline in AdminEventBookingsPage; using empty list.");
+  }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function href(next: { page?: number }) {

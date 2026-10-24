@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { prisma } from "@/lib/prisma";
+import type { Reservation } from "@prisma/client";
 import { requireStaff } from "@/lib/security";
 import { formatDateTime } from "@/lib/utils";
 import { BOOKING_STATUSES } from "@/lib/constants";
@@ -84,7 +85,13 @@ export default async function AdminReservationsPage({
       : {}),
   };
 
-  const [reservations, total, pendingCount, todayCount] = await Promise.all([
+  let reservations: Reservation[] = [];
+  let total = 0;
+  let pendingCount = 0;
+  let todayCount = 0;
+
+  try {
+    const [r, t, p, td] = await Promise.all([
     prisma.reservation.findMany({
       where,
       orderBy: { date: when === "past" ? "desc" : "asc" },
@@ -101,7 +108,14 @@ export default async function AdminReservationsPage({
         },
       },
     }),
-  ]);
+    ]);
+    reservations = r;
+    total = t;
+    pendingCount = p;
+    todayCount = td;
+  } catch {
+    console.warn("Database offline in AdminReservationsPage; using empty list.");
+  }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function href(next: { page?: number }) {

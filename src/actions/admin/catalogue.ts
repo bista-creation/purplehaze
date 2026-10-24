@@ -148,13 +148,29 @@ export async function saveDishAction(
       parsed.data.slug || parsed.data.name,
       id,
     );
-    const variants = parsed.data.variants.map((variant, index) => ({
-      name: variant.name,
-      priceDelta: rupeesToPaisa(variant.priceDelta),
-      isDefault: variant.isDefault,
-      sortOrder: index,
-      isAvailable: true,
-    }));
+    const activeVariants = parsed.data.variants.filter(
+      (variant) => variant.name.trim().length > 0,
+    );
+
+    let basePriceNpr = parsed.data.price ?? 0;
+    if (activeVariants.length > 0) {
+      const defaultVar =
+        activeVariants.find((v) => v.isDefault) || activeVariants[0];
+      if (!basePriceNpr || basePriceNpr <= 0) {
+        basePriceNpr = defaultVar.priceDelta;
+      }
+    }
+
+    const variants = activeVariants.map((variant, index) => {
+      const delta = Math.max(0, variant.priceDelta - basePriceNpr);
+      return {
+        name: variant.name,
+        priceDelta: rupeesToPaisa(delta),
+        isDefault: variant.isDefault,
+        sortOrder: index,
+        isAvailable: true,
+      };
+    });
     if (variants.length > 0 && !variants.some((variant) => variant.isDefault)) {
       variants[0].isDefault = true;
     }
@@ -165,7 +181,7 @@ export async function saveDishAction(
       slug,
       description: parsed.data.description,
       details: parsed.data.details || null,
-      price: rupeesToPaisa(parsed.data.price),
+      price: rupeesToPaisa(basePriceNpr),
       comparePrice:
         parsed.data.comparePrice && parsed.data.comparePrice > 0
           ? rupeesToPaisa(parsed.data.comparePrice)

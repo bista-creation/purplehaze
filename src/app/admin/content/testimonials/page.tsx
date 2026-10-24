@@ -3,6 +3,7 @@ import { AdminPageHeader } from "@/components/admin/admin-page";
 import { ContentNav } from "@/components/admin/content-nav";
 import { TestimonialAdmin } from "@/components/admin/testimonial-admin";
 import { prisma } from "@/lib/prisma";
+import type { Testimonial } from "@prisma/client";
 import { requireAdmin } from "@/lib/security";
 
 export const metadata: Metadata = { title: "Testimonials" };
@@ -10,9 +11,14 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminTestimonialsPage() {
   await requireAdmin("/admin/content/testimonials");
-  const testimonials = await prisma.testimonial.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-  });
+  let testimonials: Testimonial[] = [];
+  try {
+    testimonials = await prisma.testimonial.findMany({
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    });
+  } catch {
+    console.warn("Database offline in AdminTestimonialsPage; using empty list.");
+  }
 
   return (
     <>

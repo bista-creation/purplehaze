@@ -3,6 +3,7 @@ import { AdminPageHeader } from "@/components/admin/admin-page";
 import { ContentNav } from "@/components/admin/content-nav";
 import { GalleryAdmin } from "@/components/admin/gallery-admin";
 import { prisma } from "@/lib/prisma";
+import type { GalleryImage } from "@prisma/client";
 import { requireAdmin } from "@/lib/security";
 import { getImageUploadMode } from "@/lib/uploads";
 
@@ -11,9 +12,14 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminGalleryPage() {
   await requireAdmin("/admin/content/gallery");
-  const images = await prisma.galleryImage.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-  });
+  let images: GalleryImage[] = [];
+  try {
+    images = await prisma.galleryImage.findMany({
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    });
+  } catch {
+    console.warn("Database offline in AdminGalleryPage; using empty list.");
+  }
 
   return (
     <>

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { prisma } from "@/lib/prisma";
+import type { ContactMessage } from "@prisma/client";
 import { requireStaff } from "@/lib/security";
 import { formatDateTime, cn } from "@/lib/utils";
 
@@ -45,7 +46,13 @@ export default async function AdminMessagesPage({
       : {}),
   };
 
-  const [messages, total, newCount, archivedCount] = await Promise.all([
+  let messages: ContactMessage[] = [];
+  let total = 0;
+  let newCount = 0;
+  let archivedCount = 0;
+
+  try {
+    const [mList, tot, nCount, aCount] = await Promise.all([
     prisma.contactMessage.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -55,7 +62,14 @@ export default async function AdminMessagesPage({
     prisma.contactMessage.count({ where }),
     prisma.contactMessage.count({ where: { status: "NEW" } }),
     prisma.contactMessage.count({ where: { status: "ARCHIVED" } }),
-  ]);
+    ]);
+    messages = mList;
+    total = tot;
+    newCount = nCount;
+    archivedCount = aCount;
+  } catch {
+    console.warn("Database offline in AdminMessagesPage; using empty list.");
+  }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function href(next: { page?: number; status?: string }) {

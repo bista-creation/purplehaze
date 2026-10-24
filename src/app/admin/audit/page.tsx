@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/security";
 import { formatDateTime } from "@/lib/utils";
 import { parseNepalDateTime } from "@/lib/time";
@@ -83,7 +84,18 @@ export default async function AdminAuditPage({
       : {}),
   };
 
-  const [logs, total, todayCount, entityRows] = await Promise.all([
+  type AuditLogItem = Prisma.AuditLogGetPayload<{
+    include: { user: { select: { name: true } } };
+  }>;
+  type EntityRow = { entity: string; _count: { _all: number } };
+
+  let logs: AuditLogItem[] = [];
+  let total = 0;
+  let todayCount = 0;
+  let entityRows: EntityRow[] = [];
+
+  try {
+    const [l, t, tc, er] = await Promise.all([
     prisma.auditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -112,7 +124,14 @@ export default async function AdminAuditPage({
       orderBy: { _count: { entity: "desc" } },
       take: 12,
     }),
-  ]);
+    ]);
+    logs = l;
+    total = t;
+    todayCount = tc;
+    entityRows = er;
+  } catch {
+    console.warn("Database offline in AdminAuditPage; using empty list.");
+  }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function href(next: { page?: number }) {

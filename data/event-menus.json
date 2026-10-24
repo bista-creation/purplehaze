@@ -1,0 +1,323 @@
+[
+  {
+    "id": "em-royal-wedding-01",
+    "name": "Royal Garden Wedding Banquet",
+    "slug": "royal-garden-wedding-banquet",
+    "eventType": "Wedding",
+    "tagline": "Our premier grand celebration menu with live counters, rich curries and royal dessert buffet.",
+    "description": "Designed for grand wedding receptions and anniversary celebrations. Includes multi-cuisine appetizers, aromatic biryani, live tandoor and a lavish dessert counter set under the Purple Haze garden canopy.",
+    "pricePerPerson": 1850,
+    "minGuests": 50,
+    "image": "/images/venues/banquet-hall-setup.jpg",
+    "isPopular": true,
+    "isVegetarian": false,
+    "isActive": true,
+    "sortOrder": 1,
+    "badges": [
+      "Full Buffet",
+      "Live Tandoor",
+      "Wedding Special",
+      "Unlimited Soft Drinks"
+    ],
+    "courses": [
+      {
+        "category": "Welcome Drinks & Mocktails",
+        "items": [
+          "Fresh Mint Mojito",
+          "Cold Drinks"
+        ]
+      },
+      {
+        "category": "Appetizers & Starters",
+        "items": [
+          "Crispy Chicken",
+          "Tareko Machha",
+          "Banjara Kabab",
+          "Paneer Tikka",
+          "Crispy Corn Salt & Pepper",
+          "Dragon Vegetables",
+          "Peanuts Masala"
+        ]
+      },
+      {
+        "category": "Main Course Gravies & Curries",
+        "items": [
+          "Mutton Rogan Josh (Slow Cooked)",
+          "Chicken Strogunoff",
+          "Kadhai Paneer",
+          "Seasonal Garden Vegetable Korma",
+          "Yellow Dal Tadka with Desi Ghee"
+        ]
+      },
+      {
+        "category": "Rice & Tandoori Breads",
+        "items": [
+          "Steamed Basmati Rice with Fried Onions",
+          "Butter Naan & Garlic Naan",
+          "Tandoori Roti with Butter"
+        ]
+      },
+      {
+        "category": "Salads & Accompaniments",
+        "items": [
+          "Green Garden Salad",
+          "Raita",
+          "Nepali Tomato Chutney",
+          "Assorted Papad & Pickles"
+        ]
+      },
+      {
+        "category": "Dessert Counter",
+        "items": [
+          "Hot Gulab Jamun with Rabdi",
+          "Creamy Vanilla Ice Cream"
+        ]
+      }
+    ],
+    "createdAt": "2026-10-24T14:08:15.809Z",
+    "updatedAt": "2026-10-24T20:49:49.385Z"
+  },
+  {
+    "id": "em-bbq-lawn-02",
+    "name": "Biratnagar Barbeque & Lawn Party",
+    "slug": "biratnagar-barbeque-lawn-party",
+    "eventType": "Garden Party",
+    "tagline": "Live charcoal grills, sizzling platters and golden garden evening vibes.",
+    "description": "Perfect for reunion nights, casual gatherings and cocktail evenings. Features live charcoal barbecue stations, spicy skewers, smoky gravies and warm garden seating.",
+    "pricePerPerson": 1550,
+    "minGuests": 30,
+    "image": "/images/venues/purple-night.jpg",
+    "isPopular": true,
+    "isVegetarian": false,
+    "isActive": true,
+    "sortOrder": 2,
+    "badges": [
+      "Live Charcoal BBQ",
+      "Garden Lawn",
+      "Evening Special",
+      "Cocktail Friendly"
+    ],
+    "courses": [
+      {
+        "category": "Welcome Beverages",
+        "items": [
+          "Watermelon Mint Cooler",
+          "Assorted Soft Drinks"
+        ]
+      },
+      {
+        "category": "Live Grill & Sizzler Starters",
+        "items": [
+          "Charcoal Grilled Chicken BBQ(LIVE)",
+          "Chicken Poleko Wings",
+          "Fish Fingers with House Tartar Sauce",
+          "Spiced  Timmur Aloo",
+          "Mexican corn Salad",
+          "Kung Pao Mushroom"
+        ]
+      },
+      {
+        "category": "Main Course",
+        "items": [
+          "Smoky Highway Chicken Curry",
+          "Crispy Fried Fish",
+          "Assorted Mixed Vegetables",
+          "Creamy Dal Makhani",
+          "Jeera Pulao",
+          "Tandoori Roti & Butter Naan"
+        ]
+      },
+      {
+        "category": "Desserts",
+        "items": [
+          "Apple Crumbled",
+          "Ice Cream"
+        ]
+      }
+    ],
+    "createdAt": "2026-10-24T14:08:15.809Z",
+    "updatedAt": "2026-10-24T21:17:40.236Z"
+  },
+  {
+    "id": "em-birthday-feast-03",
+    "name": "Birthday & Family Celebration Feast",
+    "slug": "birthday-family-celebration-feast",
+    "eventType": "Birthday",
+    "tagline": "Crowd-pleasing Indo-Chinese and Nepali comfort food crafted for all age groups.",
+    "description": "Designed for birthdays, graduations and family milestones. Kids and adults alike love the momo station, crispy chicken, fried rice and celebratory desserts.",
+    "pricePerPerson": 1250,
+    "minGuests": 25,
+    "image": "/images/venues/birthday.png",
+    "isPopular": false,
+    "isVegetarian": false,
+    "isActive": true,
+    "sortOrder": 3,
+    "badges": [
+      "Family Favorite",
+      "Music System Ready",
+      "Momo Station",
+      "Cake Table Setup"
+    ],
+    "courses": [
+      {
+        "category": "Welcome Drinks",
+        "items": [
+          "Purple Haze Berry Punch",
+          "Fresh Lime Soda",
+          "Cold Coffee Float"
+        ]
+      },
+      {
+        "category": "Starters & Live Momos",
+        "items": [
+          "Steam Chicken Momo with Spicy Jhol",
+          "Steam Veg Momo with Sesame Tomato Chutney",
+          "Kurkure Chicken Strips with Dip",
+          "Honey Chilli Crispy Potato",
+          "Paneer 65"
+        ]
+      },
+      {
+        "category": "Mains & Asian Bowls",
+        "items": [
+          "Kukhura ko Local Jhol",
+          "Paneer Lababdar",
+          "Egg & Chicken Fried Rice",
+          "Vegetable Hakka Chowmein",
+          "Butter Naan & Roti"
+        ]
+      },
+      {
+        "category": "Dessert & Treats",
+        "items": [
+          "Chocolate Mousse Cups",
+          "Vanilla & Strawberry Ice Cream Duo",
+          "Complimentary Cake Cutting Stand"
+        ]
+      }
+    ],
+    "createdAt": "2026-10-24T14:08:15.809Z",
+    "updatedAt": "2026-10-24T21:23:34.774Z"
+  },
+  {
+    "id": "em-pure-veg-04",
+    "name": "Pure Vegetarian Satvik Banquet",
+    "slug": "pure-vegetarian-satvik-banquet",
+    "eventType": "Anniversary",
+    "tagline": "100% vegetarian royal banquet cooked with pure ghee, fresh paneer and garden herbs.",
+    "description": "Dedicated kitchen protocol ensuring 100% pure vegetarian preparation. Can be fully customized for onion-garlic free Jain preferences.",
+    "pricePerPerson": 1350,
+    "minGuests": 30,
+    "image": "/images/venues/garden-sitting-area.jpg",
+    "isPopular": false,
+    "isVegetarian": true,
+    "isActive": true,
+    "sortOrder": 4,
+    "badges": [
+      "100% Pure Veg",
+      "Jain Friendly Option",
+      "Desi Ghee",
+      "Traditional Buffet"
+    ],
+    "courses": [
+      {
+        "category": "Welcome Drinks",
+        "items": [
+          "Kesar Badam Thandai",
+          "Fresh Pineapple Juice",
+          "Nimbu Shikanji"
+        ]
+      },
+      {
+        "category": "Vegetarian Delicacy Starters",
+        "items": [
+          "Malai Paneer Tikka with Mint Dip",
+          "Dahi ke Kebab with Pomegranate",
+          "Crispy Mushroom Salt & Pepper",
+          "Corn & Cheese Croquettes",
+          "Hara Bhara Kebab"
+        ]
+      },
+      {
+        "category": "Rich Vegetarian Mains",
+        "items": [
+          "Shahi Paneer in Cashew Gravy",
+          "Amritsari Pindi Chana",
+          "Dal Makhani (24-Hour Simmered)",
+          "Kashmiri Dum Aloo",
+          "Methi Malai Matar"
+        ]
+      },
+      {
+        "category": "Rice & Specialty Breads",
+        "items": [
+          "Navratan Pulao with Fried Cashews",
+          "Butter Naan, Missi Roti & Laccha Paratha"
+        ]
+      },
+      {
+        "category": "Sweets & Desserts",
+        "items": [
+          "Moong Dal Halwa with Khoya",
+          "Kesar Rasmalai",
+          "Matka Kulfi"
+        ]
+      }
+    ],
+    "createdAt": "2026-10-24T14:08:15.809Z",
+    "updatedAt": "2026-10-24T21:27:15.994Z"
+  },
+  {
+    "id": "em-corporate-hi-tea-05",
+    "name": "Corporate Conference & Executive Hi-Tea",
+    "slug": "corporate-conference-executive-hi-tea",
+    "eventType": "Corporate",
+    "tagline": "Efficient, punctual catering for meetings, seminars, training and board luncheons.",
+    "description": "Designed for business productivity with minimal noise and maximum flavor. Includes morning coffee/tea session, hearty luncheon and evening hi-tea refreshments.",
+    "pricePerPerson": 950,
+    "minGuests": 20,
+    "image": "/images/gallery/interior.jpg",
+    "isPopular": false,
+    "isVegetarian": false,
+    "isActive": true,
+    "sortOrder": 5,
+    "badges": [
+      "Corporate Setup",
+      "Projector & Mic Support",
+      "Punctual Service",
+      "Light & Energizing"
+    ],
+    "courses": [
+      {
+        "category": "Arrival Refreshment",
+        "items": [
+          "Freshly Brewed Organic Ilam Tea",
+          "Filter Coffee",
+          "Assorted Butter Cookies"
+        ]
+      },
+      {
+        "category": "Executive Luncheon",
+        "items": [
+          "Boneless Chicken Curry in Mild Gravy",
+          "Paneer Do Pyaza",
+          "Steamed Rice & Jeera Rice",
+          "Yellow Moong Dal",
+          "Steamed Chicken & Veg Momos",
+          "Crispy Mixed Salad & Papad"
+        ]
+      },
+      {
+        "category": "Hi-Tea & Evening Bites",
+        "items": [
+          "Club Sandwiches",
+          "Paneer Pakoda",
+          "Fresh Fruit Skewers",
+          "Traditional Gulab Jamun"
+        ]
+      }
+    ],
+    "createdAt": "2026-10-24T14:08:15.809Z",
+    "updatedAt": "2026-10-24T21:13:41.077Z"
+  }
+]

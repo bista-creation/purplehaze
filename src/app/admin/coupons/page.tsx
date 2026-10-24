@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AdminPageHeader } from "@/components/admin/admin-page";
 import { CouponAdmin } from "@/components/admin/coupon-admin";
 import { prisma } from "@/lib/prisma";
+import type { Coupon } from "@prisma/client";
 import { requireAdmin } from "@/lib/security";
 
 export const metadata: Metadata = { title: "Coupons" };
@@ -9,9 +10,14 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminCouponsPage() {
   await requireAdmin("/admin/coupons");
-  const coupons = await prisma.coupon.findMany({
-    orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
-  });
+  let coupons: Coupon[] = [];
+  try {
+    coupons = await prisma.coupon.findMany({
+      orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
+    });
+  } catch {
+    console.warn("Database offline in AdminCouponsPage; using empty coupons list.");
+  }
 
   return (
     <>

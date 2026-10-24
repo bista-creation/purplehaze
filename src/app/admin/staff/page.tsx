@@ -11,7 +11,23 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminStaffPage() {
   const user = await requireAdmin("/admin/staff");
-  const [staff, adminCount, staffCount, customerCount] = await Promise.all([
+  type StaffMember = {
+    id: string;
+    name: string | null;
+    email: string;
+    phone: string | null;
+    role: string;
+    isBlocked: boolean;
+    emailVerified: Date | null;
+    createdAt: Date;
+  };
+  let staff: StaffMember[] = [];
+  let adminCount = 1;
+  let staffCount = 0;
+  let customerCount = 0;
+
+  try {
+    const [st, ac, sc, cc] = await Promise.all([
     prisma.user.findMany({
       where: { role: { in: ["ADMIN", "STAFF"] } },
       orderBy: [{ role: "asc" }, { createdAt: "asc" }],
@@ -29,7 +45,26 @@ export default async function AdminStaffPage() {
     prisma.user.count({ where: { role: "ADMIN", isBlocked: false } }),
     prisma.user.count({ where: { role: "STAFF", isBlocked: false } }),
     prisma.user.count({ where: { role: "CUSTOMER", isTest: false } }),
-  ]);
+    ]);
+    staff = st;
+    adminCount = ac;
+    staffCount = sc;
+    customerCount = cc;
+  } catch {
+    console.warn("Database offline in AdminStaffPage; using current admin user.");
+    staff = [
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isBlocked: false,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+      },
+    ];
+  }
 
   return (
     <>

@@ -88,7 +88,6 @@ export async function markAllNotificationsReadAction(): Promise<AdminActionResul
           notificationId: notification.id,
           userId: user.id,
         })),
-        skipDuplicates: true,
       });
     }
 

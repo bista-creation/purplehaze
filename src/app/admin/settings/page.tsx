@@ -17,6 +17,7 @@ import { DeliveryZoneAdmin } from "@/components/admin/delivery-zone-admin";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
+import type { DeliveryZone } from "@prisma/client";
 import { getSettings } from "@/lib/settings";
 import { requireAdmin } from "@/lib/security";
 import {
@@ -64,9 +65,14 @@ export default async function AdminSettingsPage({
     Boolean(sandboxExpiry);
   const esewaConfig = getEsewaConfig();
   const khaltiConfig = getKhaltiConfig();
-  const zones = await prisma.deliveryZone.findMany({
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-  });
+  let zones: DeliveryZone[] = [];
+  try {
+    zones = await prisma.deliveryZone.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    });
+  } catch {
+    console.warn("Database offline in AdminSettingsPage; using empty zones list.");
+  }
 
   const environment = [
     {

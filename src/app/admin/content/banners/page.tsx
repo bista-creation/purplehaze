@@ -3,6 +3,7 @@ import { AdminPageHeader } from "@/components/admin/admin-page";
 import { ContentNav } from "@/components/admin/content-nav";
 import { BannerAdmin } from "@/components/admin/banner-admin";
 import { prisma } from "@/lib/prisma";
+import type { Banner } from "@prisma/client";
 import { requireAdmin } from "@/lib/security";
 import { getImageUploadMode } from "@/lib/uploads";
 
@@ -11,9 +12,14 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminBannersPage() {
   await requireAdmin("/admin/content/banners");
-  const banners = await prisma.banner.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
-  });
+  let banners: Banner[] = [];
+  try {
+    banners = await prisma.banner.findMany({
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    });
+  } catch {
+    console.warn("Database offline in AdminBannersPage; using empty list.");
+  }
 
   return (
     <>
