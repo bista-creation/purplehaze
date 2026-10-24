@@ -35,14 +35,49 @@ export const SITE = {
   currency: "NPR",
 } as const;
 
-export const PUBLIC_NAV = [
+export type NavItem = {
+  href: string;
+  label: string;
+  children?: Array<{
+    href: string;
+    label: string;
+  }>;
+};
+
+export const PUBLIC_NAV: NavItem[] = [
   { href: "/", label: "Home" },
-  { href: "/menu", label: "Menu" },
-  { href: "/events", label: "Events & Venues" },
-  { href: "/gallery", label: "Gallery" },
-  { href: "/about", label: "Our Story" },
+  {
+    href: "/menu",
+    label: "Menu",
+    children: [
+      {
+        href: "/menu",
+        label: "Food & Drinks Menu",
+      },
+      {
+        href: "/events/menu",
+        label: "Event & Banquet Menus",
+      },
+    ],
+  },
+  { href: "/events", label: "Events" },
+  { href: "/career", label: "Career" },
   { href: "/contact", label: "Contact" },
-] as const;
+  {
+    href: "/about",
+    label: "Our Story",
+    children: [
+      {
+        href: "/about",
+        label: "Our Story",
+      },
+      {
+        href: "/gallery",
+        label: "Photo Gallery",
+      },
+    ],
+  },
+];
 
 export const ACCOUNT_NAV = [
   { href: "/account", label: "Overview", exact: true },
@@ -82,6 +117,7 @@ export const ADMIN_NAV_GROUPS = [
     label: "Catalogue",
     items: [
       { href: "/admin/menu", label: "Menu", icon: "utensils" },
+      { href: "/admin/event-menus", label: "Event menus", icon: "sparkles" },
       { href: "/admin/venues", label: "Venues", icon: "building" },
       { href: "/admin/coupons", label: "Coupons", icon: "ticket" },
     ],
@@ -97,6 +133,7 @@ export const ADMIN_NAV_GROUPS = [
   {
     label: "Website",
     items: [
+      { href: "/admin/career", label: "Career", icon: "briefcase" },
       { href: "/admin/content", label: "Content", icon: "layout" },
       { href: "/admin/settings", label: "Settings", icon: "settings" },
       { href: "/admin/staff", label: "Staff & roles", icon: "shield" },

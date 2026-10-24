@@ -31,10 +31,14 @@ export function EventBookingForm({
   venues,
   minDate,
   initialVenueId = "",
+  initialPackage = "",
+  initialGuests,
 }: {
   venues: Array<{ id: string; name: string }>;
   minDate: string;
   initialVenueId?: string;
+  initialPackage?: string;
+  initialGuests?: number;
 }) {
   const [pending, startTransition] = useTransition();
   const [serverError, setServerError] = useState("");
@@ -48,8 +52,10 @@ export function EventBookingForm({
       venueId: initialVenueId,
       eventType: "Wedding",
       eventDate: "",
-      guests: 50,
-      message: "",
+      guests: initialGuests && initialGuests >= 5 ? initialGuests : 50,
+      message: initialPackage
+        ? `Interested in catering package: ${initialPackage.replace(/-/g, " ")}`
+        : "",
     },
   });
 

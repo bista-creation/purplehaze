@@ -1,3 +1,4 @@
+import nextDynamic from "next/dynamic";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -20,15 +21,25 @@ import {
   AdminEmpty,
   AdminPageHeader,
 } from "@/components/admin/admin-page";
-import {
-  RevenueChart,
-  TopDishChart,
-} from "@/components/admin/dashboard-charts";
 import { MarkAllReadButton } from "@/components/admin/mark-all-read-button";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
+const RevenueChart = nextDynamic(
+  () => import("@/components/admin/dashboard-charts").then((mod) => mod.RevenueChart),
+  {
+    loading: () => <div className="h-[260px] w-full animate-pulse rounded-xl bg-muted/40" />,
+  },
+);
+
+const TopDishChart = nextDynamic(
+  () => import("@/components/admin/dashboard-charts").then((mod) => mod.TopDishChart),
+  {
+    loading: () => <div className="h-[260px] w-full animate-pulse rounded-xl bg-muted/40" />,
+  },
+);
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/security";
 import { formatNPR } from "@/lib/money";
@@ -70,24 +81,57 @@ export default async function AdminDashboardPage() {
   const monthStart = new Date(todayStart);
   monthStart.setUTCDate(monthStart.getUTCDate() - 29);
 
-  const [
-    todayOrders,
-    todayRevenue,
-    yesterdayRevenue,
-    activeOrders,
-    pendingReservations,
-    pendingEvents,
-    unreadMessages,
-    customerCount,
-    newCustomers,
-    recentOrders,
-    weekOrders,
-    statusCounts,
-    upcomingReservations,
-    upcomingEvents,
-    topDishes,
-    notifications,
-  ] = await Promise.all([
+  let todayOrders = { _count: { _all: 0 }, _sum: { total: null as number | null } };
+  let todayRevenue = { _sum: { total: null as number | null } };
+  let yesterdayRevenue = { _sum: { total: null as number | null } };
+  let activeOrders = 0;
+  let pendingReservations = 0;
+  let pendingEvents = 0;
+  let unreadMessages = 0;
+  let customerCount = 0;
+  let newCustomers = 0;
+  type DashboardRecentOrder = {
+    id: string;
+    orderNumber: string;
+    customerName: string;
+    type: string;
+    status: string;
+    paymentStatus: string;
+    paymentMethod: string;
+    total: number;
+    createdAt: Date;
+    isTest: boolean;
+  };
+
+  type DashboardReservation = {
+    id: string;
+    name: string;
+    date: Date;
+    guests: number;
+    status: string;
+    occasion: string | null;
+  };
+
+  type DashboardEventBooking = {
+    id: string;
+    name: string;
+    eventDate: Date;
+    guests: number;
+    status: string;
+    eventType: string;
+    venue: { name: string } | null;
+  };
+
+  let recentOrders: DashboardRecentOrder[] = [];
+  let weekOrders: { createdAt: Date; total: number; paymentStatus: string }[] = [];
+  let statusCounts: { status: string; _count: { _all: number } }[] = [];
+  let upcomingReservations: DashboardReservation[] = [];
+  let upcomingEvents: DashboardEventBooking[] = [];
+  let topDishes: { name: string; _sum: { quantity: number | null } }[] = [];
+  let notifications: Awaited<ReturnType<typeof getNotificationInbox>> = [];
+
+  try {
+    const results = await Promise.all([
     prisma.order.aggregate({
       where: realOrdersWhere({
         createdAt: { gte: todayStart },
@@ -219,7 +263,27 @@ export default async function AdminDashboardPage() {
       take: 5,
     }),
     getNotificationInbox(user.id, { take: 5, unreadOnly: true }),
-  ]);
+    ]);
+
+    todayOrders = results[0];
+    todayRevenue = results[1];
+    yesterdayRevenue = results[2];
+    activeOrders = results[3];
+    pendingReservations = results[4];
+    pendingEvents = results[5];
+    unreadMessages = results[6];
+    customerCount = results[7];
+    newCustomers = results[8];
+    recentOrders = results[9];
+    weekOrders = results[10];
+    statusCounts = results[11];
+    upcomingReservations = results[12];
+    upcomingEvents = results[13];
+    topDishes = results[14];
+    notifications = results[15];
+  } catch {
+    console.warn("Database offline on admin dashboard; showing empty metrics.");
+  }
 
   const chartMap = new Map<
     string,

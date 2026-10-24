@@ -5,7 +5,7 @@ import { KitchenTicket } from "@/components/print/kitchen-ticket";
 import { PrintToolbar } from "@/components/print/print-toolbar";
 import { ThermalPageSize } from "@/components/print/thermal-page-size";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/security";
+import { requireStaff } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export default async function PrintKotPage({
   params: Promise<{ orderNumber: string }>;
 }) {
   const { orderNumber } = await params;
-  await requireAdmin(`/print/kot/${encodeURIComponent(orderNumber)}`);
+  await requireStaff(`/print/kot/${encodeURIComponent(orderNumber)}`);
 
   const order = await prisma.order.findUnique({
     where: { orderNumber: decodeURIComponent(orderNumber) },

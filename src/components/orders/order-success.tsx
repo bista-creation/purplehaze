@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useCartStore } from "@/lib/cart-store";
 import { Check, Sparkles } from "lucide-react";
 
 const sparklePositions: Array<{
@@ -28,6 +30,9 @@ export function OrderSuccess({
   scheduledFor?: string | null;
 }) {
   const reduce = useReducedMotion();
+  useEffect(() => {
+    useCartStore.getState().clearCart();
+  }, []);
   const title =
     mode === "paid" ? "Payment received." : "Your order is confirmed.";
   const copy =

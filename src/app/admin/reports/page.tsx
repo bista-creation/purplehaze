@@ -1,3 +1,4 @@
+import nextDynamic from "next/dynamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -14,14 +15,24 @@ import {
   AdminEmpty,
   AdminPageHeader,
 } from "@/components/admin/admin-page";
-import {
-  RevenueChart,
-  TopDishChart,
-} from "@/components/admin/dashboard-charts";
 import { StatCard } from "@/components/admin/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const RevenueChart = nextDynamic(
+  () => import("@/components/admin/dashboard-charts").then((mod) => mod.RevenueChart),
+  {
+    loading: () => <div className="h-[260px] w-full animate-pulse rounded-xl bg-muted/40" />,
+  },
+);
+
+const TopDishChart = nextDynamic(
+  () => import("@/components/admin/dashboard-charts").then((mod) => mod.TopDishChart),
+  {
+    loading: () => <div className="h-[260px] w-full animate-pulse rounded-xl bg-muted/40" />,
+  },
+);
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/security";
 import { formatNPR } from "@/lib/money";
@@ -77,17 +88,52 @@ export default async function AdminReportsPage({
   const previousFrom = new Date(from.getTime() - rangeMs);
   const useMonthly = rangeMs > 45 * DAY_MS;
 
-  const [
-    orders,
-    previousPaid,
-    newCustomers,
-    reservationCount,
-    eventCount,
-    topDishes,
-    topCustomerRows,
-    zoneRows,
-    zones,
-  ] = await Promise.all([
+  type ReportOrder = {
+    id: string;
+    orderNumber: string;
+    customerName: string;
+    type: string;
+    status: string;
+    paymentStatus: string;
+    paymentMethod: string;
+    total: number;
+    subtotal: number;
+    createdAt: Date;
+    userId: string | null;
+    zoneId: string | null;
+  };
+
+  type TopDishRow = {
+    name: string;
+    _sum: { quantity: number | null; lineTotal: number | null };
+  };
+
+  type TopCustomerRow = {
+    userId: string | null;
+    _sum: { total: number | null };
+    _count: { _all: number };
+  };
+
+  type ZoneRow = {
+    zoneId: string | null;
+    _count: { _all: number };
+    _sum: { deliveryFee: number | null };
+  };
+
+  type ZoneItem = { id: string; name: string };
+
+  let orders: ReportOrder[] = [];
+  let previousPaid = { _sum: { total: null as number | null }, _count: { _all: 0 } };
+  let newCustomers = 0;
+  let reservationCount = 0;
+  let eventCount = 0;
+  let topDishes: TopDishRow[] = [];
+  let topCustomerRows: TopCustomerRow[] = [];
+  let zoneRows: ZoneRow[] = [];
+  let zones: ZoneItem[] = [];
+
+  try {
+    const [ord, pp, nc, rc, ec, td, tcr, zr, zn] = await Promise.all([
     prisma.order.findMany({
       where: realOrdersWhere({ createdAt: { gte: from, lte: to } }),
       select: {
@@ -160,7 +206,19 @@ export default async function AdminReportsPage({
       _sum: { deliveryFee: true },
     }),
     prisma.deliveryZone.findMany({ select: { id: true, name: true } }),
-  ]);
+    ]);
+    orders = ord;
+    previousPaid = pp;
+    newCustomers = nc;
+    reservationCount = rc;
+    eventCount = ec;
+    topDishes = td;
+    topCustomerRows = tcr;
+    zoneRows = zr;
+    zones = zn;
+  } catch {
+    console.warn("Database offline in AdminReportsPage; using empty reports metrics.");
+  }
 
   const activeOrders = orders.filter((order) => order.status !== "CANCELLED");
   const paidOrders = activeOrders.filter(

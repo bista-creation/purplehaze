@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   CalendarDays,
+  ChevronDown,
   Clock,
   LayoutDashboard,
   LogIn,
@@ -40,7 +41,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { PUBLIC_NAV, SITE } from "@/lib/constants";
+import { PUBLIC_NAV, SITE, type NavItem } from "@/lib/constants";
 import { cartCount, useCartStore } from "@/lib/cart-store";
 import { clearPageCache } from "@/lib/clear-page-cache";
 import { useMounted } from "@/lib/use-mounted";
@@ -74,8 +75,16 @@ export function SiteHeader() {
     await signOut({ callbackUrl: "/" });
   };
 
-  const isActive = (href: string) =>
+    const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  const isItemActive = (item: NavItem) => {
+    if (isActive(item.href)) return true;
+    if (item.children) {
+      return item.children.some((c) => isActive(c.href));
+    }
+    return false;
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/88 backdrop-blur-xl supports-[backdrop-filter]:bg-background/78">
@@ -113,25 +122,72 @@ export function SiteHeader() {
       <div className="container-page flex h-[4.5rem] items-center justify-between gap-2 sm:gap-4">
         <Logo className="shrink-0" />
 
-        <nav aria-label="Main navigation" className="hidden xl:flex">
+        <nav aria-label="Main navigation" className="hidden lg:flex">
           <ul className="flex items-center gap-1">
-            {PUBLIC_NAV.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={isActive(item.href) ? "page" : undefined}
-                  className={cn(
-                    "relative rounded-lg px-3 py-2 text-[13px] font-medium transition-colors hover:bg-secondary/70 hover:text-primary",
-                    isActive(item.href) ? "text-primary" : "text-foreground/75",
-                  )}
-                >
-                  {item.label}
-                  {isActive(item.href) ? (
-                    <span className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-gold" />
-                  ) : null}
-                </Link>
-              </li>
-            ))}
+            {PUBLIC_NAV.map((item) => {
+              const active = isItemActive(item);
+              if (item.children) {
+                return (
+                  <li key={item.label} className="group relative">
+                    <Link
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "relative flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[15px] font-medium transition-colors hover:bg-secondary/70 hover:text-primary focus-visible:outline-hidden",
+                        active ? "text-primary font-semibold" : "text-foreground/80",
+                      )}
+                    >
+                      {item.label}
+                      <ChevronDown className="size-3.5 opacity-60 transition-transform duration-200 group-hover:rotate-180 group-focus-within:rotate-180" />
+                      {active ? (
+                        <span className="absolute inset-x-3.5 -bottom-0.5 h-0.5 rounded-full bg-gold" />
+                      ) : null}
+                    </Link>
+
+                    {/* Hover dropdown popup */}
+                    <div className="invisible absolute left-0 top-full z-50 pt-2 opacity-0 pointer-events-none transition-all duration-150 ease-out group-hover:visible group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
+                      <div className="w-56 min-w-max rounded-2xl border border-border/80 bg-card/95 p-1.5 shadow-xl backdrop-blur-md">
+                        {item.children.map((sub) => {
+                          const subActive = isActive(sub.href);
+                          return (
+                            <Link
+                              key={sub.href}
+                              href={sub.href}
+                              className={cn(
+                                "flex items-center rounded-xl px-3.5 py-2.5 text-[15px] font-medium transition-colors hover:bg-secondary/80 hover:text-primary",
+                                subActive
+                                  ? "bg-secondary/70 text-primary font-semibold"
+                                  : "text-foreground/85",
+                              )}
+                            >
+                              {sub.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </li>
+                );
+              }
+
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "relative rounded-lg px-3.5 py-2 text-[15px] font-medium transition-colors hover:bg-secondary/70 hover:text-primary",
+                      active ? "text-primary font-semibold" : "text-foreground/80",
+                    )}
+                  >
+                    {item.label}
+                    {active ? (
+                      <span className="absolute inset-x-3.5 -bottom-0.5 h-0.5 rounded-full bg-gold" />
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
@@ -180,7 +236,7 @@ export function SiteHeader() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="xl:hidden"
+                className="lg:hidden"
                 aria-label="Open menu"
               >
                 <Menu className="size-5" />
@@ -194,6 +250,12 @@ export function SiteHeader() {
                 <SheetDescription>
                   Good food, garden evenings and celebrations in Biratnagar.
                 </SheetDescription>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Theme / Appearance
+                  </span>
+                  <ThemeToggle className="size-8 rounded-full border border-border/60 bg-secondary/60 hover:bg-secondary text-foreground" />
+                </div>
               </SheetHeader>
 
               <div className="px-4 pt-4">
@@ -294,21 +356,52 @@ export function SiteHeader() {
                 aria-label="Mobile navigation"
                 className="flex flex-1 flex-col px-4 pt-3"
               >
-                {PUBLIC_NAV.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      "rounded-xl px-4 py-3.5 text-base font-medium transition-colors",
-                      isActive(item.href)
-                        ? "bg-secondary text-primary"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+                {PUBLIC_NAV.map((item) => {
+                  const active = isItemActive(item);
+                  if (item.children) {
+                    return (
+                      <div key={item.label} className="my-1.5 space-y-1">
+                        <div className="px-4 pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          {item.label}
+                        </div>
+                        {item.children.map((sub) => {
+                          const subActive = isActive(sub.href);
+                          return (
+                            <Link
+                              key={sub.href}
+                              href={sub.href}
+                              onClick={() => setMobileOpen(false)}
+                              className={cn(
+                                "flex items-center rounded-xl px-4 py-2.5 text-[15px] font-medium transition-colors",
+                                subActive
+                                  ? "bg-secondary text-primary font-semibold"
+                                  : "text-foreground/80 hover:bg-muted",
+                              )}
+                            >
+                              <span>{sub.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "rounded-xl px-4 py-3 text-base font-medium transition-colors",
+                        active
+                          ? "bg-secondary text-primary font-semibold"
+                          : "hover:bg-muted",
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
                 <div className="my-4 h-px bg-border" />
                 <Link
                   href="/reservations"
@@ -330,11 +423,8 @@ export function SiteHeader() {
                       Order online
                     </Link>
                   </Button>
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-xs text-muted-foreground">
-                      Open daily · 9 AM – 10 PM
-                    </span>
-                    <ThemeToggle />
+                  <div className="flex items-center justify-center px-1 text-xs text-muted-foreground">
+                    <span>Open daily · 9 AM – 10 PM</span>
                   </div>
                 </div>
               </nav>

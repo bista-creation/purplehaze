@@ -14,14 +14,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
   Bike,
+  Check,
   CheckCircle2,
   Clock,
-  CreditCard,
+  Copy,
   Loader2,
   LockKeyhole,
   MapPin,
   Percent,
   ShoppingBag,
+  Sparkles,
   Store,
   Tag,
   Wallet,
@@ -124,6 +126,7 @@ export function CheckoutForm({
   const [pending, startTransition] = useTransition();
   const [couponPending, startCouponTransition] = useTransition();
   const [serverError, setServerError] = useState("");
+  const [redirectingGateway, setRedirectingGateway] = useState<string | null>(null);
   const idempotencyKey = useRef<string>(globalThis.crypto.randomUUID());
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
@@ -256,6 +259,40 @@ export function CheckoutForm({
       if (!result.success) {
         setServerError(result.message);
         window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      // If online payment (Khalti or eSewa), preserve cart and smoothly redirect to gateway
+      if (result.digitalPayment && result.orderId && result.publicToken) {
+        const providerName =
+          values.paymentMethod === "ESEWA" ? "eSewa" : "Khalti";
+        setRedirectingGateway(providerName);
+        toast.info(`Connecting to ${providerName} secure checkout...`);
+
+        const formEl = document.createElement("form");
+        formEl.method = "POST";
+        formEl.action = `/api/payments/${values.paymentMethod.toLowerCase()}/initiate`;
+
+        const inputOrderId = document.createElement("input");
+        inputOrderId.type = "hidden";
+        inputOrderId.name = "orderId";
+        inputOrderId.value = result.orderId;
+        formEl.appendChild(inputOrderId);
+
+        const inputToken = document.createElement("input");
+        inputToken.type = "hidden";
+        inputToken.name = "token";
+        inputToken.value = result.publicToken;
+        formEl.appendChild(inputToken);
+
+        const inputNumber = document.createElement("input");
+        inputNumber.type = "hidden";
+        inputNumber.name = "orderNumber";
+        inputNumber.value = result.orderNumber;
+        formEl.appendChild(inputNumber);
+
+        document.body.appendChild(formEl);
+        formEl.submit();
         return;
       }
 
@@ -525,8 +562,15 @@ export function CheckoutForm({
             </h2>
 
             <fieldset className="mt-5">
-              <legend className="text-sm font-semibold">Payment method</legend>
-              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+              <div className="flex items-center justify-between">
+                <legend className="text-sm font-semibold">Payment method</legend>
+                {paymentMode === "sandbox" ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                    <Sparkles className="size-3" /> Sandbox Mode Active
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 {codEnabled ? (
                   <PaymentOption
                     value="COD"
@@ -536,8 +580,10 @@ export function CheckoutForm({
                     description={
                       type === "DELIVERY"
                         ? "Pay on delivery"
-                        : "Pay at the restaurant"
+                        : "Pay at restaurant"
                     }
+                    badgeText="Cash"
+                    accentColor="primary"
                     register={form.register("paymentMethod")}
                   />
                 ) : null}
@@ -545,15 +591,11 @@ export function CheckoutForm({
                   <PaymentOption
                     value="ESEWA"
                     current={paymentMethod}
-                    icon={CreditCard}
+                    customIcon={<EsewaIcon />}
                     title="eSewa"
-                    description={
-                      paymentMode === "mock"
-                        ? "Demo payment"
-                        : paymentMode === "sandbox"
-                          ? "Sandbox checkout"
-                          : "Pay securely online"
-                    }
+                    description="Instant wallet / mobile payment"
+                    badgeText={paymentMode === "sandbox" ? "Sandbox" : "Instant"}
+                    accentColor="green"
                     register={form.register("paymentMethod")}
                   />
                 ) : null}
@@ -561,31 +603,24 @@ export function CheckoutForm({
                   <PaymentOption
                     value="KHALTI"
                     current={paymentMethod}
-                    icon={CreditCard}
+                    customIcon={<KhaltiIcon />}
                     title="Khalti"
-                    description={
-                      paymentMode === "mock"
-                        ? "Demo payment"
-                        : paymentMode === "sandbox"
-                          ? "Sandbox checkout"
-                          : "Pay securely online"
-                    }
+                    description="Khalti wallet, e-Banking & Cards"
+                    badgeText={paymentMode === "sandbox" ? "Sandbox" : "Instant"}
+                    accentColor="purple"
                     register={form.register("paymentMethod")}
                   />
                 ) : null}
               </div>
+
+              {paymentMethod !== "COD" && paymentMode === "sandbox" ? (
+                <SandboxCredentialsHelper method={paymentMethod} />
+              ) : null}
+
               {paymentMethod !== "COD" && paymentMode === "mock" ? (
                 <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
                   Demo mode: you will be able to simulate a successful payment
                   on the order page. No real money moves.
-                </p>
-              ) : null}
-              {paymentMethod !== "COD" && paymentMode === "sandbox" ? (
-                <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                  Sandbox mode: you will continue to the{" "}
-                  {paymentMethod === "ESEWA" ? "eSewa" : "Khalti"} test
-                  checkout. No real money moves. Use the provider&apos;s sandbox
-                  test account.
                 </p>
               ) : null}
             </fieldset>
@@ -768,35 +803,81 @@ export function CheckoutForm({
             </Alert>
           ) : null}
 
-          <Button
-            type="submit"
-            size="lg"
-            className="mt-5 w-full"
-            disabled={pending}
-          >
-            {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Place order · {formatNPR(totals.total)}
-          </Button>
-          <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+          {paymentMethod === "COD" ? (
+            <Button
+              type="submit"
+              size="lg"
+              className="mt-5 w-full font-semibold shadow-md transition-all active:scale-[0.99]"
+              disabled={pending || Boolean(redirectingGateway)}
+            >
+              {pending ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+              Place Order (Cash) · {formatNPR(totals.total)}
+            </Button>
+          ) : paymentMethod === "ESEWA" ? (
+            <Button
+              type="submit"
+              size="lg"
+              className="mt-5 w-full bg-[#10b981] hover:bg-[#059669] text-white font-semibold shadow-md transition-all active:scale-[0.99]"
+              disabled={pending || Boolean(redirectingGateway)}
+            >
+              {pending || redirectingGateway ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <div className="mr-2 shrink-0">
+                  <EsewaIcon />
+                </div>
+              )}
+              Pay with eSewa · {formatNPR(totals.total)}
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              size="lg"
+              className="mt-5 w-full bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold shadow-md transition-all active:scale-[0.99]"
+              disabled={pending || Boolean(redirectingGateway)}
+            >
+              {pending || redirectingGateway ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <div className="mr-2 shrink-0">
+                  <KhaltiIcon />
+                </div>
+              )}
+              Pay with Khalti · {formatNPR(totals.total)}
+            </Button>
+          )}
+
+          <p className="mt-3 text-center text-[11px] text-muted-foreground leading-relaxed">
+            {paymentMethod === "COD"
+              ? "Cash will be collected when your food is handed over."
+              : `Your order is sent to the kitchen immediately after ${paymentMethod === "ESEWA" ? "eSewa" : "Khalti"} payment is confirmed.`}
+          </p>
+
+          <p className="mt-2.5 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
             <Clock className="size-3.5" /> Usually ready in about{" "}
             {items.length > 0 ? "25–35" : "30"} minutes
           </p>
-          {paymentMethod !== "COD" ? (
-            <Badge
-              variant="muted"
-              className="mt-3 w-full justify-center py-1.5"
-            >
-              {paymentMethod === "ESEWA" ? "eSewa" : "Khalti"} ·{" "}
-              {paymentMode === "mock"
-                ? "demo"
-                : paymentMode === "sandbox"
-                  ? "sandbox"
-                  : "secure"}{" "}
-              payment
-            </Badge>
-          ) : null}
         </aside>
       </div>
+
+      {redirectingGateway ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="mx-auto grid size-14 place-items-center rounded-full bg-primary/10 text-primary">
+              <Loader2 className="size-8 animate-spin" />
+            </div>
+            <h3 className="mt-4 font-display text-xl font-bold">
+              Connecting to {redirectingGateway}...
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              We are securely transferring you to {redirectingGateway} to complete your payment.
+            </p>
+            <div className="mt-5 rounded-xl border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
+              Your order will be sent to the kitchen immediately once payment is verified.
+            </div>
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }
@@ -805,39 +886,282 @@ function PaymentOption({
   value,
   current,
   icon: Icon,
+  customIcon,
   title,
   description,
+  badgeText,
+  accentColor = "primary",
   register,
 }: {
   value: string;
   current: string;
-  icon: typeof Wallet;
+  icon?: typeof Wallet;
+  customIcon?: React.ReactNode;
   title: string;
   description: string;
+  badgeText?: string;
+  accentColor?: "green" | "purple" | "primary";
   register: UseFormRegisterReturn<"paymentMethod">;
 }) {
+  const isSelected = current === value;
   return (
     <label
       className={cn(
-        "relative flex cursor-pointer gap-3 rounded-xl border p-3.5 transition",
-        current === value
-          ? "border-primary bg-secondary/50"
-          : "hover:border-primary/40",
+        "relative flex cursor-pointer flex-col justify-between rounded-xl border p-3.5 sm:p-4 transition-all duration-150 select-none",
+        isSelected
+          ? accentColor === "green"
+            ? "border-emerald-500 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500/40 dark:bg-emerald-950/20"
+            : accentColor === "purple"
+              ? "border-purple-500 bg-purple-50/50 shadow-sm ring-1 ring-purple-500/40 dark:bg-purple-950/20"
+              : "border-primary bg-secondary/60 shadow-sm ring-1 ring-primary/40"
+          : "border-border/80 hover:border-primary/50 bg-card hover:bg-muted/30",
       )}
     >
       <input type="radio" value={value} className="sr-only" {...register} />
-      <Icon
-        className={cn(
-          "mt-0.5 size-4 shrink-0",
-          current === value ? "text-primary" : "text-muted-foreground",
-        )}
-      />
-      <div>
-        <p className="text-sm font-semibold">{title}</p>
-        <p className="mt-0.5 text-[10px] leading-4 text-muted-foreground">
-          {description}
-        </p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          {customIcon ? (
+            customIcon
+          ) : Icon ? (
+            <div
+              className={cn(
+                "grid size-6 place-items-center rounded-md",
+                isSelected
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              <Icon className="size-3.5" />
+            </div>
+          ) : null}
+          <p className="font-semibold text-sm leading-tight">{title}</p>
+        </div>
+        <div
+          className={cn(
+            "grid size-4 place-items-center rounded-full border transition",
+            isSelected
+              ? accentColor === "green"
+                ? "border-emerald-600 bg-emerald-600 text-white"
+                : accentColor === "purple"
+                  ? "border-purple-600 bg-purple-600 text-white"
+                  : "border-primary bg-primary text-primary-foreground"
+              : "border-muted-foreground/40 bg-transparent",
+          )}
+        >
+          {isSelected ? <Check className="size-2.5 stroke-[3]" /> : null}
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <p className="text-[11px] leading-4 text-muted-foreground">{description}</p>
+        {badgeText ? (
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider",
+              isSelected
+                ? accentColor === "green"
+                  ? "bg-emerald-200/80 text-emerald-900 dark:bg-emerald-900/60 dark:text-emerald-200"
+                  : accentColor === "purple"
+                    ? "bg-purple-200/80 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200"
+                    : "bg-primary/20 text-primary"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {badgeText}
+          </span>
+        ) : null}
       </div>
     </label>
   );
+}
+
+function EsewaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" aria-label="eSewa">
+      <circle cx="12" cy="12" r="10" fill="#60BB46" />
+      <text
+        x="12"
+        y="16.5"
+        fill="#FFFFFF"
+        fontSize="13"
+        fontWeight="900"
+        textAnchor="middle"
+        fontFamily="sans-serif"
+      >
+        e
+      </text>
+    </svg>
+  );
+}
+
+function KhaltiIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" aria-label="Khalti">
+      <rect width="24" height="24" rx="5" fill="#5D2E8E" />
+      <text
+        x="12"
+        y="16.5"
+        fill="#FFFFFF"
+        fontSize="13"
+        fontWeight="900"
+        textAnchor="middle"
+        fontFamily="sans-serif"
+      >
+        K
+      </text>
+    </svg>
+  );
+}
+
+function SandboxCredentialsHelper({ method }: { method: string }) {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopy = (key: string, value: string) => {
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(value);
+    }
+    setCopiedKey(key);
+    toast.success(`Copied ${key}: ${value}`);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  if (method === "ESEWA") {
+    return (
+      <div className="mt-3.5 rounded-xl border border-emerald-500/30 bg-emerald-50/60 p-4 text-xs dark:border-emerald-500/20 dark:bg-emerald-950/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 font-semibold text-emerald-800 dark:text-emerald-300">
+            <Sparkles className="size-3.5 text-emerald-600" />
+            <span>eSewa Sandbox Test Mode Active</span>
+          </div>
+          <Badge variant="outline" className="border-emerald-500/40 text-[10px] text-emerald-700 dark:text-emerald-400">
+            Test Money Only
+          </Badge>
+        </div>
+        <p className="mt-1 text-[11px] text-emerald-900/80 dark:text-emerald-200/80">
+          No real funds are deducted. Use eSewa&apos;s official test credentials to log in:
+        </p>
+        <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-background/80 px-2.5 py-1.5 shadow-xs">
+            <div>
+              <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">eSewa ID</span>
+              <span className="font-mono font-medium text-foreground">9800000000</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => handleCopy("eSewa ID", "9800000000")}
+              title="Copy eSewa ID"
+            >
+              {copiedKey === "eSewa ID" ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
+            </Button>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-background/80 px-2.5 py-1.5 shadow-xs">
+            <div>
+              <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">Password/MPIN</span>
+              <span className="font-mono font-medium text-foreground">1122</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => handleCopy("Password", "1122")}
+              title="Copy Password"
+            >
+              {copiedKey === "Password" ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
+            </Button>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-background/80 px-2.5 py-1.5 shadow-xs">
+            <div>
+              <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">Token / OTP</span>
+              <span className="font-mono font-medium text-foreground">123456</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => handleCopy("Token", "123456")}
+              title="Copy Token"
+            >
+              {copiedKey === "Token" ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (method === "KHALTI") {
+    return (
+      <div className="mt-3.5 rounded-xl border border-purple-500/30 bg-purple-50/60 p-4 text-xs dark:border-purple-500/20 dark:bg-purple-950/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 font-semibold text-purple-800 dark:text-purple-300">
+            <Sparkles className="size-3.5 text-purple-600" />
+            <span>Khalti Sandbox Test Mode Active</span>
+          </div>
+          <Badge variant="outline" className="border-purple-500/40 text-[10px] text-purple-700 dark:text-purple-400">
+            Test Money Only
+          </Badge>
+        </div>
+        <p className="mt-1 text-[11px] text-purple-900/80 dark:text-purple-200/80">
+          No real funds are deducted. Use Khalti&apos;s official test credentials to confirm:
+        </p>
+        <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="flex items-center justify-between rounded-lg border border-purple-500/20 bg-background/80 px-2.5 py-1.5 shadow-xs">
+            <div>
+              <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">Khalti ID</span>
+              <span className="font-mono font-medium text-foreground">9800000000</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => handleCopy("Khalti ID", "9800000000")}
+              title="Copy Khalti ID"
+            >
+              {copiedKey === "Khalti ID" ? <Check className="size-3 text-purple-600" /> : <Copy className="size-3" />}
+            </Button>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-purple-500/20 bg-background/80 px-2.5 py-1.5 shadow-xs">
+            <div>
+              <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">MPIN</span>
+              <span className="font-mono font-medium text-foreground">1111</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => handleCopy("MPIN", "1111")}
+              title="Copy MPIN"
+            >
+              {copiedKey === "MPIN" ? <Check className="size-3 text-purple-600" /> : <Copy className="size-3" />}
+            </Button>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-purple-500/20 bg-background/80 px-2.5 py-1.5 shadow-xs">
+            <div>
+              <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">OTP</span>
+              <span className="font-mono font-medium text-foreground">987654</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => handleCopy("OTP", "987654")}
+              title="Copy OTP"
+            >
+              {copiedKey === "OTP" ? <Check className="size-3 text-purple-600" /> : <Copy className="size-3" />}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }

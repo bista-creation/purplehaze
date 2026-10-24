@@ -37,8 +37,8 @@ export const getSettings = cache(async (): Promise<SettingsMap> => {
     const rows = await prisma.setting.findMany();
     const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
     return { ...DEFAULT_SETTINGS, ...values };
-  } catch (error) {
-    console.error("Unable to load settings; using defaults.", error);
+  } catch {
+    console.warn("Database offline; using default settings.");
     return { ...DEFAULT_SETTINGS };
   }
 });

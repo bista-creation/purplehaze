@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react";
 import {
   BarChart3,
   Bell,
+  Briefcase,
   Building2,
   CalendarCheck2,
   CalendarDays,
@@ -21,6 +22,7 @@ import {
   ReceiptText,
   Settings,
   ShieldCheck,
+  Sparkles,
   Star,
   TicketPercent,
   Users,
@@ -54,10 +56,14 @@ const ICONS = {
   settings: Settings,
   shield: ShieldCheck,
   history: History,
+  briefcase: Briefcase,
+  sparkles: Sparkles,
 } as const;
 
 const STAFF_ALLOWED = new Set([
   "/admin",
+  "/admin/career",
+  "/admin/event-menus",
   "/admin/orders",
   "/admin/notifications",
   "/admin/reservations",

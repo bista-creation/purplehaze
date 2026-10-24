@@ -9,12 +9,19 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { NewsletterForm } from "@/components/layout/newsletter-form";
+import { PaymentPartners } from "@/components/layout/payment-partners";
 import { Separator } from "@/components/ui/separator";
 import { PUBLIC_NAV, SITE } from "@/lib/constants";
 import { LEGAL_LINKS } from "@/lib/legal";
 
 const exploreLinks = [
-  ...PUBLIC_NAV.filter((item) => item.href !== "/"),
+  ...PUBLIC_NAV.flatMap((item) =>
+    item.children
+      ? item.children.map((c) => ({ href: c.href, label: c.label }))
+      : item.href !== "/"
+        ? [{ href: item.href, label: item.label }]
+        : [],
+  ),
   { href: "/reservations", label: "Reservations" },
   { href: "/track", label: "Track an order" },
 ];
@@ -212,7 +219,7 @@ export function SiteFooter() {
 
         <Separator className="my-10 bg-white/10" />
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_1fr] lg:items-end">
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.35fr] lg:items-end">
           <div className="max-w-md">
             <p className="font-display text-xl text-white">
               A little note from our garden.
@@ -221,20 +228,7 @@ export function SiteFooter() {
               <NewsletterForm />
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            <span className="mr-1 text-[11px] uppercase tracking-wider text-white/35">
-              We accept
-            </span>
-            <span className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-white/60">
-              Cash
-            </span>
-            <span className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-white/60">
-              eSewa
-            </span>
-            <span className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-white/60">
-              Khalti
-            </span>
-          </div>
+          <PaymentPartners />
         </div>
 
         <div className="mt-10 flex flex-col gap-4 border-t border-white/10 pt-6 text-xs text-white/35 sm:flex-row sm:items-center sm:justify-between">

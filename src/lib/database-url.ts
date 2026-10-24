@@ -9,6 +9,7 @@
  */
 export function prismaDatasourceUrl(raw = process.env.DATABASE_URL) {
   if (!raw) return undefined;
+  if (raw.startsWith("file:")) return raw;
   if (/[?&]pgbouncer=/i.test(raw)) return raw;
 
   const hashIndex = raw.indexOf("#");

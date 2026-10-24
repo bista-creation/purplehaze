@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Flame, Leaf, Minus, Plus, ShoppingBag, Timer } from "lucide-react";
+import { Flame, Leaf, Minus, Plus, ShoppingBag, SlidersHorizontal, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { FavoriteToggleButton } from "@/components/account/favorite-toggle-button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -22,9 +22,14 @@ export function DishCard({
   initialFavorited?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const addItem = useCartStore((state) => state.addItem);
+  const items = useCartStore((state) => state.items);
   const defaultVariant =
     dish.variants.find((variant) => variant.isDefault) ?? dish.variants[0];
   const displayPrice = dish.price + (defaultVariant?.priceDelta ?? 0);
+  const hasVariants =
+    dish.variants.length > 1 ||
+    (dish.variants.length === 1 && dish.variants[0].name.toLowerCase() !== "regular");
 
   return (
     <>
@@ -108,15 +113,49 @@ export function DishCard({
                 initialFavorited={initialFavorited}
                 iconOnly
               />
-              <Button
-                type="button"
-                size="sm"
-                variant="soft"
-                onClick={() => setOpen(true)}
-                className="rounded-full"
-              >
-                <Plus className="size-4" /> Add
-              </Button>
+              {hasVariants ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="soft"
+                  onClick={() => setOpen(true)}
+                  className="rounded-full gap-1.5 px-3 font-medium text-primary hover:bg-primary/15"
+                  title={`Choose option for ${dish.name}`}
+                >
+                  <SlidersHorizontal className="size-3.5" /> Options
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="soft"
+                  onClick={() => {
+                    if (dish.addOns.length > 0) {
+                      setOpen(true);
+                    } else {
+                      addItem({
+                        dishId: dish.id,
+                        name: dish.name,
+                        slug: dish.slug,
+                        image: dish.image,
+                        categoryName: dish.categoryName,
+                        basePrice: dish.price,
+                        variantId: defaultVariant?.id,
+                        variantName: defaultVariant?.name,
+                        variantPrice: defaultVariant?.priceDelta ?? 0,
+                        addOns: [],
+                        quantity: 1,
+                      });
+                      toast.success(`${dish.name} added to cart`, {
+                        description: `1 × ${formatNPR(displayPrice)} · ${cartCount(items) + 1} items in cart`,
+                      });
+                    }
+                  }}
+                  className="rounded-full"
+                >
+                  <Plus className="size-4" /> Add
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -211,8 +250,8 @@ function DishDialog({
               </p>
               <DialogTitle className="mt-1">{dish.name}</DialogTitle>
             </div>
-            <p className="mt-1 shrink-0 font-semibold">
-              {formatNPR(dish.price)}
+            <p className="mt-1 shrink-0 font-semibold text-lg">
+              {formatNPR(dish.price + (variant?.priceDelta ?? 0))}
             </p>
           </div>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -221,36 +260,46 @@ function DishDialog({
 
           {dish.variants.length > 0 ? (
             <fieldset className="mt-5">
-              <legend className="text-sm font-semibold">Choose an option</legend>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {dish.variants.map((option) => (
-                  <label
-                    key={option.id}
-                    className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-3 text-sm transition",
-                      variantId === option.id
-                        ? "border-primary bg-secondary/60"
-                        : "hover:border-primary/40",
-                    )}
-                  >
-                    <span className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name={`variant-${dish.id}`}
-                        value={option.id}
-                        checked={variantId === option.id}
-                        onChange={() => setVariantId(option.id)}
-                        className="accent-primary"
-                      />
-                      {option.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {option.priceDelta === 0
-                        ? "Included"
-                        : `+${formatNPR(option.priceDelta)}`}
-                    </span>
-                  </label>
-                ))}
+              <div className="flex items-center gap-1.5 text-sm font-semibold">
+                <SlidersHorizontal className="size-3.5 text-primary" />
+                <legend>Choose variant / portion</legend>
+              </div>
+              <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                {dish.variants.map((option) => {
+                  const isSelected = variantId === option.id;
+                  const optionPrice = dish.price + option.priceDelta;
+                  return (
+                    <label
+                      key={option.id}
+                      className={cn(
+                        "flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-3 text-sm transition",
+                        isSelected
+                          ? "border-primary bg-secondary/60 shadow-xs ring-1 ring-primary/40 font-medium"
+                          : "hover:border-primary/40 hover:bg-muted/40",
+                      )}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name={`variant-${dish.id}`}
+                          value={option.id}
+                          checked={isSelected}
+                          onChange={() => setVariantId(option.id)}
+                          className="size-4 accent-primary"
+                        />
+                        <span>{option.name}</span>
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs font-semibold",
+                          isSelected ? "text-primary font-bold" : "text-muted-foreground",
+                        )}
+                      >
+                        {formatNPR(optionPrice)}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </fieldset>
           ) : null}

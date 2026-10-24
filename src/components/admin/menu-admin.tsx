@@ -584,12 +584,14 @@ function DishDialog({
       calories: dish?.calories ?? 0,
       sortOrder: dish?.sortOrder ?? 0,
       variants:
-        dish?.variants.map((variant) => ({
-          id: variant.id,
-          name: variant.name,
-          priceDelta: paisaToRupees(variant.priceDelta),
-          isDefault: variant.isDefault,
-        })) ?? [{ name: "Regular", priceDelta: 0, isDefault: true }],
+        dish && dish.variants.length > 0
+          ? dish.variants.map((variant) => ({
+              id: variant.id,
+              name: variant.name,
+              priceDelta: paisaToRupees(dish.price + variant.priceDelta),
+              isDefault: variant.isDefault,
+            }))
+          : [],
       addOnIds: dish?.addOnIds ?? [],
     },
   });
@@ -709,8 +711,25 @@ function DishDialog({
           </FormField>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <FormField label="Price (NPR)" htmlFor="dish-price" required error={form.formState.errors.price?.message}>
-              <Input id="dish-price" type="number" step="0.01" min="0" {...form.register("price")} />
+            <FormField
+              label="Main price (NPR)"
+              htmlFor="dish-price"
+              required={fields.length === 0}
+              error={form.formState.errors.price?.message}
+              hint={
+                fields.length > 0
+                  ? "Optional when variants are added below (defaults to variant price)."
+                  : "Required for dishes without variants."
+              }
+            >
+              <Input
+                id="dish-price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={fields.length > 0 ? "Auto-set from variant" : "e.g. 250"}
+                {...form.register("price")}
+              />
             </FormField>
             <FormField
               label="Compare-at price"
@@ -782,9 +801,9 @@ function DishDialog({
           <div className="rounded-xl border border-border p-4">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold">Portion sizes / variants</p>
+                <p className="text-sm font-semibold">Dish variants &amp; individual prices</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Optional. Add a price difference for half/full or small/large.
+                  E.g. Steam, Kothey, Jhol, Chilly for Momos, or Half / Full portions. Variant prices are mandatory when options are added.
                 </p>
               </div>
               <Button
@@ -798,47 +817,62 @@ function DishDialog({
             </div>
             <div className="mt-3 space-y-2">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex flex-col gap-2 rounded-lg bg-muted/50 p-3 sm:flex-row sm:items-center">
-                  <Input
-                    placeholder="Variant name (e.g. Full)"
-                    className="flex-1 bg-background"
-                    {...form.register(`variants.${index}.name`)}
-                  />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="Extra NPR"
-                    className="w-full bg-background sm:w-32"
-                    {...form.register(`variants.${index}.priceDelta`)}
-                  />
-                  <label className="flex items-center gap-2 whitespace-nowrap text-[11px]">
-                    <input
-                      type="radio"
-                      name="default-variant"
-                      className="accent-primary"
-                      checked={Boolean(variants?.[index]?.isDefault)}
-                      onChange={() => {
-                        fields.forEach((_, variantIndex) =>
-                          form.setValue(`variants.${variantIndex}.isDefault`, variantIndex === index),
-                        );
-                      }}
+                <div key={field.id} className="space-y-1">
+                  <div className="flex flex-col gap-2 rounded-lg bg-muted/50 p-3 sm:flex-row sm:items-center">
+                    <Input
+                      placeholder="Variant name (e.g. Steam, Kothey)"
+                      className="flex-1 bg-background"
+                      {...form.register(`variants.${index}.name`)}
                     />
-                    Default
-                  </label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Remove variant"
-                    onClick={() => remove(index)}
-                  >
-                    <X className="size-3.5" />
-                  </Button>
+                    <div className="flex items-center gap-1.5 sm:w-40">
+                      <span className="text-xs font-semibold text-muted-foreground">Rs</span>
+                      <Input
+                        type="number"
+                        step="1"
+                        min="1"
+                        placeholder="Price (NPR) *"
+                        className="bg-background"
+                        {...form.register(`variants.${index}.priceDelta`)}
+                      />
+                    </div>
+                    <label className="flex items-center gap-2 whitespace-nowrap text-[11px] cursor-pointer">
+                      <input
+                        type="radio"
+                        name="default-variant"
+                        className="accent-primary"
+                        checked={Boolean(variants?.[index]?.isDefault)}
+                        onChange={() => {
+                          fields.forEach((_, variantIndex) =>
+                            form.setValue(`variants.${variantIndex}.isDefault`, variantIndex === index),
+                          );
+                        }}
+                      />
+                      Default
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Remove variant"
+                      onClick={() => remove(index)}
+                    >
+                      <X className="size-3.5" />
+                    </Button>
+                  </div>
+                  {form.formState.errors.variants?.[index]?.priceDelta?.message ? (
+                    <p className="px-1 text-[11px] font-medium text-destructive">
+                      {form.formState.errors.variants[index]?.priceDelta?.message}
+                    </p>
+                  ) : null}
+                  {form.formState.errors.variants?.[index]?.name?.message ? (
+                    <p className="px-1 text-[11px] font-medium text-destructive">
+                      {form.formState.errors.variants[index]?.name?.message}
+                    </p>
+                  ) : null}
                 </div>
               ))}
               {fields.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No variants — the base price is used.</p>
+                <p className="text-xs text-muted-foreground">No variants added — the base dish price above will be used.</p>
               ) : null}
             </div>
           </div>
