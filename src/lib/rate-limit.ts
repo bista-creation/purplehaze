@@ -16,6 +16,8 @@ globalStore.__phRateLimitStore = memoryStore;
 const limiters = globalStore.__phRateLimitLimiters ?? new Map<string, Ratelimit>();
 globalStore.__phRateLimitLimiters = limiters;
 
+let memoryChecks = 0;
+
 function hasUpstash() {
   return Boolean(
     process.env.UPSTASH_REDIS_REST_URL &&
@@ -76,6 +78,8 @@ export async function checkRateLimit(
   }
 
   const now = Date.now();
+  memoryChecks += 1;
+  if (memoryChecks % 1000 === 0) clearExpiredLimitBuckets();
   const existing = memoryStore.get(identifier);
   if (!existing || existing.resetAt <= now) {
     memoryStore.set(identifier, { count: 1, resetAt: now + windowMs });

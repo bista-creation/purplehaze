@@ -171,6 +171,18 @@ export const createOrderSchema = z.object({
   idempotencyKey: z.string().trim().min(16).max(100).optional(),
 });
 
+export const careerApplicationSchema = z.object({
+  name: z.string().trim().min(2, "Enter your full name.").max(80),
+  email: emailSchema,
+  phone: phoneSchema,
+  position: z.string().trim().min(2, "Please select or enter the position.").max(100),
+  experience: z.string().trim().min(1, "Please select your experience level.").max(50),
+  shiftPreference: z.string().trim().max(50).optional().default("Full-time"),
+  message: z.string().trim().min(10, "Tell us briefly about your background.").max(2000),
+  resumeUrl: z.string().trim().min(1, "Please upload your CV / resume before submitting.").max(500),
+  resumeFileName: z.string().trim().max(160).optional(),
+});
+
 export const contactSchema = z.object({
   name: z.string().trim().min(2, "Enter your name.").max(80),
   email: emailSchema,
@@ -253,30 +265,60 @@ export const categoryAdminSchema = z.object({
 
 export const variantSchema = z.object({
   id: z.string().optional(),
-  name: z.string().trim().min(1, "Name the option.").max(60),
+  name: z.string().trim().max(60),
   priceDelta: z.coerce.number().min(0).default(0),
   isDefault: z.boolean().default(false),
 });
 
-export const dishAdminSchema = z.object({
-  name: z.string().trim().min(2).max(100),
-  slug: z.string().trim().max(100).optional().or(z.literal("")),
-  categoryId: z.string().min(1, "Choose a category."),
-  description: z.string().trim().min(10, "Add a short description.").max(500),
-  details: z.string().trim().max(2000).optional().or(z.literal("")),
-  price: z.coerce.number().positive("Enter a price."),
-  comparePrice: z.coerce.number().min(0).optional(),
-  image: z.string().trim().max(500).optional().or(z.literal("")),
-  isVeg: z.boolean().default(false),
-  isSpicy: z.boolean().default(false),
-  isFeatured: z.boolean().default(false),
-  isAvailable: z.boolean().default(true),
-  prepTime: z.coerce.number().int().min(1).max(180).default(20),
-  calories: z.coerce.number().int().min(0).optional(),
-  sortOrder: z.coerce.number().int().min(0).default(0),
-  variants: z.array(variantSchema).max(20).default([]),
-  addOnIds: z.array(z.string()).max(30).default([]),
-});
+export const dishAdminSchema = z
+  .object({
+    name: z.string().trim().min(2).max(100),
+    slug: z.string().trim().max(100).optional().or(z.literal("")),
+    categoryId: z.string().min(1, "Choose a category."),
+    description: z.string().trim().min(10, "Add a short description.").max(500),
+    details: z.string().trim().max(2000).optional().or(z.literal("")),
+    price: z.coerce.number().min(0).optional().default(0),
+    comparePrice: z.coerce.number().min(0).optional(),
+    image: z.string().trim().max(500).optional().or(z.literal("")),
+    isVeg: z.boolean().default(false),
+    isSpicy: z.boolean().default(false),
+    isFeatured: z.boolean().default(false),
+    isAvailable: z.boolean().default(true),
+    prepTime: z.coerce.number().int().min(1).max(180).default(20),
+    calories: z.coerce.number().int().min(0).optional(),
+    sortOrder: z.coerce.number().int().min(0).default(0),
+    variants: z.array(variantSchema).max(20).default([]),
+    addOnIds: z.array(z.string()).max(30).default([]),
+  })
+  .superRefine((data, ctx) => {
+    const activeVariants = data.variants.filter((v) => v.name.trim().length > 0);
+    if (activeVariants.length > 0) {
+      activeVariants.forEach((v, index) => {
+        if (!v.name.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["variants", index, "name"],
+            message: "Enter variant name.",
+          });
+        }
+        if (v.priceDelta === undefined || v.priceDelta === null || v.priceDelta <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["variants", index, "priceDelta"],
+            message: "Variant price must be greater than 0.",
+          });
+        }
+      });
+    } else {
+      if (!data.price || data.price <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["price"],
+          message: "Enter a main price, or add dish variants with individual prices.",
+        });
+      }
+    }
+  });
 
 export const venueAdminSchema = z.object({
   name: z.string().trim().min(2).max(100),
@@ -296,7 +338,7 @@ export const staffSchema = z.object({
   name: z.string().trim().min(2).max(80),
   phone: phoneSchema,
   role: z.enum(ROLES),
-  password: z.string().min(8).max(72).optional().or(z.literal("")),
+  password: passwordSchema.optional().or(z.literal("")),
 });
 
 export const galleryAdminSchema = z.object({
@@ -375,3 +417,4 @@ export type BookingStatusInput = z.infer<typeof bookingStatusSchema>;
 export type OrderStatusInput = z.infer<typeof orderStatusSchema>;
 export type AcceptOrderInput = z.infer<typeof acceptOrderSchema>;
 export type StaffInput = z.infer<typeof staffSchema>;
+export type CareerApplicationInput = z.infer<typeof careerApplicationSchema>;

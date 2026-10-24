@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { SITE } from "@/lib/constants";
 import { normalizeAppUrl } from "@/lib/app-url";
 import { formatNPR } from "@/lib/money";
-import { sendAdminNotification } from "@/lib/email";
+import { sendAdminNotification, sendOrderConfirmation } from "@/lib/email";
 import { createStaffNotification } from "@/lib/notifications";
 import {
   getSandboxPaymentExpiry,
@@ -421,10 +421,23 @@ export async function markOrderPaid({
     select: {
       id: true,
       orderNumber: true,
+      customerName: true,
+      customerEmail: true,
+      customerPhone: true,
+      type: true,
+      deliveryAddress: true,
+      scheduledFor: true,
       total: true,
       paymentStatus: true,
       status: true,
       isTest: true,
+      items: {
+        select: {
+          name: true,
+          quantity: true,
+          lineTotal: true,
+        },
+      },
     },
   });
   if (!order) return { ok: false as const, reason: "Order not found." };
@@ -498,6 +511,15 @@ export async function markOrderPaid({
       orderId: order.id,
       isTest: order.isTest,
     });
+    await createStaffNotification(tx, {
+      eventKey: `order:${order.id}:created`,
+      type: "ORDER",
+      title: `New paid order ${order.orderNumber} — ${provider}`,
+      message: `${order.type} · ${formatNPR(order.total)} · Paid via ${provider}`,
+      link: `/admin/orders/${order.id}`,
+      orderId: order.id,
+      isTest: order.isTest,
+    });
     return true;
   });
 
@@ -519,6 +541,22 @@ export async function markOrderPaid({
   }
 
   after(async () => {
+    await sendOrderConfirmation({
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      customerEmail: order.customerEmail,
+      type: order.type,
+      total: order.total,
+      status: order.status,
+      items: order.items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        lineTotal: item.lineTotal,
+      })),
+      deliveryAddress: order.deliveryAddress,
+      scheduledFor: order.scheduledFor,
+    }).catch((error) => console.error("Order email failed", error));
+
     await sendAdminNotification(
       `Payment received — ${order.orderNumber}`,
       `<p style="font-size:14px;line-height:1.8;">We received <strong>${formatNPR(

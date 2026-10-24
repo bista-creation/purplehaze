@@ -121,6 +121,7 @@ export async function POST(request: Request) {
         },
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
     });
 
     const raw = await response.text();
@@ -152,8 +153,12 @@ export async function POST(request: Request) {
           }).slice(0, 20_000),
         },
       });
-      await prisma.order.update({
-        where: { id: order.id },
+      await prisma.order.updateMany({
+        where: {
+          id: order.id,
+          status: { not: "CANCELLED" },
+          paymentStatus: { notIn: ["PAID", "REFUNDED"] },
+        },
         data: { paymentStatus: "FAILED" },
       });
       return redirectToOrder(
@@ -206,8 +211,12 @@ export async function POST(request: Request) {
         },
       });
     }
-    await prisma.order.update({
-      where: { id: order.id },
+    await prisma.order.updateMany({
+      where: {
+        id: order.id,
+        status: { not: "CANCELLED" },
+        paymentStatus: { notIn: ["PAID", "REFUNDED"] },
+      },
       data: { paymentStatus: "INITIATED" },
     });
 

@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { OrderTimeline } from "@/components/orders/order-timeline";
-import { StatusPoller } from "@/components/orders/status-poller";
+import { RealtimeOrderTracker } from "@/components/orders/realtime-order-tracker";
 import { PaymentPanel } from "@/components/orders/payment-panel";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
 import { OrderSuccess } from "@/components/orders/order-success";
@@ -131,7 +131,12 @@ export default async function OrderPage({
 
   return (
     <section className="container-page max-w-6xl py-10 lg:py-14">
-      <StatusPoller active={active} />
+      <RealtimeOrderTracker
+        initialOrderNumber={order.orderNumber}
+        initialStatus={order.status}
+        initialType={order.type}
+        token={token ?? null}
+      />
       {justPlaced ? (
         <OrderSuccess
           orderNumber={order.orderNumber}

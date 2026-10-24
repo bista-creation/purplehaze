@@ -52,9 +52,12 @@ class CouponUnavailableError extends Error {
 export type CreateOrderResult =
   | {
       success: true;
+      orderId: string;
       orderNumber: string;
       publicToken: string;
       confirmationUrl: string;
+      paymentMethod: string;
+      digitalPayment: boolean;
     }
   | { success: false; message: string };
 
@@ -140,16 +143,24 @@ export async function createOrderAction(
     if (idempotencyKey) {
       const existing = await prisma.order.findUnique({
         where: { idempotencyKey },
-        select: { orderNumber: true, publicToken: true },
+        select: {
+          id: true,
+          orderNumber: true,
+          publicToken: true,
+          paymentMethod: true,
+        },
       });
       if (existing) {
         return {
           success: true,
+          orderId: existing.id,
           orderNumber: existing.orderNumber,
           publicToken: existing.publicToken,
           confirmationUrl: `/order/${existing.orderNumber}?token=${encodeURIComponent(
             existing.publicToken,
           )}&placed=1`,
+          paymentMethod: existing.paymentMethod,
+          digitalPayment: existing.paymentMethod !== "COD",
         };
       }
     }
@@ -475,15 +486,17 @@ export async function createOrderAction(
         created.paymentMethod,
         created.paymentStatus,
       );
-      await createStaffNotification(tx, {
-        eventKey: `order:${created.id}:created`,
-        type: "ORDER",
-        title: `New order ${created.orderNumber} — ${payment.label}`,
-        message: `${ORDER_TYPE_LABELS[created.type as keyof typeof ORDER_TYPE_LABELS] ?? created.type} · ${formatNPR(created.total)} · ${payment.label}`,
-        link: `/admin/orders/${created.id}`,
-        orderId: created.id,
-        isTest: created.isTest,
-      });
+      if (!digitalPayment) {
+        await createStaffNotification(tx, {
+          eventKey: `order:${created.id}:created`,
+          type: "ORDER",
+          title: `New order ${created.orderNumber} — ${payment.label}`,
+          message: `${ORDER_TYPE_LABELS[created.type as keyof typeof ORDER_TYPE_LABELS] ?? created.type} · ${formatNPR(created.total)} · ${payment.label}`,
+          link: `/admin/orders/${created.id}`,
+          orderId: created.id,
+          isTest: created.isTest,
+        });
+      }
 
       return created;
     });
@@ -493,39 +506,41 @@ export async function createOrderAction(
     )}&placed=1`;
 
     after(async () => {
-      await sendOrderConfirmation({
-        orderNumber: order.orderNumber,
-        customerName: order.customerName,
-        customerEmail: order.customerEmail,
-        type: order.type,
-        total: order.total,
-        status: order.status,
-        items: order.items.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          lineTotal: item.lineTotal,
-        })),
-        deliveryAddress: order.deliveryAddress,
-        scheduledFor: order.scheduledFor,
-      }).catch((error) => console.error("Order email failed", error));
+      if (!digitalPayment) {
+        await sendOrderConfirmation({
+          orderNumber: order.orderNumber,
+          customerName: order.customerName,
+          customerEmail: order.customerEmail,
+          type: order.type,
+          total: order.total,
+          status: order.status,
+          items: order.items.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            lineTotal: item.lineTotal,
+          })),
+          deliveryAddress: order.deliveryAddress,
+          scheduledFor: order.scheduledFor,
+        }).catch((error) => console.error("Order email failed", error));
 
-      await sendAdminNotification(
-        `New order ${order.orderNumber} — ${formatNPR(order.total)}`,
-        `<p style="font-size:14px;line-height:1.8;"><strong>${escapeHtml(
-          order.customerName,
-        )}</strong> · ${escapeHtml(order.customerPhone)} · ${escapeHtml(
-          order.customerEmail,
-        )}</p>
-        <p style="font-size:14px;line-height:1.8;">${escapeHtml(
-          order.type.replace("_", " "),
-        )} · ${escapeHtml(order.paymentMethod)} · ${order.items.length} lines</p>
-        <p style="font-size:14px;line-height:1.8;">${escapeHtml(
-          order.deliveryAddress ?? details.tableNumber ?? "Pickup",
-        )}</p>
-        <p style="font-size:14px;line-height:1.8;">${escapeHtml(
-          order.notes ?? "",
-        )}</p>`,
-      ).catch((error) => console.error("Admin order email failed", error));
+        await sendAdminNotification(
+          `New order ${order.orderNumber} — ${formatNPR(order.total)}`,
+          `<p style="font-size:14px;line-height:1.8;"><strong>${escapeHtml(
+            order.customerName,
+          )}</strong> · ${escapeHtml(order.customerPhone)} · ${escapeHtml(
+            order.customerEmail,
+          )}</p>
+          <p style="font-size:14px;line-height:1.8;">${escapeHtml(
+            order.type.replace("_", " "),
+          )} · ${escapeHtml(order.paymentMethod)} · ${order.items.length} lines</p>
+          <p style="font-size:14px;line-height:1.8;">${escapeHtml(
+            order.deliveryAddress ?? details.tableNumber ?? "Pickup",
+          )}</p>
+          <p style="font-size:14px;line-height:1.8;">${escapeHtml(
+            order.notes ?? "",
+          )}</p>`,
+        ).catch((error) => console.error("Admin order email failed", error));
+      }
 
       await writeAuditLog({
         userId: user?.id,
@@ -547,9 +562,12 @@ export async function createOrderAction(
 
     return {
       success: true,
+      orderId: order.id,
       orderNumber: order.orderNumber,
       publicToken,
       confirmationUrl,
+      paymentMethod: order.paymentMethod,
+      digitalPayment,
     };
   } catch (error) {
     if (error instanceof CouponUnavailableError) {
@@ -561,16 +579,24 @@ export async function createOrderAction(
     if (input.idempotencyKey && isUniqueConstraintError(error)) {
       const existing = await prisma.order.findUnique({
         where: { idempotencyKey: input.idempotencyKey },
-        select: { orderNumber: true, publicToken: true },
+        select: {
+          id: true,
+          orderNumber: true,
+          publicToken: true,
+          paymentMethod: true,
+        },
       });
       if (existing) {
         return {
           success: true,
+          orderId: existing.id,
           orderNumber: existing.orderNumber,
           publicToken: existing.publicToken,
           confirmationUrl: `/order/${existing.orderNumber}?token=${encodeURIComponent(
             existing.publicToken,
           )}&placed=1`,
+          paymentMethod: existing.paymentMethod,
+          digitalPayment: existing.paymentMethod !== "COD",
         };
       }
     }
