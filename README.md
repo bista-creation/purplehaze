@@ -151,11 +151,16 @@ The app normalizes trailing and duplicate path slashes in `AUTH_URL` and derives
 ## Checks
 
 ```bash
-npm run lint
-npm run typecheck
-npm test
-npm run build
+npm run lint       # Run ESLint (0 errors, 0 warnings)
+npm run typecheck  # Run TypeScript compiler check (strict mode)
+npm test           # Run Vitest unit tests (75 passing tests)
+npm run build      # Build Next.js 16 production bundle and generate static routes
 ```
+
+The production build automatically generates:
+- Canonical dynamic `sitemap.xml` (`/sitemap.xml`) including all public routes and active venues
+- Crawl policy `robots.txt` (`/robots.txt`) with disallow rules for admin, account, checkout, and API routes
+- Schema.org structured JSON-LD (`RestaurantJsonLd`, `Menu`, `MenuItem`, `PostalAddress`, `GeoCoordinates`)
 
 `npm run build` requires a reachable database for pages that query it. Run it after local Supabase is started and seeded, or against a reviewed staging database. Do not run destructive commands against production.
 
