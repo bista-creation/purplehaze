@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -54,9 +55,23 @@ export function CareerAdmin({
   initialCVs: ReceivedCV[];
   defaultTab?: "vacancies" | "cvs";
 }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"vacancies" | "cvs">(defaultTab);
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const [deletedVacancyIds, setDeletedVacancyIds] = useState<string[]>([]);
+  const [deletedCVIds, setDeletedCVIds] = useState<string[]>([]);
+  const [vacancyStatusOverrides, setVacancyStatusOverrides] = useState<Record<string, "ACTIVE" | "CLOSED">>({});
+  const [cvStatusOverrides, setCvStatusOverrides] = useState<Record<string, ReceivedCV["status"]>>({});
+
+  const vacancyList = vacancies
+    .filter((v) => !deletedVacancyIds.includes(v.id))
+    .map((v) => (vacancyStatusOverrides[v.id] ? { ...v, status: vacancyStatusOverrides[v.id] } : v));
+
+  const cvList = initialCVs
+    .filter((c) => !deletedCVIds.includes(c.id))
+    .map((c) => (cvStatusOverrides[c.id] ? { ...c, status: cvStatusOverrides[c.id] } : c));
 
   // Vacancy Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -166,7 +181,12 @@ export function CareerAdmin({
     startTransition(async () => {
       const res = await adminToggleVacancyAction(id);
       if (res.success) {
+        setVacancyStatusOverrides((prev) => {
+          const current = prev[id] ?? vacancies.find((v) => v.id === id)?.status ?? "ACTIVE";
+          return { ...prev, [id]: current === "ACTIVE" ? "CLOSED" : "ACTIVE" };
+        });
         setFeedback({ type: "success", message: res.message });
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: res.message });
       }
@@ -181,7 +201,9 @@ export function CareerAdmin({
     startTransition(async () => {
       const res = await adminDeleteVacancyAction(id);
       if (res.success) {
+        setDeletedVacancyIds((prev) => [...prev, id]);
         setFeedback({ type: "success", message: res.message });
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: res.message });
       }
@@ -192,23 +214,30 @@ export function CareerAdmin({
     startTransition(async () => {
       const res = await adminUpdateCVStatusAction(id, nextStatus);
       if (res.success) {
+        setCvStatusOverrides((prev) => ({ ...prev, [id]: nextStatus }));
         setFeedback({ type: "success", message: res.message });
+        router.refresh();
       }
     });
   };
 
   const handleDeleteCV = (id: string, name: string) => {
     if (!window.confirm(`Remove application from ${name}?`)) return;
+    setFeedback(null);
     startTransition(async () => {
       const res = await adminDeleteCVAction(id);
       if (res.success) {
+        setDeletedCVIds((prev) => [...prev, id]);
         setFeedback({ type: "success", message: res.message });
+        router.refresh();
+      } else {
+        setFeedback({ type: "error", message: res.message });
       }
     });
   };
 
   // Filtered CVs
-  const filteredCVs = initialCVs.filter((cv) => {
+  const filteredCVs = cvList.filter((cv) => {
     const matchesStatus = cvStatusFilter === "ALL" || cv.status === cvStatusFilter;
     const q = cvQuery.toLowerCase().trim();
     const matchesQuery =
@@ -220,8 +249,8 @@ export function CareerAdmin({
     return matchesStatus && matchesQuery;
   });
 
-  const activeVacancyCount = vacancies.filter((v) => v.status === "ACTIVE").length;
-  const newCVCount = initialCVs.filter((c) => c.status === "NEW").length;
+  const activeVacancyCount = vacancyList.filter((v) => v.status === "ACTIVE").length;
+  const newCVCount = cvList.filter((c) => c.status === "NEW").length;
 
   return (
     <div className="space-y-6">
@@ -535,14 +564,14 @@ export function CareerAdmin({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-foreground">
-                All Posted Vacancies ({vacancies.length})
+                All Posted Vacancies ({vacancyList.length})
               </h3>
               <span className="text-xs text-muted-foreground">
                 All roles strictly full-time • Managed in Biratnagar
               </span>
             </div>
 
-            {vacancies.length === 0 ? (
+            {vacancyList.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-12 text-center">
                 <Briefcase className="mx-auto size-10 text-muted-foreground/60" />
                 <h4 className="font-display mt-3 text-base font-semibold">No vacancies posted yet</h4>
@@ -552,7 +581,7 @@ export function CareerAdmin({
               </div>
             ) : (
               <div className="grid gap-4">
-                {vacancies.map((vacancy) => (
+                {vacancyList.map((vacancy) => (
                   <div
                     key={vacancy.id}
                     className="flex flex-col justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-xs sm:flex-row sm:items-center"
@@ -664,7 +693,7 @@ export function CareerAdmin({
                 onChange={(e) => setCvStatusFilter(e.target.value)}
                 className="h-10 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none"
               >
-                <option value="ALL">All ({initialCVs.length})</option>
+                <option value="ALL">All ({cvList.length})</option>
                 <option value="NEW">New ({newCVCount})</option>
                 <option value="REVIEWED">Reviewed</option>
                 <option value="SHORTLISTED">Shortlisted</option>

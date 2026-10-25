@@ -361,9 +361,7 @@ export async function getEventMenus(includeInactive = false): Promise<EventMenuP
       where: includeInactive ? undefined : { isActive: true },
       orderBy: { sortOrder: "asc" },
     });
-    if (dbPackages.length > 0) {
-      return dbPackages.map(mapDbPackage);
-    }
+    return dbPackages.map(mapDbPackage);
   } catch (error) {
     console.warn("Database lookup for event menus failed, trying local fallback:", error);
   }
@@ -532,15 +530,21 @@ export async function deleteEventMenu(id: string): Promise<boolean> {
     await prisma.eventMenuPackage.delete({
       where: { id },
     });
-    return true;
-  } catch (error) {
-    console.warn("Database deletion for event menu failed, trying local file:", error);
+  } catch (error: unknown) {
+    const isP2025 = typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2025";
+    if (!isP2025) {
+      console.warn("Database deletion for event menu failed, trying local file:", error);
+    }
   }
 
-  await ensureDataFiles();
-  const menus = await getEventMenus(true);
-  const filtered = menus.filter((m) => m.id !== id);
-  if (filtered.length === menus.length) return false;
-  await writeFile(MENUS_FILE, JSON.stringify(filtered, null, 2), "utf-8");
+  try {
+    await ensureDataFiles();
+    const menus = await getEventMenus(true);
+    const filtered = menus.filter((m) => m.id !== id);
+    await writeFile(MENUS_FILE, JSON.stringify(filtered, null, 2), "utf-8").catch(() => {});
+  } catch {
+    // Ignore read-only fs
+  }
+
   return true;
 }

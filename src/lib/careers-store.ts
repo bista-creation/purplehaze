@@ -55,28 +55,26 @@ export async function getVacancies(): Promise<CareerVacancy[]> {
     const dbVacancies = await prisma.careerVacancy.findMany({
       orderBy: { createdAt: "desc" },
     });
-    if (dbVacancies.length > 0) {
-      return dbVacancies.map((v) => ({
-        id: v.id,
-        title: v.title,
-        department: v.department,
-        type: v.type,
-        experience: v.experience,
-        salary: v.salary ?? undefined,
-        description: v.description,
-        skills: parseSkills(v.skills),
-        image: v.image ?? undefined,
-        status: v.status as CareerVacancy["status"],
-        location: v.location,
-        createdAt: v.createdAt.toISOString(),
-        updatedAt: v.updatedAt.toISOString(),
-      }));
-    }
+    return dbVacancies.map((v) => ({
+      id: v.id,
+      title: v.title,
+      department: v.department,
+      type: v.type,
+      experience: v.experience,
+      salary: v.salary ?? undefined,
+      description: v.description,
+      skills: parseSkills(v.skills),
+      image: v.image ?? undefined,
+      status: v.status as CareerVacancy["status"],
+      location: v.location,
+      createdAt: v.createdAt.toISOString(),
+      updatedAt: v.updatedAt.toISOString(),
+    }));
   } catch (error) {
     console.warn("Database lookup for vacancies failed, attempting local fallback:", error);
   }
 
-  // Fallback to local data file
+  // Fallback to local data file only if database query errored
   try {
     const content = await readFile(VACANCIES_FILE, "utf-8");
     const data = JSON.parse(content);
@@ -200,21 +198,29 @@ export async function saveVacancy(
 
 export async function deleteVacancy(id: string): Promise<boolean> {
   try {
+    // Unlink any applications referencing this vacancy to prevent foreign key errors
+    await prisma.careerApplication.updateMany({
+      where: { vacancyId: id },
+      data: { vacancyId: null },
+    }).catch(() => {});
+
     await prisma.careerVacancy.delete({ where: { id } });
-    return true;
-  } catch (dbErr) {
-    console.warn("Database deleteVacancy failed, trying local fallback:", dbErr);
+  } catch (dbErr: unknown) {
+    const isP2025 = typeof dbErr === "object" && dbErr !== null && "code" in dbErr && (dbErr as { code: string }).code === "P2025";
+    if (!isP2025) {
+      console.warn("Database deleteVacancy failed, trying local fallback:", dbErr);
+    }
   }
 
   try {
     const all = await getVacancies();
     const filtered = all.filter((v) => v.id !== id);
-    if (filtered.length === all.length) return false;
-    await writeFile(VACANCIES_FILE, JSON.stringify(filtered, null, 2), "utf-8");
-    return true;
+    await writeFile(VACANCIES_FILE, JSON.stringify(filtered, null, 2), "utf-8").catch(() => {});
   } catch {
-    return false;
+    // Ignore read-only filesystem errors
   }
+
+  return true;
 }
 
 export async function toggleVacancyStatus(id: string): Promise<CareerVacancy | null> {
@@ -260,22 +266,20 @@ export async function getReceivedCVs(): Promise<ReceivedCV[]> {
     const dbApps = await prisma.careerApplication.findMany({
       orderBy: { createdAt: "desc" },
     });
-    if (dbApps.length > 0) {
-      return dbApps.map((a) => ({
-        id: a.id,
-        name: a.name,
-        email: a.email,
-        phone: a.phone,
-        position: a.position,
-        experience: a.experience,
-        employmentType: a.employmentType,
-        message: a.message ?? "",
-        resumeUrl: a.resumeUrl,
-        resumeFileName: a.resumeFileName ?? undefined,
-        status: a.status as ReceivedCV["status"],
-        createdAt: a.createdAt.toISOString(),
-      }));
-    }
+    return dbApps.map((a) => ({
+      id: a.id,
+      name: a.name,
+      email: a.email,
+      phone: a.phone,
+      position: a.position,
+      experience: a.experience,
+      employmentType: a.employmentType,
+      message: a.message ?? "",
+      resumeUrl: a.resumeUrl,
+      resumeFileName: a.resumeFileName ?? undefined,
+      status: a.status as ReceivedCV["status"],
+      createdAt: a.createdAt.toISOString(),
+    }));
   } catch (error) {
     console.warn("Database lookup for applications failed, trying local fallback:", error);
   }
@@ -351,7 +355,11 @@ export async function updateCVStatus(
       data: { status },
     });
     return true;
-  } catch (dbError) {
+  } catch (dbError: unknown) {
+    const isP2025 = typeof dbError === "object" && dbError !== null && "code" in dbError && (dbError as { code: string }).code === "P2025";
+    if (isP2025) {
+      return true;
+    }
     console.warn("Database updateCVStatus failed, trying local fallback:", dbError);
   }
 
@@ -360,7 +368,7 @@ export async function updateCVStatus(
     const item = all.find((c) => c.id === id);
     if (!item) return false;
     item.status = status;
-    await writeFile(CVS_FILE, JSON.stringify(all, null, 2), "utf-8");
+    await writeFile(CVS_FILE, JSON.stringify(all, null, 2), "utf-8").catch(() => {});
     return true;
   } catch {
     return false;
@@ -370,18 +378,20 @@ export async function updateCVStatus(
 export async function deleteReceivedCV(id: string): Promise<boolean> {
   try {
     await prisma.careerApplication.delete({ where: { id } });
-    return true;
-  } catch (dbError) {
-    console.warn("Database deleteReceivedCV failed, trying local fallback:", dbError);
+  } catch (dbError: unknown) {
+    const isP2025 = typeof dbError === "object" && dbError !== null && "code" in dbError && (dbError as { code: string }).code === "P2025";
+    if (!isP2025) {
+      console.warn("Database deleteReceivedCV failed, trying local fallback:", dbError);
+    }
   }
 
   try {
     const all = await getReceivedCVs();
     const filtered = all.filter((c) => c.id !== id);
-    if (filtered.length === all.length) return false;
-    await writeFile(CVS_FILE, JSON.stringify(filtered, null, 2), "utf-8");
-    return true;
+    await writeFile(CVS_FILE, JSON.stringify(filtered, null, 2), "utf-8").catch(() => {});
   } catch {
-    return false;
+    // Ignore read-only filesystem errors
   }
+
+  return true;
 }
