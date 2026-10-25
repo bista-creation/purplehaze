@@ -1,46 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTheme } from "next-themes";
+import { useMounted } from "@/lib/use-mounted";
+import { cn } from "@/lib/utils";
 
 const ASSISTANT_URL = "https://mani-ai-psi.vercel.app/embed/purple-haze";
 const ASSISTANT_ORIGIN = new URL(ASSISTANT_URL).origin;
 const AVATAR_URL = "/images/brand/maya.png";
-
-const panelStyle: CSSProperties = {
-  position: "fixed",
-  right: 20,
-  bottom: 20,
-  zIndex: 999999,
-  width: 380,
-  height: 600,
-  maxWidth: "calc(100vw - 30px)",
-  maxHeight: "calc(100vh - 40px)",
-};
-
-const iframeStyle: CSSProperties = {
-  width: "100%",
-  height: "100%",
-  border: "none",
-  borderRadius: 16,
-  boxShadow: "0 12px 40px rgba(0, 0, 0, 0.35)",
-};
-
-const launcherStyle: CSSProperties = {
-  position: "fixed",
-  right: 20,
-  bottom: 20,
-  zIndex: 999999,
-  padding: 0,
-  border: "2px solid #f5b942",
-  borderRadius: "9999px",
-  background: "#1a1025",
-  boxShadow: "0 10px 30px rgba(0, 0, 0, 0.35)",
-  cursor: "pointer",
-  overflow: "visible",
-  WebkitTapHighlightColor: "transparent",
-};
 
 type AssistantCloseMessage = {
   type: "mani-ai:close";
@@ -60,16 +28,34 @@ function isCloseMessage(data: unknown): data is AssistantCloseMessage {
 /**
  * Purple Haze's own Maya assistant.
  *
- * The assistant is isolated in a cross-origin iframe and owns its
- * conversation UI. Its close button sends a `mani-ai:close` message to this
- * page; we hide the frame and show the launcher again. The message is only
- * accepted from the assistant's exact origin and iframe window.
+ * Scaled cleanly for mobile screens with website brand theme matching
+ * (royal violet & gold palette in light and dark modes).
  */
 export function PurpleHazeAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const hasOpenedRef = useRef(false);
+
+  const mounted = useMounted();
+  const { resolvedTheme } = useTheme();
+
+  const syncThemeToIframe = useCallback(() => {
+    if (!iframeRef.current?.contentWindow) return;
+    const currentTheme = resolvedTheme === "dark" ? "dark" : "light";
+    try {
+      iframeRef.current.contentWindow.postMessage(
+        { type: "theme", theme: currentTheme },
+        ASSISTANT_ORIGIN,
+      );
+      iframeRef.current.contentWindow.postMessage(
+        { type: "set-theme", theme: currentTheme },
+        ASSISTANT_ORIGIN,
+      );
+    } catch {
+      // Ignore cross-origin error
+    }
+  }, [resolvedTheme]);
 
   useEffect(() => {
     function handleMessage(event: MessageEvent<unknown>) {
@@ -87,13 +73,17 @@ export function PurpleHazeAssistant() {
   useEffect(() => {
     if (isOpen) {
       hasOpenedRef.current = true;
+      syncThemeToIframe();
       return;
     }
 
     if (hasOpenedRef.current) {
       launcherRef.current?.focus({ preventScroll: true });
     }
-  }, [isOpen]);
+  }, [isOpen, syncThemeToIframe]);
+
+  const activeTheme = mounted && resolvedTheme === "dark" ? "dark" : "light";
+  const assistantSrc = `${ASSISTANT_URL}?theme=${activeTheme}`;
 
   if (!isOpen) {
     return (
@@ -103,15 +93,22 @@ export function PurpleHazeAssistant() {
         aria-label="Open Maya assistant (online)"
         aria-haspopup="dialog"
         title="Chat with Maya"
-        style={launcherStyle}
         onClick={() => setIsOpen(true)}
-        className="h-[52px] w-[52px] rounded-full transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1025] sm:h-[60px] sm:w-[60px]"
+        className={cn(
+          "fixed z-[999999] cursor-pointer overflow-visible rounded-full p-0 select-none",
+          "bottom-3 right-3 sm:bottom-5 sm:right-5",
+          "h-[50px] w-[50px] sm:h-[58px] sm:w-[58px]",
+          "border-2 border-gold bg-[#1a1025]",
+          "shadow-[0_8px_25px_rgba(91,33,182,0.35)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.7)]",
+          "transition-all duration-200 hover:scale-105 active:scale-95",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1025]",
+        )}
       >
         <Image
           src={AVATAR_URL}
-          alt=""
-          width={60}
-          height={60}
+          alt="Maya assistant"
+          width={58}
+          height={58}
           className="h-full w-full rounded-full object-cover"
         />
         <span
@@ -125,17 +122,29 @@ export function PurpleHazeAssistant() {
   return (
     <div
       id="maya-assistant"
-      style={panelStyle}
       role="dialog"
       aria-label="Maya assistant"
+      className={cn(
+        "fixed z-[999999] overflow-hidden transition-all duration-300 ease-out",
+        // Mobile layout: scaled smaller and compact (max 330px wide, max 470px tall)
+        "bottom-3 right-3 w-[calc(100vw-24px)] max-w-[330px] h-[470px] max-h-[calc(100dvh-72px)]",
+        // Tablet & Desktop layout: standard full chat window (380px wide, 580px tall)
+        "sm:bottom-5 sm:right-5 sm:w-[380px] sm:max-w-[400px] sm:h-[580px] sm:max-h-[calc(100dvh-90px)]",
+        // Website theme matching:
+        // Royal violet & gold aesthetic matching Purple Haze Restro & Garden
+        "rounded-2xl border-2 border-gold/70 bg-card dark:bg-[#1E132C]",
+        "shadow-[0_12px_45px_-8px_rgba(91,33,182,0.35)] dark:shadow-[0_18px_55px_-8px_rgba(0,0,0,0.85)]",
+        "ring-1 ring-gold/30",
+      )}
     >
       <iframe
         ref={iframeRef}
-        src={ASSISTANT_URL}
+        src={assistantSrc}
         title="Purple Haze Assistant"
         allow="microphone"
         referrerPolicy="strict-origin-when-cross-origin"
-        style={iframeStyle}
+        onLoad={syncThemeToIframe}
+        className="h-full w-full border-none bg-transparent"
       />
     </div>
   );
