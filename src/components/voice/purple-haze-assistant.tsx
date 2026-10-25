@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { useMounted } from "@/lib/use-mounted";
+import { useCartStore } from "@/lib/cart-store";
 import { cn } from "@/lib/utils";
 
 const ASSISTANT_URL = "https://mani-ai-psi.vercel.app/embed/purple-haze";
@@ -30,6 +31,9 @@ function isCloseMessage(data: unknown): data is AssistantCloseMessage {
  *
  * Scaled cleanly for mobile screens with website brand theme matching
  * (royal violet & gold palette in light and dark modes).
+ *
+ * z-index is set to z-40 so all modals, mobile nav sheets, and the cart slider
+ * (z-50) cleanly layer over the assistant without covering checkout actions.
  */
 export function PurpleHazeAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +43,7 @@ export function PurpleHazeAssistant() {
 
   const mounted = useMounted();
   const { resolvedTheme } = useTheme();
+  const isCartOpen = useCartStore((state) => state.isOpen);
 
   const syncThemeToIframe = useCallback(() => {
     if (!iframeRef.current?.contentWindow) return;
@@ -95,13 +100,14 @@ export function PurpleHazeAssistant() {
         title="Chat with Maya"
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed z-[999999] cursor-pointer overflow-visible rounded-full p-0 select-none",
+          "fixed z-40 cursor-pointer overflow-visible rounded-full p-0 select-none",
           "bottom-3 right-3 sm:bottom-5 sm:right-5",
           "h-[50px] w-[50px] sm:h-[58px] sm:w-[58px]",
           "border-2 border-gold bg-[#1a1025]",
           "shadow-[0_8px_25px_rgba(91,33,182,0.35)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.7)]",
           "transition-all duration-200 hover:scale-105 active:scale-95",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1025]",
+          isCartOpen && "pointer-events-none opacity-0 scale-75",
         )}
       >
         <Image
@@ -125,7 +131,7 @@ export function PurpleHazeAssistant() {
       role="dialog"
       aria-label="Maya assistant"
       className={cn(
-        "fixed z-[999999] overflow-hidden transition-all duration-300 ease-out",
+        "fixed z-40 overflow-hidden transition-all duration-300 ease-out",
         // Mobile layout: scaled smaller and compact (max 330px wide, max 470px tall)
         "bottom-3 right-3 w-[calc(100vw-24px)] max-w-[330px] h-[470px] max-h-[calc(100dvh-72px)]",
         // Tablet & Desktop layout: standard full chat window (380px wide, 580px tall)
@@ -135,6 +141,7 @@ export function PurpleHazeAssistant() {
         "rounded-2xl border-2 border-gold/70 bg-card dark:bg-[#1E132C]",
         "shadow-[0_12px_45px_-8px_rgba(91,33,182,0.35)] dark:shadow-[0_18px_55px_-8px_rgba(0,0,0,0.85)]",
         "ring-1 ring-gold/30",
+        isCartOpen && "pointer-events-none opacity-0",
       )}
     >
       <iframe
