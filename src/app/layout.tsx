@@ -92,6 +92,7 @@ export default function RootLayout({
   return (
     <html lang="en-NP" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         className={`${inter.variable} ${playfair.variable} min-h-dvh font-sans`}
       >
         <ThemeProvider
