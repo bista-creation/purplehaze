@@ -7,8 +7,8 @@ export const SITE = {
   description:
     "A garden restaurant, banquet venue and meeting space on Airport Road, Biratnagar. Nepali, Indian, Asian and continental favourites, served in a warm, leafy setting.",
   url: normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL),
-  phone: "+977 9851150987",
-  phoneRaw: "+9779851150987",
+  phone: "+97721464193",
+  phoneRaw: "+97721464193",
   // Display-only number for the header top bar. Calls and WhatsApp continue
   // to use the established `phoneRaw` and `whatsapp` connections.
   topbarPhone: "+977 9852022202",
