@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { slugify } from "@/lib/utils";
+import { prisma } from "@/lib/prisma";
 
 export type EventMenuCourse = {
   category: string;
@@ -300,18 +301,80 @@ const SEED_EVENT_MENUS: EventMenuPackage[] = [
   },
 ];
 
+function parseJsonArray<T>(raw: string | null | undefined, fallback: T[] = []): T[] {
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as T[]) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function mapDbPackage(p: {
+  id: string;
+  name: string;
+  slug: string;
+  eventType: string;
+  tagline: string;
+  description: string;
+  pricePerPerson: number;
+  minGuests: number;
+  image: string | null;
+  isPopular: boolean;
+  isVegetarian: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  badges: string;
+  courses: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): EventMenuPackage {
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    eventType: p.eventType,
+    tagline: p.tagline,
+    description: p.description,
+    pricePerPerson: p.pricePerPerson,
+    minGuests: p.minGuests,
+    image: p.image || "/images/venues/banquet-hall-setup.jpg",
+    isPopular: p.isPopular,
+    isVegetarian: p.isVegetarian,
+    isActive: p.isActive,
+    sortOrder: p.sortOrder,
+    badges: parseJsonArray<string>(p.badges),
+    courses: parseJsonArray<EventMenuCourse>(p.courses),
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  };
+}
+
 async function ensureDataFiles() {
   await mkdir(DATA_DIR, { recursive: true });
 }
 
 export async function getEventMenus(includeInactive = false): Promise<EventMenuPackage[]> {
   try {
+    const dbPackages = await prisma.eventMenuPackage.findMany({
+      where: includeInactive ? undefined : { isActive: true },
+      orderBy: { sortOrder: "asc" },
+    });
+    if (dbPackages.length > 0) {
+      return dbPackages.map(mapDbPackage);
+    }
+  } catch (error) {
+    console.warn("Database lookup for event menus failed, trying local fallback:", error);
+  }
+
+  // Fallback to local JSON file
+  try {
     await ensureDataFiles();
     let content = "";
     try {
       content = await readFile(MENUS_FILE, "utf-8");
     } catch {
-      // If file doesn't exist, seed it
       await writeFile(MENUS_FILE, JSON.stringify(SEED_EVENT_MENUS, null, 2), "utf-8");
       content = JSON.stringify(SEED_EVENT_MENUS, null, 2);
     }
@@ -328,11 +391,33 @@ export async function getEventMenus(includeInactive = false): Promise<EventMenuP
 }
 
 export async function getEventMenuBySlug(slug: string): Promise<EventMenuPackage | null> {
+  try {
+    const dbPackage = await prisma.eventMenuPackage.findUnique({
+      where: { slug },
+    });
+    if (dbPackage) {
+      return mapDbPackage(dbPackage);
+    }
+  } catch (error) {
+    console.warn("Database lookup for event menu by slug failed, using fallback:", error);
+  }
+
   const menus = await getEventMenus(true);
   return menus.find((m) => m.slug === slug) ?? null;
 }
 
 export async function getEventMenuById(id: string): Promise<EventMenuPackage | null> {
+  try {
+    const dbPackage = await prisma.eventMenuPackage.findUnique({
+      where: { id },
+    });
+    if (dbPackage) {
+      return mapDbPackage(dbPackage);
+    }
+  } catch (error) {
+    console.warn("Database lookup for event menu by id failed, using fallback:", error);
+  }
+
   const menus = await getEventMenus(true);
   return menus.find((m) => m.id === id) ?? null;
 }
@@ -341,6 +426,60 @@ export async function saveEventMenu(
   input: Partial<EventMenuPackage>,
   id?: string,
 ): Promise<EventMenuPackage> {
+  const name = input.name || "Special Event Package";
+  const slug = input.slug || slugify(name) || `menu-${Date.now()}`;
+  const badgesStr = Array.isArray(input.badges) ? JSON.stringify(input.badges) : undefined;
+  const coursesStr = Array.isArray(input.courses) ? JSON.stringify(input.courses) : undefined;
+
+  // Try Prisma first
+  try {
+    if (id) {
+      const updated = await prisma.eventMenuPackage.update({
+        where: { id },
+        data: {
+          name: input.name,
+          slug: input.slug ? slugify(input.slug) : (input.name ? slugify(input.name) : undefined),
+          eventType: input.eventType,
+          tagline: input.tagline,
+          description: input.description,
+          pricePerPerson: input.pricePerPerson !== undefined ? Number(input.pricePerPerson) : undefined,
+          minGuests: input.minGuests !== undefined ? Number(input.minGuests) : undefined,
+          image: input.image,
+          isPopular: input.isPopular !== undefined ? Boolean(input.isPopular) : undefined,
+          isVegetarian: input.isVegetarian !== undefined ? Boolean(input.isVegetarian) : undefined,
+          isActive: input.isActive !== undefined ? Boolean(input.isActive) : undefined,
+          sortOrder: input.sortOrder !== undefined ? Number(input.sortOrder) : undefined,
+          badges: badgesStr,
+          courses: coursesStr,
+        },
+      });
+      return mapDbPackage(updated);
+    } else {
+      const created = await prisma.eventMenuPackage.create({
+        data: {
+          name,
+          slug,
+          eventType: input.eventType || "Wedding",
+          tagline: input.tagline || "",
+          description: input.description || "",
+          pricePerPerson: Number(input.pricePerPerson) || 1200,
+          minGuests: Number(input.minGuests) || 20,
+          image: input.image || "/images/venues/banquet-hall-setup.jpg",
+          isPopular: Boolean(input.isPopular),
+          isVegetarian: Boolean(input.isVegetarian),
+          isActive: input.isActive ?? true,
+          sortOrder: Number(input.sortOrder) || 0,
+          badges: badgesStr || "[]",
+          courses: coursesStr || "[]",
+        },
+      });
+      return mapDbPackage(created);
+    }
+  } catch (error) {
+    console.warn("Database write for event menu failed, falling back to local file:", error);
+  }
+
+  // Local JSON fallback
   await ensureDataFiles();
   const menus = await getEventMenus(true);
   const now = new Date().toISOString();
@@ -363,7 +502,6 @@ export async function saveEventMenu(
     return updated;
   }
 
-  const name = input.name || "Special Event Package";
   const newMenu: EventMenuPackage = {
     id: `em-${randomUUID().slice(0, 8)}`,
     name,
@@ -390,6 +528,15 @@ export async function saveEventMenu(
 }
 
 export async function deleteEventMenu(id: string): Promise<boolean> {
+  try {
+    await prisma.eventMenuPackage.delete({
+      where: { id },
+    });
+    return true;
+  } catch (error) {
+    console.warn("Database deletion for event menu failed, trying local file:", error);
+  }
+
   await ensureDataFiles();
   const menus = await getEventMenus(true);
   const filtered = menus.filter((m) => m.id !== id);

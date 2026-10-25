@@ -560,3 +560,69 @@ model NewsletterSubscriber {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 }
+
+
+model CareerVacancy {
+  id          String   @id @default(cuid())
+  title       String
+  department  String
+  type        String   @default("Full-time")
+  experience  String
+  salary      String?
+  description String
+  skills      String   @default("[]")
+  image       String?
+  status      String   @default("ACTIVE")
+  location    String   @default("Airport Road, Biratnagar")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  applications CareerApplication[]
+
+  @@index([status])
+}
+
+model CareerApplication {
+  id             String         @id @default(cuid())
+  vacancyId      String?
+  name           String
+  email          String
+  phone          String
+  position       String
+  experience     String
+  employmentType String         @default("Full-time")
+  message        String?
+  resumeUrl      String
+  resumeFileName String?
+  status         String         @default("NEW")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  vacancy CareerVacancy? @relation(fields: [vacancyId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model EventMenuPackage {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  eventType      String
+  tagline        String
+  description    String
+  pricePerPerson Int
+  minGuests      Int      @default(20)
+  image          String?
+  isPopular      Boolean  @default(false)
+  isVegetarian   Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  badges         String   @default("[]")
+  courses        String   @default("[]")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@index([eventType])
+}
