@@ -19,6 +19,14 @@ const appUrl = normalizeAppUrl(
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  outputFileTracingExcludes: {
+    // These admin screens now use the public asset URLs and Blob for uploaded
+    // media; they do not need copies of the static image tree inside Functions.
+    "/admin/menu": ["./public/images/**"],
+    "/admin/venues": ["./public/images/**"],
+    "/admin/content/gallery": ["./public/images/**"],
+    "/admin/content/banners": ["./public/images/**"],
+  },
   env: {
     NEXT_PUBLIC_APP_URL: appUrl,
   },

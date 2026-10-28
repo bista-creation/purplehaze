@@ -38,6 +38,8 @@ export async function listImageOptions(folder: ImageFolder) {
   const options = new Set<string>();
 
   for (const relative of FOLDERS[folder]) {
+    // Avoid tracing the static image tree into admin Functions on Vercel.
+    if (process.env.VERCEL === "1") break;
     const directory = path.join(process.cwd(), "public", "images", relative);
     try {
       const entries = await readdir(directory, { withFileTypes: true });

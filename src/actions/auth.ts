@@ -65,33 +65,6 @@ export async function loginAction(formData: FormData): Promise<AuthActionResult>
     // Check the credentials before calling Auth.js so we can explain the
     // one recoverable case (an unverified email) without leaking whether an
     // account exists to someone who does not know the password.
-    const emailLower = parsed.data.email.toLowerCase();
-    const seedEmail = (process.env.SEED_ADMIN_EMAIL || "admin@purplehaze.com").toLowerCase();
-    const seedPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@PurpleHaze2026";
-
-    const isLocalAdmin =
-      (emailLower === seedEmail ||
-        emailLower === "admin@purplehaze.com" ||
-        emailLower === "bistacreation@gmail.com") &&
-      (parsed.data.password === seedPassword ||
-        parsed.data.password === "Admin@PurpleHaze2026" ||
-        parsed.data.password === "M9_HDW64EfqnLw6mjMJEGNCK");
-
-    if (isLocalAdmin) {
-      await signIn("credentials", {
-        email: parsed.data.email,
-        password: parsed.data.password,
-        redirect: false,
-      });
-
-      const destination = next.startsWith("/admin") ? next : "/admin";
-      return {
-        success: true,
-        message: "Signed in successfully as administrator.",
-        next: destination,
-      };
-    }
-
     const account = await prisma.user.findUnique({
       where: { email: parsed.data.email },
       select: {

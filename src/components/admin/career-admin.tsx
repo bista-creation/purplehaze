@@ -783,7 +783,13 @@ export function CareerAdmin({
                           size="sm"
                           className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
                         >
-                          <a href={cv.resumeUrl} target="_blank" rel="noopener noreferrer">
+                          <a
+                            href={cv.resumeUrl.startsWith("resumes/")
+                              ? `/api/admin/career/cvs/${encodeURIComponent(cv.id)}/resume`
+                              : cv.resumeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
                             <Download className="size-4" /> View / Download CV
                           </a>
                         </Button>

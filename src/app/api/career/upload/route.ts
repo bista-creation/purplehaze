@@ -1,11 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { assertSameOrigin, getClientIp } from "@/lib/security";
-import { getImageUploadMode } from "@/lib/uploads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -135,24 +133,31 @@ export async function POST(request: Request) {
     }
 
     const safeName = sanitizeFileName(file.name, kind);
-    const mode = getImageUploadMode();
-
-    if (mode === "blob" && process.env.BLOB_READ_WRITE_TOKEN) {
+    const careerBlobToken = process.env.CAREER_BLOB_READ_WRITE_TOKEN?.trim();
+    if (careerBlobToken) {
       const blob = await put(`resumes/${safeName}`, Buffer.from(bytes), {
-        access: "public",
+        access: "private",
         contentType: MIME_MAP[kind],
         addRandomSuffix: false,
-        token: process.env.BLOB_READ_WRITE_TOKEN,
+        token: careerBlobToken,
       });
 
       return NextResponse.json({
-        url: blob.url,
+        url: blob.pathname,
         fileName: file.name,
         size: bytes.byteLength,
       });
     }
 
-    // Default to local uploads directory in public
+    if (process.env.VERCEL === "1") {
+      return NextResponse.json(
+        { error: "Resume uploads are temporarily unavailable. Please email your CV directly." },
+        { status: 503 },
+      );
+    }
+
+    // Local uploads are only for local development and self-hosted deployments.
+    const { mkdir, writeFile } = await import("node:fs/promises");
     const relativeDir = path.join("uploads", "resumes");
     const absoluteDir = path.join(process.cwd(), "public", relativeDir);
 

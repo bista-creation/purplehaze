@@ -71,6 +71,7 @@ export async function getVacancies(): Promise<CareerVacancy[]> {
       updatedAt: v.updatedAt.toISOString(),
     }));
   } catch (error) {
+    if (process.env.VERCEL === "1") throw error;
     console.warn("Database lookup for vacancies failed, attempting local fallback:", error);
   }
 
@@ -109,8 +110,9 @@ export async function getVacancyById(id: string): Promise<CareerVacancy | null> 
         updatedAt: v.updatedAt.toISOString(),
       };
     }
-  } catch {
-    // fallback
+  } catch (error) {
+    if (process.env.VERCEL === "1") throw error;
+    // Local development fallback.
   }
 
   const all = await getVacancies();
@@ -176,6 +178,7 @@ export async function saveVacancy(
       updatedAt: record.updatedAt.toISOString(),
     };
   } catch (dbError) {
+    if (process.env.VERCEL === "1") throw dbError;
     console.error("Database saveVacancy failed, falling back to JSON:", dbError);
     // Local JSON fallback
     const all = await getVacancies();
@@ -202,12 +205,17 @@ export async function deleteVacancy(id: string): Promise<boolean> {
     await prisma.careerApplication.updateMany({
       where: { vacancyId: id },
       data: { vacancyId: null },
-    }).catch(() => {});
+    }).catch((error) => {
+      if (process.env.VERCEL === "1") throw error;
+    });
 
     await prisma.careerVacancy.delete({ where: { id } });
+    if (process.env.VERCEL === "1") return true;
   } catch (dbErr: unknown) {
     const isP2025 = typeof dbErr === "object" && dbErr !== null && "code" in dbErr && (dbErr as { code: string }).code === "P2025";
+    if (isP2025 && process.env.VERCEL === "1") return true;
     if (!isP2025) {
+      if (process.env.VERCEL === "1") throw dbErr;
       console.warn("Database deleteVacancy failed, trying local fallback:", dbErr);
     }
   }
@@ -248,8 +256,9 @@ export async function toggleVacancyStatus(id: string): Promise<CareerVacancy | n
         updatedAt: updated.updatedAt.toISOString(),
       };
     }
-  } catch {
-    // fallback
+  } catch (error) {
+    if (process.env.VERCEL === "1") throw error;
+    // Local development fallback.
   }
 
   const all = await getVacancies();
@@ -281,6 +290,7 @@ export async function getReceivedCVs(): Promise<ReceivedCV[]> {
       createdAt: a.createdAt.toISOString(),
     }));
   } catch (error) {
+    if (process.env.VERCEL === "1") throw error;
     console.warn("Database lookup for applications failed, trying local fallback:", error);
   }
 
@@ -331,6 +341,7 @@ export async function saveReceivedCV(
       createdAt: record.createdAt.toISOString(),
     };
   } catch (dbError) {
+    if (process.env.VERCEL === "1") throw dbError;
     console.error("Database saveReceivedCV failed, trying fallback:", dbError);
     const all = await getReceivedCVs();
     const newCV: ReceivedCV = {
@@ -360,6 +371,7 @@ export async function updateCVStatus(
     if (isP2025) {
       return true;
     }
+    if (process.env.VERCEL === "1") throw dbError;
     console.warn("Database updateCVStatus failed, trying local fallback:", dbError);
   }
 
@@ -378,9 +390,12 @@ export async function updateCVStatus(
 export async function deleteReceivedCV(id: string): Promise<boolean> {
   try {
     await prisma.careerApplication.delete({ where: { id } });
+    if (process.env.VERCEL === "1") return true;
   } catch (dbError: unknown) {
     const isP2025 = typeof dbError === "object" && dbError !== null && "code" in dbError && (dbError as { code: string }).code === "P2025";
+    if (isP2025 && process.env.VERCEL === "1") return true;
     if (!isP2025) {
+      if (process.env.VERCEL === "1") throw dbError;
       console.warn("Database deleteReceivedCV failed, trying local fallback:", dbError);
     }
   }

@@ -43,10 +43,11 @@ export async function getCurrentUser() {
   }
 
   // Resilient admin session fallback if database is temporarily offline/unreachable
+  const seedAdminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
   if (
     session.user.role === "ADMIN" &&
-    (session.user.email?.toLowerCase() === "bistacreation@gmail.com" ||
-      session.user.email?.toLowerCase() === "admin@purplehaze.com")
+    Boolean(seedAdminEmail) &&
+    session.user.email?.toLowerCase() === seedAdminEmail
   ) {
     return {
       id: session.user.id || "cc38da83845104ec88bd66675",
