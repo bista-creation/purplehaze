@@ -37,7 +37,8 @@ export async function POST(
   );
 
   if (!result.success) {
-    return jsonError("CANCEL_FAILED", result.message, 400);
+    const statusCode = result.message === "Order not found." ? 404 : 400;
+    return jsonError("CANCEL_FAILED", result.message, statusCode);
   }
 
   return jsonOk({ message: result.message });

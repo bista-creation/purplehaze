@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { orderService } from "@/lib/services/order.service";
-import { getAuthContext } from "@/lib/api/auth-context";
+import { getAuthContext, checkCsrfOrigin } from "@/lib/api/auth-context";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/security";
 import { checkIdempotency, recordIdempotency } from "@/lib/api/idempotency";
@@ -46,19 +46,32 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = await getClientIp();
+    const forwarded = req.headers.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() || (await getClientIp());
     const limit = await checkRateLimit(`api:orders:${ip}`, 10, 10 * 60 * 1000);
     if (!limit.success) {
       return jsonError("RATE_LIMIT_EXCEEDED", "Too many order requests. Please wait a few minutes.", 429);
     }
 
-    const idempotencyHeader = req.headers.get("idempotency-key");
-    const cachedResponse = await checkIdempotency(req, "/api/v1/orders");
-    if (cachedResponse) {
-      return cachedResponse;
+    const csrf = checkCsrfOrigin(req);
+    if (!csrf.valid) {
+      return csrf.errorResponse!;
     }
 
+    const idempotencyHeader = req.headers.get("idempotency-key")?.trim();
     const body = await req.json().catch(() => null);
+    const user = await getAuthContext(req);
+
+    if (idempotencyHeader) {
+      const cachedResponse = await checkIdempotency(req, "/api/v1/orders", {
+        userId: user?.id,
+        payload: body,
+      });
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+    }
+
     const parsed = createOrderSchema.safeParse({
       ...body,
       idempotencyKey: idempotencyHeader || body?.idempotencyKey,
@@ -68,7 +81,6 @@ export async function POST(req: NextRequest) {
       return jsonZodError(parsed.error);
     }
 
-    const user = await getAuthContext(req);
     const result = await orderService.createOrder(parsed.data, user);
 
     if (!result.success) {
@@ -86,7 +98,14 @@ export async function POST(req: NextRequest) {
     };
 
     if (idempotencyHeader) {
-      await recordIdempotency(idempotencyHeader, "/api/v1/orders", user?.id, 201, responsePayload);
+      await recordIdempotency(
+        idempotencyHeader,
+        "/api/v1/orders",
+        user?.id,
+        201,
+        responsePayload,
+        body,
+      );
     }
 
     return jsonOk(responsePayload, undefined, 201);

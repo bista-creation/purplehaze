@@ -16,7 +16,66 @@ export type ApiUserSession = {
   image?: string | null;
 };
 
-export async function getAuthContext(req: NextRequest): Promise<ApiUserSession | null> {
+export function checkCsrfOrigin(req: NextRequest): {
+  valid: boolean;
+  errorResponse?: ReturnType<typeof jsonError>;
+} {
+  const isStateChanging = ["POST", "PUT", "PATCH", "DELETE"].includes(
+    req.method.toUpperCase(),
+  );
+  const authHeader = req.headers.get("authorization");
+  const hasCookie = Boolean(req.headers.get("cookie"));
+
+  // Only apply CSRF origin checks to cookie-session fallbacks on state-changing methods
+  if (isStateChanging && hasCookie && !authHeader?.startsWith("Bearer ")) {
+    const origin = req.headers.get("origin");
+    const referer = req.headers.get("referer");
+    let requestOrigin = origin;
+    if (!requestOrigin && referer) {
+      try {
+        requestOrigin = new URL(referer).origin;
+      } catch {
+        requestOrigin = null;
+      }
+    }
+
+    const allowedOrigins = new Set<string>([
+      req.nextUrl.origin.toLowerCase(),
+      SITE.url.toLowerCase(),
+    ]);
+
+    const isLocalDev =
+      process.env.NODE_ENV !== "production" &&
+      (requestOrigin?.startsWith("http://localhost:") ||
+        requestOrigin?.startsWith("http://127.0.0.1:"));
+
+    if (
+      !requestOrigin ||
+      (!allowedOrigins.has(requestOrigin.toLowerCase()) && !isLocalDev)
+    ) {
+      return {
+        valid: false,
+        errorResponse: jsonError(
+          "FORBIDDEN",
+          `Cross-origin request blocked: origin '${requestOrigin || "unknown"}' is not allowed for cookie sessions.`,
+          403,
+        ),
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
+export async function getAuthContext(
+  req: NextRequest,
+): Promise<ApiUserSession | null> {
+  // Check CSRF on cookie fallback
+  const csrf = checkCsrfOrigin(req);
+  if (!csrf.valid) {
+    return null;
+  }
+
   // 1. Try Bearer JWT first (Mobile App)
   const authHeader = req.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
@@ -58,41 +117,6 @@ export async function getAuthContext(req: NextRequest): Promise<ApiUserSession |
   }
 
   // 2. Fall back to Auth.js session cookies (Website / Admin Dashboard)
-  // Enforce Origin check for state-changing requests authenticated via cookie fallback
-  const isStateChanging = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method.toUpperCase());
-  if (isStateChanging) {
-    const origin = req.headers.get("origin");
-    const referer = req.headers.get("referer");
-    let requestOrigin = origin;
-    if (!requestOrigin && referer) {
-      try {
-        requestOrigin = new URL(referer).origin;
-      } catch {
-        requestOrigin = null;
-      }
-    }
-
-    const allowedOrigins = new Set<string>([
-      req.nextUrl.origin.toLowerCase(),
-      SITE.url.toLowerCase(),
-    ]);
-
-    const isLocalDev =
-      process.env.NODE_ENV !== "production" &&
-      (requestOrigin?.startsWith("http://localhost:") ||
-        requestOrigin?.startsWith("http://127.0.0.1:"));
-
-    if (
-      !requestOrigin ||
-      (!allowedOrigins.has(requestOrigin.toLowerCase()) && !isLocalDev)
-    ) {
-      console.warn(
-        `[CSRF] Rejected cookie fallback on state-changing ${req.method} from origin: ${requestOrigin}`,
-      );
-      return null;
-    }
-  }
-
   try {
     const session = await auth();
     if (session?.user?.id && session.user.email) {
@@ -128,29 +152,51 @@ export async function getAuthContext(req: NextRequest): Promise<ApiUserSession |
 }
 
 export async function requireUserAuth(req: NextRequest) {
+  const csrf = checkCsrfOrigin(req);
+  if (!csrf.valid) {
+    return { user: null, errorResponse: csrf.errorResponse! } as const;
+  }
+
   const user = await getAuthContext(req);
   if (!user) {
     return {
       user: null,
-      errorResponse: jsonError("UNAUTHORIZED", "Please sign in to access this resource.", 401),
+      errorResponse: jsonError(
+        "UNAUTHORIZED",
+        "Please sign in to access this resource.",
+        401,
+      ),
     } as const;
   }
   return { user, errorResponse: null } as const;
 }
 
 export async function requireAdminAuth(req: NextRequest) {
+  const csrf = checkCsrfOrigin(req);
+  if (!csrf.valid) {
+    return { user: null, errorResponse: csrf.errorResponse! } as const;
+  }
+
   const user = await getAuthContext(req);
   if (!user) {
     return {
       user: null,
-      errorResponse: jsonError("UNAUTHORIZED", "Authentication required.", 401),
+      errorResponse: jsonError(
+        "UNAUTHORIZED",
+        "Authentication required.",
+        401,
+      ),
     } as const;
   }
 
   if (user.role !== "ADMIN" && user.role !== "STAFF") {
     return {
       user: null,
-      errorResponse: jsonError("FORBIDDEN", "You do not have permission to perform this action.", 403),
+      errorResponse: jsonError(
+        "FORBIDDEN",
+        "You do not have permission to perform this action.",
+        403,
+      ),
     } as const;
   }
 

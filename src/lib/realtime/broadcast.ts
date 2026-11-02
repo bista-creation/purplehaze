@@ -1,5 +1,5 @@
 import "server-only";
-import { SignJWT } from "jose";
+import { SignJWT, jwtVerify } from "jose";
 import { getSupabaseRealtimeConfig } from "@/lib/supabase-realtime";
 import {
   REALTIME_CHANNELS,
@@ -186,4 +186,45 @@ export async function broadcastBookingUpdated(params: {
 
   const results = await Promise.allSettled(tasks);
   return results.some((r) => r.status === "fulfilled" && r.value === true);
+}
+
+
+/**
+ * Validates whether a given Realtime token grants permission to join a target channel.
+ * Used for server-side verification and channel guard assertions.
+ */
+export async function verifyRealtimeChannelAccess(
+  token: string,
+  channelName: string,
+): Promise<{ authorized: boolean; reason?: string; allowedChannels?: string[] }> {
+  const config = getSupabaseRealtimeConfig();
+  if (!config) {
+    return { authorized: false, reason: "Realtime not configured." };
+  }
+
+  try {
+    const { payload } = await jwtVerify(
+      token,
+      new TextEncoder().encode(config.jwtSecret),
+      {
+        issuer: "purple-haze",
+        audience: "authenticated",
+      },
+    );
+
+    const allowed = Array.isArray(payload.allowed_channels)
+      ? (payload.allowed_channels as string[])
+      : [];
+
+    const authorized = allowed.includes(channelName);
+    return {
+      authorized,
+      allowedChannels: allowed,
+      reason: authorized
+        ? undefined
+        : `Channel '${channelName}' is not in allowed_channels [${allowed.join(", ")}].`,
+    };
+  } catch {
+    return { authorized: false, reason: "Invalid or expired realtime token." };
+  }
 }

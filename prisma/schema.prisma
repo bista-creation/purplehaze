@@ -662,14 +662,15 @@ model PushToken {
 }
 
 model IdempotencyKey {
-  id         String   @id @default(cuid())
-  key        String   @unique
-  endpoint   String
-  userId     String?
-  response   String
-  statusCode Int      @default(200)
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime
+  id          String   @id @default(cuid())
+  key         String   @unique
+  endpoint    String
+  userId      String?
+  requestHash String?
+  response    String
+  statusCode  Int      @default(200)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
 
   @@index([key, endpoint])
 }

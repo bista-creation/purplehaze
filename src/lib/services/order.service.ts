@@ -731,6 +731,8 @@ export class OrderService {
         where.userId = userId;
       } else if (publicToken) {
         where.publicToken = publicToken;
+      } else {
+        return { success: false, message: "Order not found." };
       }
     }
 

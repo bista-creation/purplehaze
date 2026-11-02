@@ -7,7 +7,8 @@ import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = await getClientIp();
+    const forwarded = req.headers.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() || (await getClientIp());
     const limit = await checkRateLimit(`api:reset-pw:${ip}`, 5, 15 * 60 * 1000);
     if (!limit.success) {
       return jsonError("RATE_LIMIT_EXCEEDED", "Too many password reset attempts. Please wait.", 429);

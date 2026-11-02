@@ -11,7 +11,8 @@ const trackQuerySchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
-  const ip = await getClientIp();
+  const forwarded = req.headers.get("x-forwarded-for");
+  const ip = forwarded?.split(",")[0]?.trim() || (await getClientIp());
   const limit = await checkRateLimit(`api:track:${ip}`, 20, 10 * 60 * 1000);
   if (!limit.success) {
     return jsonError("RATE_LIMIT_EXCEEDED", "Too many tracking attempts. Please wait.", 429);
@@ -36,5 +37,32 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  return jsonOk(order);
+  // Sanitized guest tracking payload: excludes customer email and full address
+  const safeTrackingDto = {
+    orderNumber: order.orderNumber,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    type: order.type,
+    createdAt: order.createdAt,
+    subtotal: order.subtotal,
+    deliveryFee: order.deliveryFee,
+    discountAmount: order.discountAmount,
+    total: order.total,
+    items: order.items.map((item) => ({
+      id: item.id,
+      dishId: item.dishId,
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal,
+      variantName: item.variantName,
+    })),
+    statusHistory: order.statusHistory.map((h) => ({
+      status: h.status,
+      note: h.note,
+      createdAt: h.createdAt,
+    })),
+  };
+
+  return jsonOk(safeTrackingDto);
 }

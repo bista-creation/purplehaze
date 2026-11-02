@@ -8,7 +8,8 @@ import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = await getClientIp();
+    const forwarded = req.headers.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() || (await getClientIp());
     const body = await req.json().catch(() => null);
     const parsed = mobileLoginSchema.safeParse(body);
     if (!parsed.success) {

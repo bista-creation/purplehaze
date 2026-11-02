@@ -6,7 +6,8 @@ import { getClientIp } from "@/lib/security";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 
 export async function POST(req: NextRequest) {
-  const ip = await getClientIp();
+  const forwarded = req.headers.get("x-forwarded-for");
+  const ip = forwarded?.split(",")[0]?.trim() || (await getClientIp());
   const limit = await checkRateLimit(`api:contact:${ip}`, 5, 10 * 60 * 1000);
   if (!limit.success) {
     return jsonError("RATE_LIMIT_EXCEEDED", "Too many contact messages sent. Please wait.", 429);
