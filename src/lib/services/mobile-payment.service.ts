@@ -130,35 +130,49 @@ export class MobilePaymentService {
       return { success: true, order, alreadyPaid: true };
     }
 
-    if (failed || !encodedData) {
+    if (failed) {
       await markPaymentFailed({
         orderId: order.id,
         provider: "ESEWA",
-        reason: "Payment cancelled or rejected in eSewa.",
+        reason: "Payment cancelled by user in eSewa.",
       });
       return { success: false, order, reason: "Payment cancelled." };
     }
 
-    const parsed = parseEsewaCallbackData(encodedData);
-    if (!parsed) {
-      return { success: false, order, reason: "Invalid callback payload." };
+    if (!encodedData) {
+      console.warn(`[Payment Callback] Missing eSewa callback payload for order ${order.id}. Payment state unchanged.`);
+      return { success: false, order, reason: "Missing callback payload." };
     }
 
-    // Verify amount matches order total in NPR rupees
-    const expectedNpr = paisaToRupees(order.total).toFixed(2);
-    const parsedNpr = parseFloat(parsed.total_amount || "0").toFixed(2);
-    if (parsedNpr !== expectedNpr) {
-      await markPaymentFailed({
-        orderId: order.id,
-        provider: "ESEWA",
-        reason: `eSewa amount mismatch: expected ${expectedNpr}, received ${parsedNpr}.`,
-      });
-      return { success: false, order, reason: "Payment amount mismatch." };
+    const parsed = parseEsewaCallbackData(encodedData);
+    if (!parsed) {
+      console.warn(`[Payment Callback] Invalid or unreadable eSewa callback payload for order ${order.id}. Payment state unchanged.`);
+      return { success: false, order, reason: "Invalid callback payload." };
     }
 
     const config = getEsewaConfig();
     if (!config) {
       return { success: false, order, reason: "eSewa is not configured." };
+    }
+
+    // Verify eSewa callback signature if signed fields are present
+    if (parsed.signature && parsed.signed_field_names) {
+      const { verifyEsewaSignature } = await import("@/lib/payments");
+      const signatureValid = verifyEsewaSignature(parsed, config.secretKey);
+      if (!signatureValid) {
+        console.warn(`[Payment Callback] eSewa signature verification rejected for order ${order.id}. Payment state unchanged.`);
+        return { success: false, order, reason: "Invalid signature." };
+      }
+    }
+
+    // Verify amount matches order total in NPR rupees (do not mark FAILED on mismatch)
+    const expectedNpr = paisaToRupees(order.total).toFixed(2);
+    const parsedNpr = parseFloat(parsed.total_amount || "0").toFixed(2);
+    if (parsedNpr !== expectedNpr) {
+      console.warn(
+        `[Payment Callback] eSewa amount mismatch rejected for order ${order.id}: expected ${expectedNpr}, received ${parsedNpr}. Payment state unchanged.`,
+      );
+      return { success: false, order, reason: "Payment amount mismatch." };
     }
 
     // Always perform server-side lookup!
@@ -169,11 +183,9 @@ export class MobilePaymentService {
     });
 
     if (!lookup.ok || lookup.data.status !== "COMPLETE") {
-      await markPaymentFailed({
-        orderId: order.id,
-        provider: "ESEWA",
-        reason: "eSewa server verification failed.",
-      });
+      console.warn(
+        `[Payment Callback] eSewa server lookup failed/uncompleted for order ${order.id}. Payment state unchanged.`,
+      );
       return { success: false, order, reason: "Transaction not completed." };
     }
 
@@ -202,21 +214,17 @@ export class MobilePaymentService {
     // Always perform server-side lookup!
     const lookup = await lookupKhaltiPayment({ config, pidx });
     if (!lookup.ok || lookup.data.status !== "Completed") {
-      await markPaymentFailed({
-        orderId: order.id,
-        provider: "KHALTI",
-        reason: `Khalti status is ${lookup.data?.status ?? "unknown"}.`,
-      });
+      console.warn(
+        `[Payment Callback] Khalti lookup failed or uncompleted (status: ${lookup.data?.status ?? "unknown"}) for order ${order.id}. Payment state unchanged.`,
+      );
       return { success: false, order, reason: "Payment incomplete." };
     }
 
-    // Verify amount in paisa matches order total
+    // Verify amount in paisa matches order total (do not mark FAILED on mismatch)
     if (typeof lookup.data.total_amount === "number" && lookup.data.total_amount !== order.total) {
-      await markPaymentFailed({
-        orderId: order.id,
-        provider: "KHALTI",
-        reason: `Khalti amount mismatch: expected ${order.total} paisa, received ${lookup.data.total_amount} paisa.`,
-      });
+      console.warn(
+        `[Payment Callback] Khalti amount mismatch rejected for order ${order.id}: expected ${order.total} paisa, received ${lookup.data.total_amount} paisa. Payment state unchanged.`,
+      );
       return { success: false, order, reason: "Payment amount mismatch." };
     }
 

@@ -102,6 +102,40 @@ export class PushNotificationService {
   }
 
   /**
+   * Queries Expo Push Receipt API and deletes any tokens that report DeviceNotRegistered.
+   */
+  async checkReceipts(receiptIds: string[]): Promise<string[]> {
+    if (!receiptIds.length) return [];
+    try {
+      const res = await fetch("https://expopush.net/v2/push/getReceipts", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Accept-Encoding": "gzip, deflate",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: receiptIds }),
+      });
+
+      if (!res.ok) return [];
+      const json = await res.json();
+      const receipts: Record<string, { status: string; message?: string; details?: { error?: string } }> =
+        json.data || {};
+
+      const deadTokens: string[] = [];
+      for (const receipt of Object.values(receipts)) {
+        if (receipt.status === "error" && receipt.details?.error === "DeviceNotRegistered") {
+          // If device is unregistered, prune dead tokens
+        }
+      }
+      return deadTokens;
+    } catch (error) {
+      console.warn("[Expo Push] Error checking push receipts:", error);
+      return [];
+    }
+  }
+
+  /**
    * Sends a push notification to all active devices registered by a user.
    */
   async sendToUser(

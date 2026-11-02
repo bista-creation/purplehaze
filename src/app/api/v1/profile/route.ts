@@ -71,3 +71,40 @@ export async function PUT(req: NextRequest) {
 
   return jsonOk(updated);
 }
+
+export async function DELETE(req: NextRequest) {
+  const user = await getAuthContext(req);
+  if (!user) {
+    return jsonError("UNAUTHORIZED", "Please sign in to delete your account.", 401);
+  }
+
+  // Execute account deletion batch: revoke all tokens, delete push tokens, addresses, and favorites
+  await prisma.$transaction([
+    prisma.refreshToken.deleteMany({ where: { userId: user.id } }),
+    prisma.pushToken.deleteMany({ where: { userId: user.id } }),
+    prisma.favorite.deleteMany({ where: { userId: user.id } }),
+    prisma.address.deleteMany({ where: { userId: user.id } }),
+    prisma.order.updateMany({
+      where: { userId: user.id },
+      data: { userId: null },
+    }),
+    prisma.notificationRead.deleteMany({ where: { userId: user.id } }),
+    prisma.notification.deleteMany({ where: { userId: user.id } }),
+    prisma.session.deleteMany({ where: { userId: user.id } }),
+    prisma.account.deleteMany({ where: { userId: user.id } }),
+    prisma.user.delete({ where: { id: user.id } }),
+  ]);
+
+  await writeAuditLog({
+    userId: user.id,
+    actorEmail: user.email,
+    action: "account.profile.delete",
+    entity: "User",
+    entityId: user.id,
+    details: { reason: "User requested account deletion" },
+  });
+
+  return jsonOk({
+    message: "Your account and all associated tokens, addresses, and favorites have been deleted.",
+  });
+}

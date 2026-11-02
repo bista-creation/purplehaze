@@ -16,9 +16,16 @@ export async function POST(req: NextRequest) {
       return jsonZodError(parsed.error);
     }
 
-    const limit = await checkRateLimit(`api:login:${ip}:${parsed.data.email}`, 10, 10 * 60 * 1000);
-    if (!limit.success) {
-      return jsonError("RATE_LIMIT_EXCEEDED", "Too many login attempts. Please wait a few minutes.", 429);
+    // 1. Per-IP rate limit across all login attempts (20 attempts / 10 minutes)
+    const ipLimit = await checkRateLimit(`api:login:ip:${ip}`, 20, 10 * 60 * 1000);
+    if (!ipLimit.success) {
+      return jsonError("RATE_LIMIT_EXCEEDED", "Too many login attempts from this network. Please wait a few minutes.", 429);
+    }
+
+    // 2. Per-email rate limit against targeted account brute force (10 attempts / 10 minutes)
+    const emailLimit = await checkRateLimit(`api:login:email:${ip}:${parsed.data.email}`, 10, 10 * 60 * 1000);
+    if (!emailLimit.success) {
+      return jsonError("RATE_LIMIT_EXCEEDED", "Too many login attempts for this account. Please wait a few minutes.", 429);
     }
 
     const authResult = await authService.verifyCredentials(parsed.data.email, parsed.data.password);
