@@ -9,11 +9,12 @@ interface AuditInput {
   entity: string;
   entityId?: string | null;
   details?: Record<string, unknown> | string | null;
+  ip?: string | null;
 }
 
 export async function writeAuditLog(input: AuditInput) {
   try {
-    const ip = await getClientIp();
+    const ip = input.ip !== undefined ? input.ip : await getClientIp();
     await prisma.auditLog.create({
       data: {
         userId: input.userId ?? undefined,
@@ -25,7 +26,7 @@ export async function writeAuditLog(input: AuditInput) {
           typeof input.details === "string" || input.details == null
             ? input.details ?? null
             : JSON.stringify(input.details),
-        ip,
+        ip: ip ?? null,
       },
     });
   } catch (error) {

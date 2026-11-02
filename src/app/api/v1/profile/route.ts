@@ -90,8 +90,11 @@ export async function DELETE(req: NextRequest) {
   // 2. Delete push tokens, saved addresses, favorites, notifications
   // 3. Delete personal reviews and contact messages
   // 4. Anonymize reservations and event bookings
-  // 5. Scrub retained orders and payments (keep only transactionId, provider, and amount for accounting)
-  // 6. Delete user account
+  // 5. Scrub retained orders: customerName, email, phone, deliveryAddress, free-text order notes, cancelReason
+  // 6. Scrub order item free-text special instructions
+  // 7. Scrub payments (keep only transactionId, provider, and amount for accounting)
+  // 8. Scrub historical audit log entries (anonymize email, IP, details)
+  // 9. Delete user account
   await prisma.$transaction([
     prisma.refreshToken.deleteMany({ where: { userId: user.id } }),
     prisma.pushToken.deleteMany({ where: { userId: user.id } }),
@@ -126,6 +129,10 @@ export async function DELETE(req: NextRequest) {
             where: { orderId: { in: orderIds } },
             data: { payload: null },
           }),
+          prisma.orderItem.updateMany({
+            where: { orderId: { in: orderIds } },
+            data: { instructions: null },
+          }),
         ]
       : []),
     prisma.order.updateMany({
@@ -136,6 +143,19 @@ export async function DELETE(req: NextRequest) {
         customerEmail: "deleted@customer.local",
         customerPhone: "0000000000",
         deliveryAddress: "[Scrubbed upon account deletion]",
+        notes: null,
+        cancelReason: null,
+      },
+    }),
+    prisma.auditLog.updateMany({
+      where: {
+        OR: [{ userId: user.id }, { actorEmail: user.email }],
+      },
+      data: {
+        userId: null,
+        actorEmail: "deleted@customer.local",
+        ip: "0.0.0.0",
+        details: "[Scrubbed upon account deletion]",
       },
     }),
     prisma.notificationRead.deleteMany({ where: { userId: user.id } }),
@@ -146,11 +166,12 @@ export async function DELETE(req: NextRequest) {
   ]);
 
   await writeAuditLog({
-    userId: user.id,
-    actorEmail: user.email,
+    userId: null,
+    actorEmail: "deleted@customer.local",
     action: "account.profile.delete",
     entity: "User",
     entityId: user.id,
+    ip: "0.0.0.0",
     details: { reason: "User requested account deletion" },
   });
 
