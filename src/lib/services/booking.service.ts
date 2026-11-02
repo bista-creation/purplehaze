@@ -10,6 +10,8 @@ import {
   sendReservationConfirmation,
 } from "@/lib/email";
 import { writeAuditLog } from "@/lib/audit";
+import { broadcastBookingUpdated } from "@/lib/realtime/broadcast";
+import { pushNotificationService } from "./push-notification.service";
 import type {
   ContactInput,
   EventBookingInput,
@@ -142,6 +144,24 @@ export class BookingService {
       entityId: id,
       details: JSON.stringify({ from: reservation.status, to: status }),
     });
+
+    broadcastBookingUpdated({
+      id: updated.id,
+      kind: "reservation",
+      name: updated.name,
+      status: updated.status,
+      date: updated.date,
+    }).catch(() => undefined);
+
+    pushNotificationService
+      .sendReservationNotification({
+        userId: reservation.userId,
+        reservationId: reservation.id,
+        status,
+        date: reservation.date,
+        tableNumber,
+      })
+      .catch(() => undefined);
 
     return updated;
   }
@@ -277,6 +297,14 @@ export class BookingService {
       entityId: id,
       details: JSON.stringify({ from: booking.status, to: status }),
     });
+
+    broadcastBookingUpdated({
+      id: updated.id,
+      kind: "event",
+      name: updated.name,
+      status: updated.status,
+      date: updated.eventDate,
+    }).catch(() => undefined);
 
     return updated;
   }

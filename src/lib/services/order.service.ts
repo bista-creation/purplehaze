@@ -30,6 +30,8 @@ import {
   type OrderType,
 } from "@/lib/constants";
 import { evaluateOrderAcceptance, paymentPresentation } from "@/lib/order-state";
+import { broadcastOrderCreated, broadcastOrderStatusUpdated } from "@/lib/realtime/broadcast";
+import { pushNotificationService } from "./push-notification.service";
 import type { CreateOrderInput } from "@/lib/validations";
 
 export class CouponUnavailableError extends Error {
@@ -420,6 +422,16 @@ export class OrderService {
         },
       });
 
+      broadcastOrderCreated({
+        id: order.id,
+        orderNumber: order.orderNumber,
+        customerName: order.customerName,
+        total: order.total,
+        type: order.type,
+        paymentMethod: order.paymentMethod,
+        createdAt: order.createdAt,
+      }).catch((err) => console.warn("Realtime order created broadcast failed:", err));
+
       return {
         success: true,
         orderId: order.id,
@@ -678,6 +690,25 @@ export class OrderService {
         entityId: order.id,
         details: JSON.stringify({ from: currentStatus, to: newStatus }),
       });
+
+      broadcastOrderStatusUpdated({
+        orderId: updated.id,
+        orderNumber: updated.orderNumber,
+        status: newStatus,
+        userId: updated.userId,
+        previousStatus: currentStatus,
+        note,
+      }).catch((err) => console.warn("Realtime order status broadcast failed:", err));
+
+      pushNotificationService
+        .sendOrderStatusNotification({
+          userId: updated.userId,
+          orderId: updated.id,
+          orderNumber: updated.orderNumber,
+          status: newStatus,
+          note,
+        })
+        .catch((err) => console.warn("Push notification failed:", err));
     }
 
     return {
@@ -787,6 +818,25 @@ export class OrderService {
       entityId: order.id,
       details: cancelReason,
     });
+
+    broadcastOrderStatusUpdated({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: "CANCELLED",
+      userId: order.userId,
+      previousStatus: order.status,
+      note: cancelReason,
+    }).catch((err) => console.warn("Realtime order cancel broadcast failed:", err));
+
+    pushNotificationService
+      .sendOrderStatusNotification({
+        userId: order.userId,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: "CANCELLED",
+        note: cancelReason,
+      })
+      .catch((err) => console.warn("Push notification failed:", err));
 
     return {
       success: true,

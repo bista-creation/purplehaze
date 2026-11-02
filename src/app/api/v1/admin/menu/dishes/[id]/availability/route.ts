@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/api/auth-context";
 import { writeAuditLog } from "@/lib/audit";
+import { broadcastMenuUpdated } from "@/lib/realtime/broadcast";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 
 const availabilitySchema = z.object({
@@ -47,6 +48,14 @@ export async function PATCH(
     entityId: id,
     details: { name: dish.name, isAvailable: parsed.data.isAvailable },
   });
+
+  broadcastMenuUpdated({
+    type: "dish_availability",
+    dishId: dish.id,
+    dishName: dish.name,
+    isAvailable: parsed.data.isAvailable,
+    updatedAt: new Date().toISOString(),
+  }).catch(() => undefined);
 
   return jsonOk(updated);
 }

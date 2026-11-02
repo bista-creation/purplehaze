@@ -20,6 +20,7 @@ import {
 import { rupeesToPaisa } from "@/lib/money";
 import { parseNepalDateTime } from "@/lib/time";
 import { slugify } from "@/lib/utils";
+import { broadcastMenuUpdated } from "@/lib/realtime/broadcast";
 import type { AdminActionResult } from "@/actions/admin/orders";
 
 async function uniqueSlug(
@@ -282,6 +283,14 @@ export async function setDishAvailabilityAction(
       { ids, isAvailable, count: result.count },
     );
     refreshAdmin("/admin/menu", "/menu");
+    for (const dishId of ids) {
+      broadcastMenuUpdated({
+        type: "dish_availability",
+        dishId,
+        isAvailable,
+        updatedAt: new Date().toISOString(),
+      }).catch(() => undefined);
+    }
     return {
       success: true,
       message: `${result.count} dish${result.count === 1 ? "" : "es"} marked ${isAvailable ? "available" : "unavailable"}.`,

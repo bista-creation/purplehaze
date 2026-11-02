@@ -297,6 +297,23 @@ export function AdminLiveMonitor({
             },
             (payload) => notify(payload.new as RealtimeNotification),
           )
+          .on(
+            "broadcast",
+            { event: "order.created" },
+            (payload: { payload: { orderNumber?: string; customerName?: string; paymentMethod?: string } }) => {
+              const data = payload.payload;
+              notify({
+                type: "ORDER",
+                title: `New order ${data.orderNumber || ""} placed!`,
+                message: `${data.customerName || "Customer"} · ${data.paymentMethod || "COD"}`,
+                link: `/admin/orders`,
+              });
+              refresh(true);
+            },
+          )
+          .on("broadcast", { event: "order.status_updated" }, () => {
+            refresh(true);
+          })
           .subscribe((subscriptionStatus) => {
             if (cancelled) return;
             if (subscriptionStatus === "SUBSCRIBED") {
