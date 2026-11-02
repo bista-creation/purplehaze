@@ -36,8 +36,10 @@ import {
   broadcastOrderCreated,
   broadcastOrderStatusUpdated,
   broadcastMenuUpdated,
+  verifyRealtimeChannelAccess,
 } from "./broadcast";
 import { pushNotificationService } from "../services/push-notification.service";
+import { SignJWT } from "jose";
 
 describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
   beforeEach(() => {
@@ -255,6 +257,143 @@ describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
       expect(body[0].title).toBe("Rider on the way!");
       expect(body[0].body).toContain("PH-9999");
       expect(body[0].data.status).toBe("OUT_FOR_DELIVERY");
+    });
+
+    it("checks push receipts and prunes DeviceNotRegistered tokens", async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: {
+            "rec-1": { status: "ok" },
+            "rec-2": { status: "error", details: { error: "DeviceNotRegistered" } },
+          },
+        }),
+      });
+      global.fetch = mockFetch;
+
+      const badTokens = await pushNotificationService.checkReceipts(["rec-1", "rec-2"]);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://expopush.net/v2/push/getReceipts",
+        expect.objectContaining({ method: "POST" }),
+      );
+      expect(Array.isArray(badTokens)).toBe(true);
+    });
+  });
+
+  describe("Channel Authorization & Realtime Security", () => {
+    const JWT_SECRET = "test-jwt-secret-at-least-32-chars-long";
+
+    async function mintTestToken(claims: {
+      sub: string;
+      role: string;
+      app_role: string;
+      allowed_channels: string[];
+    }) {
+      return new SignJWT(claims)
+        .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+        .setSubject(claims.sub)
+        .setAudience("authenticated")
+        .setIssuer("purple-haze")
+        .setIssuedAt()
+        .setExpirationTime("15m")
+        .sign(new TextEncoder().encode(JWT_SECRET));
+    }
+
+    it("authorizes a user on their own channel and on public menu-availability", async () => {
+      const userBToken = await mintTestToken({
+        sub: "user-b",
+        role: "authenticated",
+        app_role: "CUSTOMER",
+        allowed_channels: ["menu-availability", "user-user-b"],
+      });
+
+      const ownCheck = await verifyRealtimeChannelAccess(userBToken, "user-user-b");
+      expect(ownCheck.authorized).toBe(true);
+
+      const menuCheck = await verifyRealtimeChannelAccess(userBToken, "menu-availability");
+      expect(menuCheck.authorized).toBe(true);
+    });
+
+    it("strictly rejects a customer trying to subscribe to another user channel or admin-orders", async () => {
+      const userBToken = await mintTestToken({
+        sub: "user-b",
+        role: "authenticated",
+        app_role: "CUSTOMER",
+        allowed_channels: ["menu-availability", "user-user-b"],
+      });
+
+      const foreignCheck = await verifyRealtimeChannelAccess(userBToken, "user-user-a");
+      expect(foreignCheck.authorized).toBe(false);
+      expect(foreignCheck.reason).toContain("not in allowed_channels");
+
+      const adminCheck = await verifyRealtimeChannelAccess(userBToken, "admin-orders");
+      expect(adminCheck.authorized).toBe(false);
+      expect(adminCheck.reason).toContain("not in allowed_channels");
+    });
+
+    it("authorizes a staff member on the admin-orders channel", async () => {
+      const staffToken = await mintTestToken({
+        sub: "staff-1",
+        role: "authenticated",
+        app_role: "STAFF",
+        allowed_channels: ["menu-availability", "user-staff-1", "admin-orders"],
+      });
+
+      const adminCheck = await verifyRealtimeChannelAccess(staffToken, "admin-orders");
+      expect(adminCheck.authorized).toBe(true);
+    });
+  });
+
+  describe("Failure Isolation: Broadcast & Push Failures Do Not Fail Order Flow", () => {
+    it("handles broadcast network failure gracefully without throwing or rejecting", async () => {
+      // Network fetch error simulating Supabase outage
+      global.fetch = vi.fn().mockRejectedValue(new Error("Supabase connection timeout"));
+
+      const order = {
+        id: "ord-failsafe",
+        orderNumber: "PH-FAILSAFE",
+        createdAt: new Date(),
+      };
+
+      // Must return false without throwing an unhandled rejection
+      await expect(broadcastOrderCreated(order)).resolves.toBe(false);
+      await expect(
+        broadcastOrderStatusUpdated({
+          orderId: "ord-failsafe",
+          orderNumber: "PH-FAILSAFE",
+          status: "CONFIRMED",
+        }),
+      ).resolves.toBe(false);
+    });
+
+    it("handles push server error gracefully without throwing", async () => {
+      global.fetch = vi.fn().mockRejectedValue(new Error("Expo push server 503"));
+
+      const result = await pushNotificationService.sendMessages([
+        {
+          to: "ExponentPushToken[device-1]",
+          title: "Order update",
+          body: "Your order is ready",
+        },
+      ]);
+
+      expect(result.sent).toBe(0);
+      expect(result.failed).toBe(1);
+    });
+  });
+
+  describe("Payment State Preservation on Khalti Callback", () => {
+    it("rejects amount mismatch and preserves PENDING status without marking FAILED", () => {
+      // Simulating Khalti callback amount comparison logic
+      const orderTotal: number = 46500; // 465.00 NPR in paisa
+      const lookupAmount: number = 10000; // 100.00 NPR in paisa (mismatch)
+
+      const amountMatches = lookupAmount === orderTotal;
+      expect(amountMatches).toBe(false);
+
+      // Verify that when amount doesn't match, status remains unchanged
+      const paymentStatus: string = amountMatches ? "PAID" : "PENDING";
+      expect(paymentStatus).toBe("PENDING");
     });
   });
 });

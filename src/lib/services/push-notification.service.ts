@@ -104,7 +104,10 @@ export class PushNotificationService {
   /**
    * Queries Expo Push Receipt API and deletes any tokens that report DeviceNotRegistered.
    */
-  async checkReceipts(receiptIds: string[]): Promise<string[]> {
+  async checkReceipts(
+    receiptIds: string[],
+    receiptToTokenMap?: Record<string, string>,
+  ): Promise<string[]> {
     if (!receiptIds.length) return [];
     try {
       const res = await fetch("https://expopush.net/v2/push/getReceipts", {
@@ -123,11 +126,25 @@ export class PushNotificationService {
         json.data || {};
 
       const deadTokens: string[] = [];
-      for (const receipt of Object.values(receipts)) {
+      for (const [receiptId, receipt] of Object.entries(receipts)) {
         if (receipt.status === "error" && receipt.details?.error === "DeviceNotRegistered") {
-          // If device is unregistered, prune dead tokens
+          const badToken = receiptToTokenMap?.[receiptId];
+          if (badToken) {
+            deadTokens.push(badToken);
+          }
         }
       }
+
+      if (deadTokens.length > 0) {
+        await prisma.pushToken
+          .deleteMany({
+            where: { token: { in: deadTokens } },
+          })
+          .catch((err) =>
+            console.warn("[Expo Push] Error pruning unregistered tokens from receipts:", err),
+          );
+      }
+
       return deadTokens;
     } catch (error) {
       console.warn("[Expo Push] Error checking push receipts:", error);

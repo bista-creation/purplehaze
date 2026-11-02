@@ -86,7 +86,13 @@ export async function DELETE(req: NextRequest) {
     prisma.address.deleteMany({ where: { userId: user.id } }),
     prisma.order.updateMany({
       where: { userId: user.id },
-      data: { userId: null },
+      data: {
+        userId: null,
+        customerName: "Deleted User",
+        customerEmail: "deleted@customer.local",
+        customerPhone: "0000000000",
+        deliveryAddress: "[Scrubbed upon account deletion]",
+      },
     }),
     prisma.notificationRead.deleteMany({ where: { userId: user.id } }),
     prisma.notification.deleteMany({ where: { userId: user.id } }),

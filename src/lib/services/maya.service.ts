@@ -61,7 +61,7 @@ export class MayaService {
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     const oneDayMs = 24 * 60 * 60 * 1000;
 
-    // 2. Global Daily Spend / Usage Cap
+    // 2. Global Daily Spend / Usage Cap & Spend Alert
     const globalLimit = await checkRateLimit(
       `maya:global:daily:${today}`,
       MayaService.GLOBAL_DAILY_CAP,
@@ -74,8 +74,13 @@ export class MayaService {
         status: 429,
       };
     }
+    if (globalLimit.remaining <= MayaService.GLOBAL_DAILY_CAP * 0.2) {
+      console.warn(
+        `[Maya Spend Alert] Global daily usage is at ${(1 - globalLimit.remaining / MayaService.GLOBAL_DAILY_CAP) * 100}%! Remaining: ${globalLimit.remaining}/${MayaService.GLOBAL_DAILY_CAP}`,
+      );
+    }
 
-    // 3. Per-User Daily Usage Cap
+    // 3. Per-User Daily Usage Cap & Alert
     const userLimit = await checkRateLimit(
       `maya:user:daily:${today}:${userOrIp}`,
       MayaService.USER_DAILY_CAP,
@@ -87,6 +92,11 @@ export class MayaService {
         reason: "You have reached your daily query limit for Maya. Please try again tomorrow or contact staff.",
         status: 429,
       };
+    }
+    if (userLimit.remaining <= MayaService.USER_DAILY_CAP * 0.2) {
+      console.warn(
+        `[Maya Spend Alert] User ${userOrIp} reached 80% daily quota (${MayaService.USER_DAILY_CAP - userLimit.remaining}/${MayaService.USER_DAILY_CAP}).`,
+      );
     }
 
     return { allowed: true, status: 200 };
@@ -141,7 +151,10 @@ export class MayaService {
 
   private sanitizePrompt(input: string): string {
     return input
-      .replace(/<[^>]*>?/gm, "") // strip HTML tags
+      .slice(0, 300) // Input length restriction
+      .replace(/<[^>]*>?/gm, "") // Strip HTML tags
+      .replace(/[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+/g, "[email]") // Zero PII: strip emails
+      .replace(/(?:\+977[- ]?)?(?:98|97)\d{8}/g, "[phone]") // Zero PII: strip phone numbers
       .replace(/(ignore previous instructions|system prompt|reveal secrets|delete tables)/gi, "[redacted]")
       .trim();
   }
