@@ -366,7 +366,7 @@ export class OrderService {
         }
 
         return created;
-      });
+      }, { timeout: 30000, maxWait: 15000 });
 
       const confirmationUrl = `/order/${order.orderNumber}?token=${encodeURIComponent(
         publicToken,
@@ -425,10 +425,7 @@ export class OrderService {
       broadcastOrderCreated({
         id: order.id,
         orderNumber: order.orderNumber,
-        customerName: order.customerName,
-        total: order.total,
-        type: order.type,
-        paymentMethod: order.paymentMethod,
+        userId: user?.id,
         createdAt: order.createdAt,
       }).catch((err) => console.warn("Realtime order created broadcast failed:", err));
 
@@ -669,7 +666,7 @@ export class OrderService {
       });
 
       return tx.order.findUnique({ where: { id: order.id } });
-    });
+    }, { timeout: 30000, maxWait: 15000 });
 
     if (updated) {
       sendOrderStatusEmail(
@@ -696,8 +693,6 @@ export class OrderService {
         orderNumber: updated.orderNumber,
         status: newStatus,
         userId: updated.userId,
-        previousStatus: currentStatus,
-        note,
       }).catch((err) => console.warn("Realtime order status broadcast failed:", err));
 
       pushNotificationService
@@ -797,7 +792,7 @@ export class OrderService {
         orderId: order.id,
         isTest: order.isTest,
       });
-    });
+    }, { timeout: 30000, maxWait: 15000 });
 
     sendOrderStatusEmail(
       {
@@ -824,8 +819,6 @@ export class OrderService {
       orderNumber: order.orderNumber,
       status: "CANCELLED",
       userId: order.userId,
-      previousStatus: order.status,
-      note: cancelReason,
     }).catch((err) => console.warn("Realtime order cancel broadcast failed:", err));
 
     pushNotificationService

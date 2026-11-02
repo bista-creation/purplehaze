@@ -14,7 +14,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => null);
-    const parsed = registerSchema.safeParse(body);
+    const bodyWithDefaults = {
+      ...body,
+      confirmPassword: body?.confirmPassword || body?.password,
+      acceptTerms: body?.acceptTerms !== undefined ? body.acceptTerms : true,
+    };
+    const parsed = registerSchema.safeParse(bodyWithDefaults);
     if (!parsed.success) {
       return jsonZodError(parsed.error);
     }

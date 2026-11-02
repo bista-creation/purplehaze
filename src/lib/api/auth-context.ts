@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyAccessToken } from "./tokens";
 import { jsonError } from "./response";
+import { SITE } from "@/lib/constants";
 import type { Role } from "@/lib/shared/types";
 
 export type ApiUserSession = {
@@ -57,6 +58,41 @@ export async function getAuthContext(req: NextRequest): Promise<ApiUserSession |
   }
 
   // 2. Fall back to Auth.js session cookies (Website / Admin Dashboard)
+  // Enforce Origin check for state-changing requests authenticated via cookie fallback
+  const isStateChanging = ["POST", "PUT", "PATCH", "DELETE"].includes(req.method.toUpperCase());
+  if (isStateChanging) {
+    const origin = req.headers.get("origin");
+    const referer = req.headers.get("referer");
+    let requestOrigin = origin;
+    if (!requestOrigin && referer) {
+      try {
+        requestOrigin = new URL(referer).origin;
+      } catch {
+        requestOrigin = null;
+      }
+    }
+
+    const allowedOrigins = new Set<string>([
+      req.nextUrl.origin.toLowerCase(),
+      SITE.url.toLowerCase(),
+    ]);
+
+    const isLocalDev =
+      process.env.NODE_ENV !== "production" &&
+      (requestOrigin?.startsWith("http://localhost:") ||
+        requestOrigin?.startsWith("http://127.0.0.1:"));
+
+    if (
+      !requestOrigin ||
+      (!allowedOrigins.has(requestOrigin.toLowerCase()) && !isLocalDev)
+    ) {
+      console.warn(
+        `[CSRF] Rejected cookie fallback on state-changing ${req.method} from origin: ${requestOrigin}`,
+      );
+      return null;
+    }
+  }
+
   try {
     const session = await auth();
     if (session?.user?.id && session.user.email) {

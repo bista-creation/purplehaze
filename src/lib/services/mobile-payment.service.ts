@@ -126,6 +126,10 @@ export class MobilePaymentService {
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) return { success: false, reason: "Order not found" };
 
+    if (order.paymentStatus === "PAID") {
+      return { success: true, order, alreadyPaid: true };
+    }
+
     if (failed || !encodedData) {
       await markPaymentFailed({
         orderId: order.id,
@@ -138,6 +142,18 @@ export class MobilePaymentService {
     const parsed = parseEsewaCallbackData(encodedData);
     if (!parsed) {
       return { success: false, order, reason: "Invalid callback payload." };
+    }
+
+    // Verify amount matches order total in NPR rupees
+    const expectedNpr = paisaToRupees(order.total).toFixed(2);
+    const parsedNpr = parseFloat(parsed.total_amount || "0").toFixed(2);
+    if (parsedNpr !== expectedNpr) {
+      await markPaymentFailed({
+        orderId: order.id,
+        provider: "ESEWA",
+        reason: `eSewa amount mismatch: expected ${expectedNpr}, received ${parsedNpr}.`,
+      });
+      return { success: false, order, reason: "Payment amount mismatch." };
     }
 
     const config = getEsewaConfig();
@@ -176,6 +192,10 @@ export class MobilePaymentService {
     const order = await prisma.order.findUnique({ where: { id: orderId } });
     if (!order) return { success: false, reason: "Order not found" };
 
+    if (order.paymentStatus === "PAID") {
+      return { success: true, order, alreadyPaid: true };
+    }
+
     const config = getKhaltiConfig();
     if (!config) return { success: false, order, reason: "Khalti not configured" };
 
@@ -188,6 +208,16 @@ export class MobilePaymentService {
         reason: `Khalti status is ${lookup.data?.status ?? "unknown"}.`,
       });
       return { success: false, order, reason: "Payment incomplete." };
+    }
+
+    // Verify amount in paisa matches order total
+    if (typeof lookup.data.total_amount === "number" && lookup.data.total_amount !== order.total) {
+      await markPaymentFailed({
+        orderId: order.id,
+        provider: "KHALTI",
+        reason: `Khalti amount mismatch: expected ${order.total} paisa, received ${lookup.data.total_amount} paisa.`,
+      });
+      return { success: false, order, reason: "Payment amount mismatch." };
     }
 
     await markOrderPaid({

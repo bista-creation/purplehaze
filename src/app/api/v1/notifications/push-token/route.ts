@@ -37,3 +37,25 @@ export async function POST(req: NextRequest) {
 
   return jsonOk({ id: pushToken.id, registered: true });
 }
+
+export async function DELETE(req: NextRequest) {
+  const body = await req.json().catch(() => null);
+  const token = body?.token;
+
+  if (typeof token === "string" && token.length > 0) {
+    await prisma.pushToken.deleteMany({
+      where: { token },
+    });
+    return jsonOk({ unregistered: true });
+  }
+
+  const user = await getAuthContext(req);
+  if (user) {
+    await prisma.pushToken.deleteMany({
+      where: { userId: user.id },
+    });
+    return jsonOk({ unregistered: true });
+  }
+
+  return jsonOk({ unregistered: false, message: "No token or session provided." });
+}

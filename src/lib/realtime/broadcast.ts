@@ -75,74 +75,115 @@ export async function broadcastEvent(
   }
 }
 
+/**
+ * Broadcast new order event to admin-orders channel.
+ * Contains only event type + IDs (no personal data).
+ */
 export async function broadcastOrderCreated(order: {
   id: string;
   orderNumber: string;
-  customerName: string;
-  total: number;
-  type: string;
-  paymentMethod: string;
+  userId?: string | null;
   createdAt: Date;
 }) {
   const payload: OrderCreatedPayload = {
+    event: REALTIME_EVENTS.orderCreated,
     orderId: order.id,
     orderNumber: order.orderNumber,
-    customerName: order.customerName,
-    total: order.total,
-    type: order.type,
-    paymentMethod: order.paymentMethod,
+    userId: order.userId || undefined,
     createdAt: order.createdAt.toISOString(),
   };
 
   return broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderCreated, payload);
 }
 
+/**
+ * Broadcast order status update to admin-orders and user-{userId} channels.
+ * Contains only event type + IDs (no personal data).
+ */
 export async function broadcastOrderStatusUpdated(params: {
   orderId: string;
   orderNumber: string;
   status: string;
   userId?: string | null;
-  previousStatus?: string;
-  note?: string | null;
 }) {
   const payload: OrderStatusUpdatedPayload = {
+    event: REALTIME_EVENTS.orderStatusUpdated,
     orderId: params.orderId,
     orderNumber: params.orderNumber,
     status: params.status,
-    previousStatus: params.previousStatus,
-    note: params.note,
+    userId: params.userId || undefined,
     updatedAt: new Date().toISOString(),
   };
 
-  // Broadcast to admin channel, order-specific channel, and user-specific channel
-  await Promise.allSettled([
+  const tasks: Promise<boolean>[] = [
     broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, payload),
-    broadcastEvent(REALTIME_CHANNELS.orderTracking(params.orderId), REALTIME_EVENTS.orderStatusUpdated, payload),
-    params.userId
-      ? broadcastEvent(REALTIME_CHANNELS.userOrders(params.userId), REALTIME_EVENTS.orderStatusUpdated, payload)
-      : Promise.resolve(false),
-  ]);
+  ];
+
+  if (params.userId) {
+    tasks.push(
+      broadcastEvent(REALTIME_CHANNELS.userChannel(params.userId), REALTIME_EVENTS.orderStatusUpdated, payload),
+    );
+  }
+
+  const results = await Promise.allSettled(tasks);
+  return results.some((r) => r.status === "fulfilled" && r.value === true);
 }
 
-export async function broadcastMenuUpdated(update: MenuUpdatedPayload) {
-  return broadcastEvent(REALTIME_CHANNELS.publicMenu, REALTIME_EVENTS.menuUpdated, update);
+/**
+ * Broadcast menu availability/price updates to menu-availability channel.
+ */
+export async function broadcastMenuUpdated(update: {
+  type: "dish_availability" | "dish_price" | "category_updated";
+  dishId?: string;
+  dishName?: string;
+  categoryId?: string;
+  isAvailable?: boolean;
+  price?: number;
+  updatedAt?: string;
+}) {
+  const payload: MenuUpdatedPayload = {
+    event: REALTIME_EVENTS.menuUpdated,
+    type: update.type,
+    dishId: update.dishId,
+    dishName: update.dishName,
+    categoryId: update.categoryId,
+    isAvailable: update.isAvailable,
+    price: update.price,
+    updatedAt: update.updatedAt || new Date().toISOString(),
+  };
+
+  return broadcastEvent(REALTIME_CHANNELS.menuAvailability, REALTIME_EVENTS.menuUpdated, payload);
 }
 
+/**
+ * Broadcast booking updates to admin-orders and user-{userId} channels.
+ * Contains only event type + IDs (no personal data).
+ */
 export async function broadcastBookingUpdated(params: {
   id: string;
   kind: "reservation" | "event";
-  name: string;
   status: string;
-  date: Date;
+  userId?: string | null;
 }) {
   const payload: BookingUpdatedPayload = {
-    id: params.id,
+    event: REALTIME_EVENTS.bookingUpdated,
+    bookingId: params.id,
     kind: params.kind,
-    name: params.name,
     status: params.status,
-    date: params.date.toISOString(),
+    userId: params.userId || undefined,
     updatedAt: new Date().toISOString(),
   };
 
-  return broadcastEvent(REALTIME_CHANNELS.adminBookings, REALTIME_EVENTS.bookingUpdated, payload);
+  const tasks: Promise<boolean>[] = [
+    broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.bookingUpdated, payload),
+  ];
+
+  if (params.userId) {
+    tasks.push(
+      broadcastEvent(REALTIME_CHANNELS.userChannel(params.userId), REALTIME_EVENTS.bookingUpdated, payload),
+    );
+  }
+
+  const results = await Promise.allSettled(tasks);
+  return results.some((r) => r.status === "fulfilled" && r.value === true);
 }

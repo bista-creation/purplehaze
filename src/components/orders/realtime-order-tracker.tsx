@@ -227,12 +227,12 @@ export function RealtimeOrderTracker({
 
     void connectRealtime();
 
-    // Poll every 4 seconds when active as authoritative fallback
+    // Poll every 10 seconds as authoritative fallback
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") {
         poll();
       }
-    }, 4000);
+    }, 10_000);
 
     return () => {
       ignore = true;

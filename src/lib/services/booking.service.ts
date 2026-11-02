@@ -148,9 +148,8 @@ export class BookingService {
     broadcastBookingUpdated({
       id: updated.id,
       kind: "reservation",
-      name: updated.name,
       status: updated.status,
-      date: updated.date,
+      userId: reservation.userId,
     }).catch(() => undefined);
 
     pushNotificationService
@@ -301,9 +300,8 @@ export class BookingService {
     broadcastBookingUpdated({
       id: updated.id,
       kind: "event",
-      name: updated.name,
       status: updated.status,
-      date: updated.eventDate,
+      userId: booking.userId,
     }).catch(() => undefined);
 
     return updated;

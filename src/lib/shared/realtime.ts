@@ -4,11 +4,16 @@
  */
 
 export const REALTIME_CHANNELS = {
-  adminOrders: "orders:admin",
-  adminBookings: "bookings:admin",
-  publicMenu: "menu:public",
-  orderTracking: (orderId: string) => `orders:${orderId}`,
-  userOrders: (userId: string) => `orders:user:${userId}`,
+  // Canonical Phase (c) channels
+  adminOrders: "admin-orders",
+  menuAvailability: "menu-availability",
+  userChannel: (userId: string) => `user-${userId}`,
+
+  // Compatibility aliases
+  publicMenu: "menu-availability",
+  adminBookings: "admin-orders",
+  orderTracking: (orderId: string) => `order-${orderId}`,
+  userOrders: (userId: string) => `user-${userId}`,
 } as const;
 
 export const REALTIME_EVENTS = {
@@ -22,40 +27,43 @@ export const REALTIME_EVENTS = {
 export type RealtimeEventName =
   typeof REALTIME_EVENTS[keyof typeof REALTIME_EVENTS];
 
+/**
+ * Broadcast payloads contain ONLY event type + IDs, NO personal data.
+ * Clients refetch details through the authenticated REST API.
+ */
 export type OrderCreatedPayload = {
+  event: typeof REALTIME_EVENTS.orderCreated;
   orderId: string;
   orderNumber: string;
-  customerName: string;
-  total: number;
-  type: string;
-  paymentMethod: string;
+  userId?: string;
   createdAt: string;
 };
 
 export type OrderStatusUpdatedPayload = {
+  event: typeof REALTIME_EVENTS.orderStatusUpdated;
   orderId: string;
   orderNumber: string;
   status: string;
-  previousStatus?: string;
-  note?: string | null;
+  userId?: string;
   updatedAt: string;
 };
 
 export type MenuUpdatedPayload = {
+  event: typeof REALTIME_EVENTS.menuUpdated;
   type: "dish_availability" | "dish_price" | "category_updated";
   dishId?: string;
   dishName?: string;
+  categoryId?: string;
   isAvailable?: boolean;
   price?: number;
-  categoryId?: string;
   updatedAt: string;
 };
 
 export type BookingUpdatedPayload = {
-  id: string;
+  event: typeof REALTIME_EVENTS.bookingUpdated;
+  bookingId: string;
   kind: "reservation" | "event";
-  name: string;
   status: string;
-  date: string;
+  userId?: string;
   updatedAt: string;
 };

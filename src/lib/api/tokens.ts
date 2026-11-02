@@ -9,8 +9,14 @@ const ACCESS_TOKEN_EXPIRY = "15m";
 const ACCESS_TOKEN_EXPIRY_SECONDS = 15 * 60; // 900 seconds
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
 
-function getJwtSecret(): Uint8Array {
-  const secret = process.env.AUTH_SECRET || "purple-haze-mobile-default-secret-key-32";
+export const JWT_ISSUER = "purple-haze-api";
+export const JWT_AUDIENCE = "purple-haze-mobile";
+
+function getJwtAccessSecret(): Uint8Array {
+  const secret =
+    process.env.JWT_ACCESS_SECRET ||
+    process.env.AUTH_SECRET ||
+    "purple-haze-mobile-default-secret-key-32";
   return new TextEncoder().encode(secret);
 }
 
@@ -31,18 +37,18 @@ export async function signAccessToken(payload: TokenPayload): Promise<string> {
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(payload.id)
-    .setIssuer("purple-haze")
-    .setAudience("purple-haze-client")
+    .setIssuer(JWT_ISSUER)
+    .setAudience(JWT_AUDIENCE)
     .setIssuedAt()
     .setExpirationTime(ACCESS_TOKEN_EXPIRY)
-    .sign(getJwtSecret());
+    .sign(getJwtAccessSecret());
 }
 
 export async function verifyAccessToken(token: string): Promise<TokenPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, getJwtSecret(), {
-      issuer: "purple-haze",
-      audience: "purple-haze-client",
+    const { payload } = await jwtVerify(token, getJwtAccessSecret(), {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
 
     if (!payload.sub || !payload.email || !payload.role) {

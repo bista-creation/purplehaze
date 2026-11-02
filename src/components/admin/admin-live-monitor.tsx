@@ -122,7 +122,7 @@ function browserAlertTitle(payload: RealtimeNotification) {
 }
 
 export function AdminLiveMonitor({
-  fallbackIntervalMs = 30_000,
+  fallbackIntervalMs = 10_000,
   unreadCount = 0,
 }: {
   fallbackIntervalMs?: number;
@@ -287,7 +287,7 @@ export function AdminLiveMonitor({
         }
 
         channel = client
-          .channel("admin-notifications")
+          .channel("admin-orders")
           .on(
             "postgres_changes",
             {
@@ -300,12 +300,12 @@ export function AdminLiveMonitor({
           .on(
             "broadcast",
             { event: "order.created" },
-            (payload: { payload: { orderNumber?: string; customerName?: string; paymentMethod?: string } }) => {
+            (payload: { payload: { orderNumber?: string } }) => {
               const data = payload.payload;
               notify({
                 type: "ORDER",
-                title: `New order ${data.orderNumber || ""} placed!`,
-                message: `${data.customerName || "Customer"} · ${data.paymentMethod || "COD"}`,
+                title: `New order ${data?.orderNumber || ""} placed!`,
+                message: "New kitchen order waiting in queue.",
                 link: `/admin/orders`,
               });
               refresh(true);

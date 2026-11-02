@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { SignJWT } from "jose";
 import { getAuthContext } from "@/lib/api/auth-context";
 import { getSupabaseRealtimeConfig } from "@/lib/supabase-realtime";
-import { orderService } from "@/lib/services/order.service";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { REALTIME_CHANNELS } from "@/lib/shared/realtime";
 
@@ -15,39 +14,22 @@ export async function POST(req: NextRequest) {
   }
 
   const user = await getAuthContext(req);
-  const body = await req.json().catch(() => ({}));
-  const { orderId, orderNumber, phone, publicToken } = body as {
-    orderId?: string;
-    orderNumber?: string;
-    phone?: string;
-    publicToken?: string;
-  };
 
-  const allowedChannels: string[] = [REALTIME_CHANNELS.publicMenu];
+  // 1. menu-availability is public
+  const allowedChannels: string[] = [REALTIME_CHANNELS.menuAvailability];
 
+  // 2. Private channel authorization
   if (user) {
-    allowedChannels.push(REALTIME_CHANNELS.userOrders(user.id));
+    // User can only join their own user-{userId} channel
+    allowedChannels.push(REALTIME_CHANNELS.userChannel(user.id));
+
+    // Only STAFF or ADMIN can join admin-orders
     if (user.role === "ADMIN" || user.role === "STAFF") {
       allowedChannels.push(REALTIME_CHANNELS.adminOrders);
-      allowedChannels.push(REALTIME_CHANNELS.adminBookings);
     }
   }
 
-  // Authorize guest order tracking channel if guest credentials match
-  if (orderId) {
-    allowedChannels.push(REALTIME_CHANNELS.orderTracking(orderId));
-  } else if (orderNumber && phone) {
-    const verified = await orderService.trackOrder(orderNumber, phone);
-    if (verified) {
-      allowedChannels.push(REALTIME_CHANNELS.orderTracking(verified.id));
-    }
-  } else if (orderNumber && publicToken) {
-    const verified = await orderService.getOrderByNumber(orderNumber, null, publicToken);
-    if (verified) {
-      allowedChannels.push(REALTIME_CHANNELS.orderTracking(verified.id));
-    }
-  }
-
+  // Mint short-lived Realtime token (15 mins) with authorization claims
   const token = await new SignJWT({
     role: user ? "authenticated" : "anon",
     app_role: user?.role ?? "GUEST",

@@ -6,6 +6,10 @@ const { mockPrisma } = vi.hoisted(() => {
       pushToken: {
         findMany: vi.fn(),
         deleteMany: vi.fn(),
+        upsert: vi.fn(),
+      },
+      user: {
+        findUnique: vi.fn(),
       },
     },
   };
@@ -35,19 +39,17 @@ import {
 } from "./broadcast";
 import { pushNotificationService } from "../services/push-notification.service";
 
-describe("Realtime Sync & Push Notification Architecture", () => {
+describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
   describe("Realtime Channel & Event Contracts", () => {
-    it("defines consistent channel naming scheme", () => {
-      expect(REALTIME_CHANNELS.adminOrders).toBe("orders:admin");
-      expect(REALTIME_CHANNELS.adminBookings).toBe("bookings:admin");
-      expect(REALTIME_CHANNELS.publicMenu).toBe("menu:public");
-      expect(REALTIME_CHANNELS.orderTracking("ord-123")).toBe("orders:ord-123");
-      expect(REALTIME_CHANNELS.userOrders("user-456")).toBe("orders:user:user-456");
+    it("defines user-{userId}, admin-orders, and menu-availability channels", () => {
+      expect(REALTIME_CHANNELS.adminOrders).toBe("admin-orders");
+      expect(REALTIME_CHANNELS.menuAvailability).toBe("menu-availability");
+      expect(REALTIME_CHANNELS.userChannel("user-123")).toBe("user-user-123");
     });
 
     it("defines consistent event constants across platforms", () => {
@@ -67,9 +69,8 @@ describe("Realtime Sync & Push Notification Architecture", () => {
       });
       global.fetch = mockFetch;
 
-      const success = await broadcastEvent("orders:admin", "order.created", {
+      const success = await broadcastEvent("admin-orders", "order.created", {
         orderId: "ord-1",
-        total: 1500,
       });
 
       expect(success).toBe(true);
@@ -86,34 +87,39 @@ describe("Realtime Sync & Push Notification Architecture", () => {
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(requestBody.messages).toHaveLength(1);
-      expect(requestBody.messages[0].topic).toBe("orders:admin");
+      expect(requestBody.messages[0].topic).toBe("admin-orders");
       expect(requestBody.messages[0].event).toBe("order.created");
       expect(requestBody.messages[0].payload.orderId).toBe("ord-1");
     });
 
-    it("formats order.created broadcast with standard fields", async () => {
+    it("ensures broadcast payloads contain only event type + IDs (no personal data)", async () => {
       const mockFetch = vi.fn().mockResolvedValue({ ok: true });
       global.fetch = mockFetch;
 
       const order = {
         id: "ord-99",
         orderNumber: "PH-123456",
-        customerName: "Sita Sharma",
-        total: 250000,
-        type: "DELIVERY",
-        paymentMethod: "COD",
+        userId: "usr-456",
         createdAt: new Date("2026-11-02T12:00:00Z"),
       };
 
       await broadcastOrderCreated(order);
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(requestBody.messages[0].topic).toBe("orders:admin");
-      expect(requestBody.messages[0].payload.orderNumber).toBe("PH-123456");
-      expect(requestBody.messages[0].payload.customerName).toBe("Sita Sharma");
+      expect(requestBody.messages[0].topic).toBe("admin-orders");
+      const payload = requestBody.messages[0].payload;
+
+      expect(payload.orderId).toBe("ord-99");
+      expect(payload.orderNumber).toBe("PH-123456");
+      expect(payload.userId).toBe("usr-456");
+      // Must NOT contain personal details
+      expect(payload).not.toHaveProperty("customerName");
+      expect(payload).not.toHaveProperty("phone");
+      expect(payload).not.toHaveProperty("email");
+      expect(payload).not.toHaveProperty("deliveryAddress");
     });
 
-    it("broadcasts order.status_updated to admin, order channel, and user channel", async () => {
+    it("broadcasts order.status_updated to admin-orders and user-{userId} without personal data", async () => {
       const mockFetch = vi.fn().mockResolvedValue({ ok: true });
       global.fetch = mockFetch;
 
@@ -122,36 +128,34 @@ describe("Realtime Sync & Push Notification Architecture", () => {
         orderNumber: "PH-100",
         status: "PREPARING",
         userId: "user-100",
-        previousStatus: "CONFIRMED",
-        note: "Chefs are preparing",
       });
 
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
       const topics = mockFetch.mock.calls.map(
         (call: unknown[]) => JSON.parse((call[1] as { body: string }).body).messages[0].topic,
       );
-      expect(topics).toContain("orders:admin");
-      expect(topics).toContain("orders:ord-100");
-      expect(topics).toContain("orders:user:user-100");
+      expect(topics).toContain("admin-orders");
+      expect(topics).toContain("user-user-100");
+
+      const payload = JSON.parse(mockFetch.mock.calls[0][1].body).messages[0].payload;
+      expect(payload.orderId).toBe("ord-100");
+      expect(payload.status).toBe("PREPARING");
+      expect(payload).not.toHaveProperty("customerName");
     });
 
-    it("broadcasts menu.updated to public channel", async () => {
+    it("broadcasts menu.updated to menu-availability channel", async () => {
       const mockFetch = vi.fn().mockResolvedValue({ ok: true });
       global.fetch = mockFetch;
 
       await broadcastMenuUpdated({
         type: "dish_availability",
         dishId: "dish-5",
-        dishName: "Chicken Sekuwa",
-        isAvailable: false,
-        updatedAt: new Date().toISOString(),
       });
 
       const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(requestBody.messages[0].topic).toBe("menu:public");
+      expect(requestBody.messages[0].topic).toBe("menu-availability");
       expect(requestBody.messages[0].event).toBe("menu.updated");
-      expect(requestBody.messages[0].payload.dishName).toBe("Chicken Sekuwa");
-      expect(requestBody.messages[0].payload.isAvailable).toBe(false);
+      expect(requestBody.messages[0].payload.dishId).toBe("dish-5");
     });
   });
 
