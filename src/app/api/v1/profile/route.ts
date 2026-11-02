@@ -48,7 +48,6 @@ export async function PUT(req: NextRequest) {
     data: {
       name: parsed.data.name,
       phone: parsed.data.phone,
-      image: parsed.data.image || null,
     },
     select: {
       id: true,
@@ -57,7 +56,7 @@ export async function PUT(req: NextRequest) {
       phone: true,
       role: true,
       image: true,
-      updatedAt: true,
+      createdAt: true,
     },
   });
 
@@ -67,6 +66,7 @@ export async function PUT(req: NextRequest) {
     action: "account.profile.update",
     entity: "User",
     entityId: user.id,
+    details: { changes: parsed.data },
   });
 
   return jsonOk(updated);
@@ -78,12 +78,56 @@ export async function DELETE(req: NextRequest) {
     return jsonError("UNAUTHORIZED", "Please sign in to delete your account.", 401);
   }
 
-  // Execute account deletion batch: revoke all tokens, delete push tokens, addresses, and favorites
+  // Pre-fetch user's orders to link to payment scrubbing
+  const userOrders = await prisma.order.findMany({
+    where: { userId: user.id },
+    select: { id: true },
+  });
+  const orderIds = userOrders.map((o) => o.id);
+
+  // Execute account deletion batch:
+  // 1. Revoke all refresh tokens, sessions, accounts
+  // 2. Delete push tokens, saved addresses, favorites, notifications
+  // 3. Delete personal reviews and contact messages
+  // 4. Anonymize reservations and event bookings
+  // 5. Scrub retained orders and payments (keep only transactionId, provider, and amount for accounting)
+  // 6. Delete user account
   await prisma.$transaction([
     prisma.refreshToken.deleteMany({ where: { userId: user.id } }),
     prisma.pushToken.deleteMany({ where: { userId: user.id } }),
     prisma.favorite.deleteMany({ where: { userId: user.id } }),
     prisma.address.deleteMany({ where: { userId: user.id } }),
+    prisma.review.deleteMany({ where: { userId: user.id } }),
+    prisma.contactMessage.deleteMany({ where: { email: user.email } }),
+    prisma.reservation.updateMany({
+      where: { OR: [{ userId: user.id }, { email: user.email }] },
+      data: {
+        userId: null,
+        name: "Deleted User",
+        email: "deleted@customer.local",
+        phone: "0000000000",
+        notes: null,
+        occasion: null,
+      },
+    }),
+    prisma.eventBooking.updateMany({
+      where: { OR: [{ userId: user.id }, { email: user.email }] },
+      data: {
+        userId: null,
+        name: "Deleted User",
+        email: "deleted@customer.local",
+        phone: "0000000000",
+        message: null,
+      },
+    }),
+    ...(orderIds.length > 0
+      ? [
+          prisma.payment.updateMany({
+            where: { orderId: { in: orderIds } },
+            data: { payload: null },
+          }),
+        ]
+      : []),
     prisma.order.updateMany({
       where: { userId: user.id },
       data: {
@@ -111,6 +155,6 @@ export async function DELETE(req: NextRequest) {
   });
 
   return jsonOk({
-    message: "Your account and all associated tokens, addresses, and favorites have been deleted.",
+    message: "Your account and all associated personal data have been deleted and anonymized.",
   });
 }

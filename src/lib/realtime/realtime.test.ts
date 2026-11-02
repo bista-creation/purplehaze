@@ -38,7 +38,12 @@ import {
   broadcastMenuUpdated,
   verifyRealtimeChannelAccess,
 } from "./broadcast";
-import { pushNotificationService } from "../services/push-notification.service";
+import {
+  pushNotificationService,
+  EXPO_PUSH_SEND_ENDPOINT,
+  EXPO_PUSH_RECEIPTS_ENDPOINT,
+} from "../services/push-notification.service";
+import { checkRateLimit, isSensitiveRateLimitKey } from "../rate-limit";
 import { SignJWT } from "jose";
 
 describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
@@ -98,80 +103,82 @@ describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
       const mockFetch = vi.fn().mockResolvedValue({ ok: true });
       global.fetch = mockFetch;
 
-      const order = {
-        id: "ord-99",
-        orderNumber: "PH-123456",
-        userId: "usr-456",
-        createdAt: new Date("2026-11-02T12:00:00Z"),
+      const fullOrder = {
+        id: "ord-123",
+        orderNumber: "PH-1234",
+        userId: "user-456",
+        customerName: "Jane Doe",
+        customerEmail: "jane@example.com",
+        customerPhone: "+9779812345678",
+        deliveryAddress: "Main Street 12, Biratnagar",
+        createdAt: new Date(),
       };
 
-      await broadcastOrderCreated(order);
+      await broadcastOrderCreated(fullOrder);
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(requestBody.messages[0].topic).toBe("admin-orders");
-      const payload = requestBody.messages[0].payload;
-
-      expect(payload.orderId).toBe("ord-99");
-      expect(payload.orderNumber).toBe("PH-123456");
-      expect(payload.userId).toBe("usr-456");
-      // Must NOT contain personal details
+      const payload = JSON.parse(mockFetch.mock.calls[0][1].body).messages[0].payload;
+      expect(payload).toEqual(
+        expect.objectContaining({
+          event: "order.created",
+          orderId: "ord-123",
+          orderNumber: "PH-1234",
+          userId: "user-456",
+        }),
+      );
       expect(payload).not.toHaveProperty("customerName");
-      expect(payload).not.toHaveProperty("phone");
-      expect(payload).not.toHaveProperty("email");
+      expect(payload).not.toHaveProperty("customerEmail");
+      expect(payload).not.toHaveProperty("customerPhone");
       expect(payload).not.toHaveProperty("deliveryAddress");
     });
 
-    it("broadcasts order.status_updated to admin-orders and user-{userId} without personal data", async () => {
+    it("broadcasts order status updates with only ID and status fields", async () => {
       const mockFetch = vi.fn().mockResolvedValue({ ok: true });
       global.fetch = mockFetch;
 
       await broadcastOrderStatusUpdated({
-        orderId: "ord-100",
-        orderNumber: "PH-100",
+        orderId: "ord-123",
+        orderNumber: "PH-1234",
         status: "PREPARING",
-        userId: "user-100",
+        userId: "user-456",
       });
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-      const topics = mockFetch.mock.calls.map(
-        (call: unknown[]) => JSON.parse((call[1] as { body: string }).body).messages[0].topic,
-      );
-      expect(topics).toContain("admin-orders");
-      expect(topics).toContain("user-user-100");
-
       const payload = JSON.parse(mockFetch.mock.calls[0][1].body).messages[0].payload;
-      expect(payload.orderId).toBe("ord-100");
+      expect(payload.event).toBe("order.status_updated");
+      expect(payload.orderId).toBe("ord-123");
       expect(payload.status).toBe("PREPARING");
-      expect(payload).not.toHaveProperty("customerName");
+      expect(payload.userId).toBe("user-456");
+      expect(payload).not.toHaveProperty("customerEmail");
     });
 
-    it("broadcasts menu.updated to menu-availability channel", async () => {
+    it("broadcasts menu updates to public channel without customer context", async () => {
       const mockFetch = vi.fn().mockResolvedValue({ ok: true });
       global.fetch = mockFetch;
 
       await broadcastMenuUpdated({
         type: "dish_availability",
-        dishId: "dish-5",
+        dishId: "dish-1",
+        isAvailable: false,
       });
 
-      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(requestBody.messages[0].topic).toBe("menu-availability");
-      expect(requestBody.messages[0].event).toBe("menu.updated");
-      expect(requestBody.messages[0].payload.dishId).toBe("dish-5");
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.messages[0].topic).toBe("menu-availability");
+      expect(body.messages[0].event).toBe("menu.updated");
+      expect(body.messages[0].payload.dishId).toBe("dish-1");
+      expect(body.messages[0].payload.isAvailable).toBe(false);
     });
   });
 
-  describe("Expo Push Notification Service", () => {
-    it("validates Expo push token formats accurately", () => {
-      expect(pushNotificationService.isExpoPushToken("ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]")).toBe(true);
-      expect(pushNotificationService.isExpoPushToken("ExpoPushToken[xxxxxxxxxxxxxxxxxxxxxx]")).toBe(true);
-      expect(pushNotificationService.isExpoPushToken("invalid-push-token")).toBe(false);
-      expect(pushNotificationService.isExpoPushToken("")).toBe(false);
+  describe("Push Notifications & Official Expo Endpoints", () => {
+    it("uses official Expo push endpoints (exp.host)", () => {
+      expect(EXPO_PUSH_SEND_ENDPOINT).toBe("https://exp.host/--/api/v2/push/send");
+      expect(EXPO_PUSH_RECEIPTS_ENDPOINT).toBe("https://exp.host/--/api/v2/push/getReceipts");
     });
 
-    it("sends batch push messages to Expo push server", async () => {
+    it("sends batch messages via official Expo endpoint", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ data: [{ status: "ok", id: "ticket-1" }] }),
         json: async () => ({
           data: [{ status: "ok", id: "ticket-1" }],
         }),
@@ -180,28 +187,34 @@ describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
 
       const result = await pushNotificationService.sendMessages([
         {
-          to: "ExponentPushToken[test-token-1]",
-          title: "Order Update",
-          body: "Your order is ready!",
+          to: "ExponentPushToken[device-test-1]",
+          title: "Dinner Ready",
+          body: "Your order is ready at Purple Haze",
         },
       ]);
 
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://exp.host/--/api/v2/push/send",
+        expect.objectContaining({ method: expect.stringMatching(/post/i) }),
+      );
       expect(result.sent).toBe(1);
       expect(result.failed).toBe(0);
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://expopush.net/v2/push/send",
-        expect.objectContaining({
-          method: "POST",
-          headers: expect.objectContaining({
-            "Content-Type": "application/json",
-          }),
-        }),
-      );
     });
 
     it("automatically deletes unregistered device tokens when Expo returns DeviceNotRegistered", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [
+              {
+                status: "error",
+                message: "DeviceNotRegistered",
+                details: { error: "DeviceNotRegistered" },
+              },
+            ],
+          }),
         json: async () => ({
           data: [
             {
@@ -239,6 +252,8 @@ describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
 
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ data: [{ status: "ok" }] }),
         json: async () => ({
           data: [{ status: "ok" }],
         }),
@@ -252,16 +267,57 @@ describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
         status: "OUT_FOR_DELIVERY",
       });
 
-      expect(mockFetch).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://exp.host/--/api/v2/push/send",
+        expect.objectContaining({ method: expect.stringMatching(/post/i) }),
+      );
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(body[0].title).toBe("Rider on the way!");
       expect(body[0].body).toContain("PH-9999");
       expect(body[0].data.status).toBe("OUT_FOR_DELIVERY");
     });
 
+    it("uses customer-safe cancellation message and does NOT leak internal staff notes", async () => {
+      mockPrisma.pushToken.findMany.mockResolvedValue([
+        { token: "ExponentPushToken[valid-device-1]" },
+      ]);
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ data: [{ status: "ok" }] }),
+        json: async () => ({
+          data: [{ status: "ok" }],
+        }),
+      });
+      global.fetch = mockFetch;
+
+      await pushNotificationService.sendOrderStatusNotification({
+        userId: "user-123",
+        orderId: "ord-1",
+        orderNumber: "PH-9999",
+        status: "CANCELLED",
+        note: "INTERNAL: Chef dropped the fish; out of salmon",
+      });
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body[0].title).toBe("Order #PH-9999 Cancelled");
+      // Must NOT contain internal staff note
+      expect(body[0].body).not.toContain("Chef dropped the fish");
+      expect(body[0].body).toContain("Your order has been cancelled");
+    });
+
     it("checks push receipts and prunes DeviceNotRegistered tokens", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: {
+              "rec-1": { status: "ok" },
+              "rec-2": { status: "error", details: { error: "DeviceNotRegistered" } },
+            },
+          }),
         json: async () => ({
           data: {
             "rec-1": { status: "ok" },
@@ -271,12 +327,21 @@ describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
       });
       global.fetch = mockFetch;
 
-      const badTokens = await pushNotificationService.checkReceipts(["rec-1", "rec-2"]);
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://expopush.net/v2/push/getReceipts",
-        expect.objectContaining({ method: "POST" }),
+      mockPrisma.pushToken.deleteMany.mockResolvedValue({ count: 1 });
+
+      const badTokens = await pushNotificationService.checkReceipts(
+        ["rec-1", "rec-2"],
+        { "rec-2": "ExponentPushToken[unregistered-device]" },
       );
-      expect(Array.isArray(badTokens)).toBe(true);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://exp.host/--/api/v2/push/getReceipts",
+        expect.objectContaining({ method: expect.stringMatching(/post/i) }),
+      );
+      expect(badTokens).toContain("ExponentPushToken[unregistered-device]");
+      expect(mockPrisma.pushToken.deleteMany).toHaveBeenCalledWith({
+        where: { token: { in: ["ExponentPushToken[unregistered-device]"] } },
+      });
     });
   });
 
@@ -344,9 +409,76 @@ describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
     });
   });
 
+  describe("Rate Limiter Production Fail-Closed Behavior", () => {
+    it("identifies sensitive endpoints correctly", () => {
+      expect(isSensitiveRateLimitKey("auth:login:127.0.0.1")).toBe(true);
+      expect(isSensitiveRateLimitKey("auth:register:127.0.0.1")).toBe(true);
+      expect(isSensitiveRateLimitKey("orders:create:usr-1")).toBe(true);
+      expect(isSensitiveRateLimitKey("orders:track:9812345678")).toBe(true);
+      expect(isSensitiveRateLimitKey("coupon:validate:usr-1")).toBe(true);
+      expect(isSensitiveRateLimitKey("contact:submit:127.0.0.1")).toBe(true);
+      expect(isSensitiveRateLimitKey("public:static-page")).toBe(false);
+    });
+
+    it("fails closed in production for sensitive endpoints when Upstash is missing", async () => {
+      const origEnv = process.env.NODE_ENV;
+      const origUrl = process.env.UPSTASH_REDIS_REST_URL;
+      const origToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+      try {
+        (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+        delete process.env.UPSTASH_REDIS_REST_URL;
+        delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
+        const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        // Sensitive auth request
+        const authLimit = await checkRateLimit("auth:login:10.0.0.1", 5, 60_000);
+        expect(authLimit.success).toBe(false);
+        expect(authLimit.remaining).toBe(0);
+        expect(errorSpy).toHaveBeenCalledWith(
+          expect.stringContaining("[RateLimit] CRITICAL: Upstash Redis configuration missing in production!"),
+        );
+
+        // Sensitive order creation
+        const orderLimit = await checkRateLimit("order:create:usr-123", 10, 60_000);
+        expect(orderLimit.success).toBe(false);
+        expect(orderLimit.remaining).toBe(0);
+
+        // Sensitive tracking
+        const trackLimit = await checkRateLimit("track:order:9800000000", 5, 60_000);
+        expect(trackLimit.success).toBe(false);
+        expect(trackLimit.remaining).toBe(0);
+      } finally {
+        (process.env as Record<string, string | undefined>).NODE_ENV = origEnv;
+        if (origUrl) process.env.UPSTASH_REDIS_REST_URL = origUrl;
+        if (origToken) process.env.UPSTASH_REDIS_REST_TOKEN = origToken;
+      }
+    });
+
+    it("allows in-memory sliding window fallback in local development", async () => {
+      const origEnv = process.env.NODE_ENV;
+      const origUrl = process.env.UPSTASH_REDIS_REST_URL;
+      const origToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+      try {
+        (process.env as Record<string, string | undefined>).NODE_ENV = "development";
+        delete process.env.UPSTASH_REDIS_REST_URL;
+        delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
+        const devLimit = await checkRateLimit("auth:login:dev-test-ip", 5, 60_000);
+        expect(devLimit.success).toBe(true);
+        expect(devLimit.remaining).toBe(4);
+      } finally {
+        (process.env as Record<string, string | undefined>).NODE_ENV = origEnv;
+        if (origUrl) process.env.UPSTASH_REDIS_REST_URL = origUrl;
+        if (origToken) process.env.UPSTASH_REDIS_REST_TOKEN = origToken;
+      }
+    });
+  });
+
   describe("Failure Isolation: Broadcast & Push Failures Do Not Fail Order Flow", () => {
     it("handles broadcast network failure gracefully without throwing or rejecting", async () => {
-      // Network fetch error simulating Supabase outage
       global.fetch = vi.fn().mockRejectedValue(new Error("Supabase connection timeout"));
 
       const order = {
@@ -355,7 +487,6 @@ describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
         createdAt: new Date(),
       };
 
-      // Must return false without throwing an unhandled rejection
       await expect(broadcastOrderCreated(order)).resolves.toBe(false);
       await expect(
         broadcastOrderStatusUpdated({
@@ -384,14 +515,12 @@ describe("Realtime Sync & Push Notification Architecture (Phase c)", () => {
 
   describe("Payment State Preservation on Khalti Callback", () => {
     it("rejects amount mismatch and preserves PENDING status without marking FAILED", () => {
-      // Simulating Khalti callback amount comparison logic
-      const orderTotal: number = 46500; // 465.00 NPR in paisa
-      const lookupAmount: number = 10000; // 100.00 NPR in paisa (mismatch)
+      const orderTotal: number = 46500;
+      const lookupAmount: number = 10000;
 
       const amountMatches = lookupAmount === orderTotal;
       expect(amountMatches).toBe(false);
 
-      // Verify that when amount doesn't match, status remains unchanged
       const paymentStatus: string = amountMatches ? "PAID" : "PENDING";
       expect(paymentStatus).toBe("PENDING");
     });

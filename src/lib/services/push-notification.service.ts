@@ -1,7 +1,9 @@
 import "server-only";
+import { Expo, type ExpoPushMessage, type ExpoPushTicket, type ExpoPushReceipt } from "expo-server-sdk";
 import { prisma } from "@/lib/prisma";
 
-const EXPO_PUSH_ENDPOINT = "https://expopush.net/v2/push/send";
+export const EXPO_PUSH_SEND_ENDPOINT = "https://exp.host/--/api/v2/push/send";
+export const EXPO_PUSH_RECEIPTS_ENDPOINT = "https://exp.host/--/api/v2/push/getReceipts";
 
 export type PushMessage = {
   to: string;
@@ -14,70 +16,68 @@ export type PushMessage = {
 };
 
 export class PushNotificationService {
+  private expo: Expo;
+
+  constructor() {
+    this.expo = new Expo();
+  }
+
   /**
    * Verifies if a string matches the standard Expo push token pattern.
    */
   isExpoPushToken(token: string): boolean {
-    return (
-      typeof token === "string" &&
-      (token.startsWith("ExponentPushToken[") || token.startsWith("ExpoPushToken[")) &&
-      token.endsWith("]")
-    );
+    return Expo.isExpoPushToken(token);
   }
 
   /**
-   * Sends raw batch of push messages to Expo push servers.
+   * Sends raw batch of push messages using the official Expo Server SDK.
+   * Endpoints: https://exp.host/--/api/v2/push/send
    */
   async sendMessages(messages: PushMessage[]): Promise<{
     sent: number;
     failed: number;
     unregisteredTokens: string[];
+    tickets: ExpoPushTicket[];
   }> {
     if (!messages.length) {
-      return { sent: 0, failed: 0, unregisteredTokens: [] };
+      return { sent: 0, failed: 0, unregisteredTokens: [], tickets: [] };
     }
 
     const unregisteredTokens: string[] = [];
+    const allTickets: ExpoPushTicket[] = [];
     let sentCount = 0;
     let failedCount = 0;
 
-    // Expo recommends chunks of up to 100
-    const chunkSize = 100;
-    for (let i = 0; i < messages.length; i += chunkSize) {
-      const chunk = messages.slice(i, i + chunkSize);
+    // Filter valid tokens
+    const validMessages: ExpoPushMessage[] = [];
+    for (const msg of messages) {
+      if (this.isExpoPushToken(msg.to)) {
+        validMessages.push(msg as ExpoPushMessage);
+      } else {
+        console.warn(`[Expo Push] Invalid push token skipped: ${msg.to}`);
+        failedCount += 1;
+      }
+    }
 
+    if (!validMessages.length) {
+      return { sent: 0, failed: failedCount, unregisteredTokens: [], tickets: [] };
+    }
+
+    const chunks = this.expo.chunkPushNotifications(validMessages);
+
+    for (const chunk of chunks) {
       try {
-        const res = await fetch(EXPO_PUSH_ENDPOINT, {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Accept-Encoding": "gzip, deflate",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(chunk),
-        });
+        const ticketChunk = await this.expo.sendPushNotificationsAsync(chunk);
+        allTickets.push(...ticketChunk);
 
-        if (!res.ok) {
-          console.warn("[Expo Push] HTTP error from push server:", res.status, res.statusText);
-          failedCount += chunk.length;
-          continue;
-        }
-
-        const json = await res.json();
-        const tickets: Array<{
-          status: "ok" | "error";
-          message?: string;
-          details?: { error?: string };
-        }> = json.data || [];
-
-        tickets.forEach((ticket, idx) => {
+        ticketChunk.forEach((ticket, idx) => {
           if (ticket.status === "ok") {
             sentCount += 1;
           } else {
             failedCount += 1;
             if (ticket.details?.error === "DeviceNotRegistered") {
               const badToken = chunk[idx]?.to;
-              if (badToken) {
+              if (typeof badToken === "string") {
                 unregisteredTokens.push(badToken);
               }
             }
@@ -98,11 +98,12 @@ export class PushNotificationService {
         .catch((err) => console.warn("[Expo Push] Error pruning unregistered tokens:", err));
     }
 
-    return { sent: sentCount, failed: failedCount, unregisteredTokens };
+    return { sent: sentCount, failed: failedCount, unregisteredTokens, tickets: allTickets };
   }
 
   /**
-   * Queries Expo Push Receipt API and deletes any tokens that report DeviceNotRegistered.
+   * Queries official Expo Push Receipt API and deletes any tokens that report DeviceNotRegistered.
+   * Endpoint: https://exp.host/--/api/v2/push/getReceipts
    */
   async checkReceipts(
     receiptIds: string[],
@@ -110,27 +111,19 @@ export class PushNotificationService {
   ): Promise<string[]> {
     if (!receiptIds.length) return [];
     try {
-      const res = await fetch("https://expopush.net/v2/push/getReceipts", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Accept-Encoding": "gzip, deflate",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ids: receiptIds }),
-      });
-
-      if (!res.ok) return [];
-      const json = await res.json();
-      const receipts: Record<string, { status: string; message?: string; details?: { error?: string } }> =
-        json.data || {};
-
+      const receiptIdChunks = this.expo.chunkPushNotificationReceiptIds(receiptIds);
       const deadTokens: string[] = [];
-      for (const [receiptId, receipt] of Object.entries(receipts)) {
-        if (receipt.status === "error" && receipt.details?.error === "DeviceNotRegistered") {
-          const badToken = receiptToTokenMap?.[receiptId];
-          if (badToken) {
-            deadTokens.push(badToken);
+
+      for (const chunk of receiptIdChunks) {
+        const receipts: Record<string, ExpoPushReceipt> =
+          await this.expo.getPushNotificationReceiptsAsync(chunk);
+
+        for (const [receiptId, receipt] of Object.entries(receipts)) {
+          if (receipt.status === "error" && receipt.details?.error === "DeviceNotRegistered") {
+            const badToken = receiptToTokenMap?.[receiptId];
+            if (badToken) {
+              deadTokens.push(badToken);
+            }
           }
         }
       }
@@ -161,7 +154,7 @@ export class PushNotificationService {
     body: string,
     data?: Record<string, unknown>,
   ) {
-    if (!userId) return { sent: 0, failed: 0 };
+    if (!userId) return { sent: 0, failed: 0, unregisteredTokens: [], tickets: [] };
 
     const records = await prisma.pushToken.findMany({
       where: { userId },
@@ -169,7 +162,7 @@ export class PushNotificationService {
     });
 
     if (!records.length) {
-      return { sent: 0, failed: 0 };
+      return { sent: 0, failed: 0, unregisteredTokens: [], tickets: [] };
     }
 
     const validTokens = records
@@ -177,7 +170,7 @@ export class PushNotificationService {
       .filter((t) => this.isExpoPushToken(t));
 
     if (!validTokens.length) {
-      return { sent: 0, failed: 0 };
+      return { sent: 0, failed: 0, unregisteredTokens: [], tickets: [] };
     }
 
     const messages: PushMessage[] = validTokens.map((to) => ({
@@ -194,6 +187,7 @@ export class PushNotificationService {
 
   /**
    * Sends tailored push notifications for order status transitions.
+   * Cancellation notices strictly use a customer-safe message, never exposing internal notes.
    */
   async sendOrderStatusNotification(params: {
     userId?: string | null;
@@ -230,7 +224,8 @@ export class PushNotificationService {
         break;
       case "CANCELLED":
         title = `Order #${params.orderNumber} Cancelled`;
-        body = params.note ? `Reason: ${params.note}` : "Your order has been cancelled.";
+        // Strictly customer-safe message — never expose internal kitchen/staff notes
+        body = "Your order has been cancelled. Please contact our Biratnagar team if you need assistance.";
         break;
       default:
         body = `Your order status has changed to ${params.status.toLowerCase()}.`;

@@ -18,10 +18,26 @@ globalStore.__phRateLimitLimiters = limiters;
 
 let memoryChecks = 0;
 
-function hasUpstash() {
+export function hasUpstash() {
   return Boolean(
     process.env.UPSTASH_REDIS_REST_URL &&
       process.env.UPSTASH_REDIS_REST_TOKEN,
+  );
+}
+
+export function isSensitiveRateLimitKey(key: string): boolean {
+  const lower = key.toLowerCase();
+  return (
+    lower.includes("auth") ||
+    lower.includes("login") ||
+    lower.includes("register") ||
+    lower.includes("order") ||
+    lower.includes("track") ||
+    lower.includes("coupon") ||
+    lower.includes("contact") ||
+    lower.includes("password") ||
+    lower.includes("profile") ||
+    lower.includes("realtime-token")
   );
 }
 
@@ -55,9 +71,10 @@ function getLimiter(limit: number, windowMs: number) {
 }
 
 /**
- * Production uses Upstash when configured; local development falls back to an
- * in-process sliding window. The fallback is intentionally best-effort because
- * serverless instances do not share memory.
+ * Production uses Upstash distributed rate limiting across serverless instances.
+ * In production, missing Upstash variables log a critical error and fail closed
+ * for sensitive endpoints (auth, orders, tracking, coupons, contact).
+ * In-memory fallback is strictly reserved for local development.
  */
 export async function checkRateLimit(
   identifier: string,
@@ -73,10 +90,25 @@ export async function checkRateLimit(
         resetAt: result.reset,
       };
     } catch (error) {
-      console.error("Upstash rate limit failed; using local fallback.", error);
+      console.error("[RateLimit] Upstash rate limit call failed:", error);
     }
   }
 
+  const isProduction = process.env.NODE_ENV === "production";
+  if (isProduction && !hasUpstash()) {
+    console.error(
+      `[RateLimit] CRITICAL: Upstash Redis configuration missing in production! Failing closed for identifier: '${identifier}'.`,
+    );
+    if (isSensitiveRateLimitKey(identifier)) {
+      return {
+        success: false,
+        remaining: 0,
+        resetAt: Date.now() + windowMs,
+      };
+    }
+  }
+
+  // Local development fallback: best-effort in-memory sliding window
   const now = Date.now();
   memoryChecks += 1;
   if (memoryChecks % 1000 === 0) clearExpiredLimitBuckets();

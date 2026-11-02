@@ -15,17 +15,18 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Unregister push token on logout
+    // Rule: remove ONLY the current device's push token; do not delete all of the user's tokens unless explicitly asked (allDevices: true)
     if (body?.pushToken) {
       await prisma.pushToken.deleteMany({
         where: { token: body.pushToken },
       });
-    } else if (user) {
+    } else if (body?.allDevices === true && user) {
       await prisma.pushToken.deleteMany({
         where: { userId: user.id },
       });
     }
 
-    return jsonOk({ message: "Successfully signed out and unregistered push tokens." });
+    return jsonOk({ message: "Successfully signed out." });
   } catch (error) {
     console.error("API logout failed:", error);
     return jsonError("INTERNAL_ERROR", "Logout failed.", 500);

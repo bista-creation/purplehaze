@@ -1,21 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
-import { signRealtimeToken, getSupabaseRealtimeConfig } from "../src/lib/supabase-realtime";
+import { SignJWT } from "jose";
 
-process.env.NEXT_PUBLIC_SUPABASE_URL = "https://lcexncppqesfnsdetoqv.supabase.co";
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY =
+const SUPABASE_URL = "https://lcexncppqesfnsdetoqv.supabase.co";
+const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjZXhuY3BwcWVzZm5zZGV0b3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0ODQ3ODksImV4cCI6MjEwODA2MDc4OX0.MR9A1fzITEbXc8mw-5p1lMHRAAMsIwumpwd-uYti3vI";
-process.env.SUPABASE_JWT_SECRET =
+const SUPABASE_JWT_SECRET =
   "EPEvygl8b+qDOgaCSr5RYvMVMNl2iPUpl8UlzuxEcIHFK91qDcWhmNjo4nERoNHP1E3fpncD5ftdWMJQXxEVRw==";
 
-const config = getSupabaseRealtimeConfig()!;
-
 async function mintToken(userId: string, role: string) {
-  const res = await signRealtimeToken({
-    id: userId,
-    email: `${userId}@example.com`,
-    role,
-  });
-  return res!.token;
+  return await new SignJWT({
+    role: "authenticated",
+    app_role: role,
+  })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setSubject(userId)
+    .setAudience("authenticated")
+    .setIssuer("purple-haze")
+    .setIssuedAt()
+    .setExpirationTime("10m")
+    .sign(new TextEncoder().encode(SUPABASE_JWT_SECRET));
 }
 
 function testChannelSubscription(
@@ -24,19 +27,18 @@ function testChannelSubscription(
   options: { isPrivate: boolean } = { isPrivate: true }
 ): Promise<{ status: string; error?: string }> {
   return new Promise((resolve) => {
-    const client = createClient(config.url, config.anonKey, {
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
       },
       realtime: {
         params: {
-          apikey: config.anonKey,
+          apikey: SUPABASE_ANON_KEY,
         },
       },
     });
 
-    // Set auth token on supabase client for Realtime
     client.realtime.setAuth(token);
 
     const channel = client.channel(channelTopic, {
@@ -71,10 +73,63 @@ function testChannelSubscription(
   });
 }
 
+function testCustomerBroadcastAttempt(
+  token: string,
+  channelTopic: string
+): Promise<{ allowed: boolean; status: string; error?: string }> {
+  return new Promise((resolve) => {
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      realtime: {
+        params: {
+          apikey: SUPABASE_ANON_KEY,
+        },
+      },
+    });
+
+    client.realtime.setAuth(token);
+
+    const channel = client.channel(channelTopic, {
+      config: {
+        private: true,
+      },
+    });
+
+    const timeout = setTimeout(() => {
+      channel.unsubscribe();
+      resolve({ allowed: false, status: "TIMEOUT_OR_BLOCKED" });
+    }, 8000);
+
+    channel.subscribe(async (status, err) => {
+      if (status === "CHANNEL_ERROR") {
+        clearTimeout(timeout);
+        channel.unsubscribe();
+        resolve({ allowed: false, status: "CHANNEL_ERROR", error: err?.message });
+      } else if (status === "SUBSCRIBED") {
+        // If somehow subscribed, attempt to send a broadcast message
+        const sendStatus = await channel.send({
+          type: "broadcast",
+          event: "order.created",
+          payload: { orderId: "rogue-inject" },
+        });
+        clearTimeout(timeout);
+        channel.unsubscribe();
+        resolve({
+          allowed: sendStatus === "ok",
+          status: sendStatus,
+        });
+      }
+    });
+  });
+}
+
 async function main() {
   console.log("=== SUPABASE REALTIME LIVE ACCEPTANCE TEST ===");
   console.log("Target Supabase Project: lcexncppqesfnsdetoqv (ap-northeast-2)");
-  console.log("URL:", config.url);
+  console.log("URL:", SUPABASE_URL);
 
   const userAId = "usr-test-alice-aaa";
   const userBId = "usr-test-bob-bbb";
@@ -103,21 +158,34 @@ async function main() {
   const res5 = await testChannelSubscription(tokenUserB, "menu-availability", { isPrivate: false });
   console.log("Result 5:", res5.status);
 
+  console.log("\n6. Testing: User B (CUSTOMER) attempting to broadcast/send to 'admin-orders'");
+  const res6 = await testCustomerBroadcastAttempt(tokenUserB, "admin-orders");
+  console.log("Result 6:", res6.allowed ? "ALLOWED (FAIL)" : "BLOCKED (PASS)", res6.status, res6.error ? `(${res6.error})` : "");
+
+  console.log("\n7. Testing: User B (CUSTOMER) attempting to broadcast/send to 'user-" + userAId + "'");
+  const res7 = await testCustomerBroadcastAttempt(tokenUserB, `user-${userAId}`);
+  console.log("Result 7:", res7.allowed ? "ALLOWED (FAIL)" : "BLOCKED (PASS)", res7.status, res7.error ? `(${res7.error})` : "");
+
   console.log("\n=== EVALUATION ===");
   const test1Passed = res1.status === "CHANNEL_ERROR";
   const test2Passed = res2.status === "CHANNEL_ERROR";
   const test3Passed = res3.status === "SUBSCRIBED";
   const test4Passed = res4.status === "SUBSCRIBED";
   const test5Passed = res5.status === "SUBSCRIBED";
+  const test6Passed = !res6.allowed;
+  const test7Passed = !res7.allowed;
 
   console.log("User B denied user A channel:", test1Passed ? "PASS (REJECTED)" : "FAIL (" + res1.status + ")");
   console.log("User B denied admin-orders channel:", test2Passed ? "PASS (REJECTED)" : "FAIL (" + res2.status + ")");
   console.log("User B allowed own user B channel:", test3Passed ? "PASS (SUBSCRIBED)" : "FAIL (" + res3.status + ")");
   console.log("Admin allowed admin-orders channel:", test4Passed ? "PASS (SUBSCRIBED)" : "FAIL (" + res4.status + ")");
   console.log("User B allowed public menu channel:", test5Passed ? "PASS (SUBSCRIBED)" : "FAIL (" + res5.status + ")");
+  console.log("User B blocked from sending to admin-orders:", test6Passed ? "PASS (BLOCKED)" : "FAIL");
+  console.log("User B blocked from sending to user A channel:", test7Passed ? "PASS (BLOCKED)" : "FAIL");
 
-  if (test1Passed && test2Passed && test3Passed && test4Passed && test5Passed) {
-    console.log("\nALL 5 LIVE SUPABASE REALTIME ACCEPTANCE TESTS PASSED!");
+  if (test1Passed && test2Passed && test3Passed && test4Passed && test5Passed && test6Passed && test7Passed) {
+    console.log("\nALL 7 LIVE SUPABASE REALTIME ACCEPTANCE TESTS PASSED!");
+    process.exit(0);
   } else {
     console.error("\nONE OR MORE TESTS FAILED.");
     process.exit(1);
