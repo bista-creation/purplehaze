@@ -107,6 +107,7 @@ export class BookingService {
   async updateReservationStatus(
     id: string,
     status: string,
+    tableNumber?: string | null,
     adminNotes?: string | null,
     actorEmail?: string | null,
   ) {
@@ -117,6 +118,7 @@ export class BookingService {
       where: { id },
       data: {
         status,
+        ...(tableNumber !== undefined ? { tableNumber } : {}),
         adminNotes: adminNotes || null,
       },
     });
