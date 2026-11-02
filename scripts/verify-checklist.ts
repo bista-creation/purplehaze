@@ -386,6 +386,76 @@ async function main() {
     throw new Error(`Check 4 Failed: Expected 429 rate limit after repeated attempts, got statuses: ${trackStatuses.join(", ")}`);
   }
   console.log(`Rate limit reached as expected: HTTP 429 Too Many Requests`);
+
+  // Guest idempotency-key isolation test: Guest 1 creates order, Guest 2 cannot get Guest 1's order
+  console.log("Testing Guest Idempotency-Key Isolation...");
+  const guestKey = `chk-guest-idem-${runId}-xyz`;
+  const guest1Payload = {
+    details: {
+      customerName: "Guest Customer 1",
+      customerEmail: `guest1_${runId}@test.com`,
+      customerPhone: "9844444444",
+      type: "PICKUP",
+      paymentMethod: "COD",
+    },
+    items: [{ dishId: sampleDish.id, quantity: 1 }],
+  };
+
+  const guest1Res = await fetch(`${BASE_URL}/api/v1/orders`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": guestKey,
+      "X-Forwarded-For": "198.51.100.81",
+    },
+    body: JSON.stringify(guest1Payload),
+  });
+  const guest1Json = await guest1Res.json();
+  console.log(`Guest 1 Order: HTTP ${guest1Res.status}, Order: ${guest1Json.data?.orderNumber}`);
+  if (guest1Res.status !== 201) throw new Error("Check 4 Failed: Guest 1 order placement not 201");
+
+  // Guest 1 replay with same payload -> 201 with idempotent: true
+  const guest1Replay = await fetch(`${BASE_URL}/api/v1/orders`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": guestKey,
+      "X-Forwarded-For": "198.51.100.81",
+    },
+    body: JSON.stringify(guest1Payload),
+  });
+  const guest1ReplayJson = await guest1Replay.json();
+  console.log(`Guest 1 Replay: HTTP ${guest1Replay.status}`, guest1ReplayJson.meta);
+  if (guest1Replay.status !== 201 || !guest1ReplayJson.meta?.idempotent) {
+    throw new Error("Check 4 Failed: Guest 1 replay did not return cached 201 with idempotent: true");
+  }
+
+  // Guest 2 attempts to use Guest 1's key with Guest 2's payload -> MUST return 409 Conflict
+  const guest2Payload = {
+    details: {
+      customerName: "Guest Customer 2",
+      customerEmail: `guest2_${runId}@test.com`,
+      customerPhone: "9855555555",
+      type: "PICKUP",
+      paymentMethod: "COD",
+    },
+    items: [{ dishId: sampleDish.id, quantity: 1 }],
+  };
+  const guest2Res = await fetch(`${BASE_URL}/api/v1/orders`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": guestKey,
+      "X-Forwarded-For": "198.51.100.82",
+    },
+    body: JSON.stringify(guest2Payload),
+  });
+  const guest2Json = await guest2Res.json();
+  console.log(`Guest 2 reusing Guest 1's Idempotency Key: HTTP ${guest2Res.status}`, guest2Json);
+  if (guest2Res.status !== 409) {
+    throw new Error(`Check 4 Failed: Guest 2 key reuse returned ${guest2Res.status}, expected 409.`);
+  }
+  console.log("Verified: Guest 2 cannot retrieve Guest 1's order via idempotency key replay.");
   console.log(">>> CHECK 4 PASSED: Guest tracking sanitized and endpoint rate-limited on brute-force.\n");
 
   // =========================================================================
@@ -626,7 +696,13 @@ async function main() {
   const deletedOrders = await prisma.order.deleteMany({
     where: {
       customerEmail: {
-        in: [emailA, emailB, emailAdmin],
+        in: [
+          emailA,
+          emailB,
+          emailAdmin,
+          `guest1_${runId}@test.com`,
+          `guest2_${runId}@test.com`,
+        ],
       },
     },
   });
@@ -634,7 +710,10 @@ async function main() {
 
   const deletedIdem = await prisma.idempotencyKey.deleteMany({
     where: {
-      key: { startsWith: `chk-idem-${runId}` },
+      OR: [
+        { key: { startsWith: `chk-idem-${runId}` } },
+        { key: { startsWith: `chk-guest-idem-${runId}` } },
+      ],
     },
   });
   console.log(`Cleaned up ${deletedIdem.count} test idempotency keys.`);

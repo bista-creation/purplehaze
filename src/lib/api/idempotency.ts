@@ -39,16 +39,25 @@ export async function checkIdempotency(
     return null;
   }
 
-  // Cross-user reuse protection: User B reusing User A's key must NOT return A's order
-  if (record.userId && options?.userId && record.userId !== options.userId) {
+  // Cross-user and guest-vs-user reuse protection
+  if (record.userId) {
+    if (!options?.userId || record.userId !== options.userId) {
+      return jsonError(
+        "CONFLICT",
+        "This idempotency key belongs to another user.",
+        409,
+      );
+    }
+  } else if (options?.userId) {
+    // Key belonged to a guest; an authenticated user cannot claim it
     return jsonError(
       "CONFLICT",
-      "This idempotency key belongs to another user.",
+      "This idempotency key belongs to another session.",
       409,
     );
   }
 
-  // Payload mismatch protection: same key with different body -> 409 Conflict
+  // Payload mismatch protection: same key with different body/details -> 409 Conflict
   if (record.requestHash && options?.payload !== undefined) {
     const currentHash = computePayloadHash(options.payload);
     if (currentHash && record.requestHash !== currentHash) {
