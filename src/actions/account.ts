@@ -16,7 +16,7 @@ import {
   type AddressInput,
 } from "@/lib/validations";
 import { writeAuditLog } from "@/lib/audit";
-import { parseAddOnNames } from "@/lib/utils";
+import { authService, orderService } from "@/lib/services";
 
 export type AccountActionResult = {
   success: boolean;
@@ -298,33 +298,15 @@ export async function toggleFavoriteAction(
     if (!user) {
       return { success: false, message: "Please sign in to save favourites." };
     }
-    const dish = await prisma.dish.findUnique({
-      where: { id: dishId },
-      select: { id: true, name: true, isAvailable: true },
-    });
-    if (!dish) return { success: false, message: "Dish not found." };
-    const existing = await prisma.favorite.findUnique({
-      where: { userId_dishId: { userId: user.id, dishId } },
-    });
-    if (existing) {
-      await prisma.favorite.delete({
-        where: { userId_dishId: { userId: user.id, dishId } },
-      });
-      revalidatePath("/account/favorites");
-      revalidatePath("/menu");
-      return {
-        success: true,
-        favorited: false,
-        message: `${dish.name} removed from favourites.`,
-      };
-    }
-    await prisma.favorite.create({ data: { userId: user.id, dishId } });
+    const result = await authService.toggleFavorite(user.id, dishId);
     revalidatePath("/account/favorites");
     revalidatePath("/menu");
     return {
       success: true,
-      favorited: true,
-      message: `${dish.name} saved to favourites.`,
+      favorited: result.favorited,
+      message: result.favorited
+        ? `${result.dishName} saved to favourites.`
+        : `${result.dishName} removed from favourites.`,
     };
   } catch (error) {
     console.error("Toggle favorite failed", error);
@@ -356,64 +338,7 @@ export async function getReorderLinesAction(
   try {
     const user = await getCurrentUser();
     if (!user) return { success: false, message: "Please sign in first." };
-    const order = await prisma.order.findFirst({
-      where: { id: orderId, userId: user.id },
-      include: {
-        items: {
-          include: {
-            dish: {
-              include: {
-                category: true,
-                variants: { where: { isAvailable: true } },
-                addOns: { include: { addOn: true } },
-              },
-            },
-          },
-        },
-      },
-    });
-    if (!order) return { success: false, message: "Order not found." };
-
-    const lines: ReorderLine[] = [];
-    let skipped = 0;
-    for (const item of order.items) {
-      const dish = item.dish;
-      if (!dish || !dish.isAvailable) {
-        skipped += 1;
-        continue;
-      }
-      const variant = item.variantName
-        ? dish.variants.find((option) => option.name === item.variantName)
-        : undefined;
-      if (item.variantName && !variant) {
-        // The option no longer exists; keep the dish but use its default.
-        skipped += 0;
-      }
-      const wantedAddOns = new Set(parseAddOnNames(item.addOns));
-      const addOns = dish.addOns
-        .filter(({ addOn }) => addOn.isActive && wantedAddOns.has(addOn.name))
-        .map(({ addOn }) => ({
-          id: addOn.id,
-          name: addOn.name,
-          price: addOn.price,
-        }));
-      lines.push({
-        dishId: dish.id,
-        name: dish.name,
-        slug: dish.slug,
-        image: dish.image,
-        categoryName: dish.category.name,
-        basePrice: dish.price,
-        variantId: variant?.id ?? null,
-        variantName: variant?.name ?? null,
-        variantPrice: variant?.priceDelta ?? 0,
-        addOns,
-        quantity: Math.min(20, item.quantity),
-        instructions: item.instructions ?? undefined,
-      });
-    }
-
-    return { success: true, lines, skipped };
+    return orderService.getReorderLines(orderId, user.id);
   } catch (error) {
     console.error("Reorder lookup failed", error);
     return {
