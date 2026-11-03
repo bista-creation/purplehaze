@@ -7,17 +7,11 @@ import { prisma } from "@/lib/prisma";
 import { createOrderSchema, type CreateOrderInput } from "@/lib/validations";
 import {
   assertSameOrigin,
-  generateSecureToken,
   getClientIp,
+  getCurrentUser,
 } from "@/lib/security";
-import { getCurrentUser } from "@/lib/security";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getPublicSettings } from "@/lib/settings";
-import {
-  calculateCouponDiscount,
-  calculateOrderTotals,
-  formatNPR,
-} from "@/lib/money";
+import { formatNPR } from "@/lib/money";
 import {
   getEsewaConfig,
   getKhaltiConfig,
@@ -27,27 +21,11 @@ import {
   lookupKhaltiPayment,
   markOrderPaid,
   markPaymentFailed,
-  onlinePaymentAvailability,
   parseEsewaAmount,
 } from "@/lib/payments";
-import { parseNepalDateTime } from "@/lib/time";
-import { generateOrderNumber } from "@/lib/utils";
-import {
-  escapeHtml,
-  sendAdminNotification,
-  sendOrderConfirmation,
-} from "@/lib/email";
 import { writeAuditLog } from "@/lib/audit";
 import { createStaffNotification } from "@/lib/notifications";
-import { ORDER_TYPE_LABELS } from "@/lib/constants";
-import { paymentPresentation } from "@/lib/order-state";
-
-class CouponUnavailableError extends Error {
-  constructor() {
-    super("Coupon is no longer available.");
-    this.name = "CouponUnavailableError";
-  }
-}
+import { couponService, orderService } from "@/lib/services";
 
 export type CreateOrderResult =
   | {
@@ -96,20 +74,15 @@ export async function validateCouponAction(
     return { success: false, message: "Too many attempts. Try again shortly." };
   }
 
-  const coupon = await prisma.coupon.findUnique({ where: { code } });
-  if (!coupon) {
-    return { success: false, message: "That coupon code is not valid." };
-  }
-
-  const result = calculateCouponDiscount(coupon, subtotal);
-  if (!result.valid) return { success: false, message: result.reason };
+  const result = await couponService.validateCoupon(code, subtotal);
+  if (!result.valid) return { success: false, message: result.message };
 
   return {
     success: true,
-    code: coupon.code,
-    description: coupon.description,
-    discount: result.discount,
-    message: `Coupon applied — you saved ${formatNPR(result.discount)}.`,
+    code: result.coupon.code,
+    description: result.coupon.description,
+    discount: result.coupon.discount,
+    message: result.message,
   };
 }
 
@@ -138,468 +111,29 @@ export async function createOrderAction(
       };
     }
 
-    const { details, items, idempotencyKey } = parsed.data;
-
-    if (idempotencyKey) {
-      const existing = await prisma.order.findUnique({
-        where: { idempotencyKey },
-        select: {
-          id: true,
-          orderNumber: true,
-          publicToken: true,
-          paymentMethod: true,
-        },
-      });
-      if (existing) {
-        return {
-          success: true,
-          orderId: existing.id,
-          orderNumber: existing.orderNumber,
-          publicToken: existing.publicToken,
-          confirmationUrl: `/order/${existing.orderNumber}?token=${encodeURIComponent(
-            existing.publicToken,
-          )}&placed=1`,
-          paymentMethod: existing.paymentMethod,
-          digitalPayment: existing.paymentMethod !== "COD",
-        };
-      }
-    }
-
-    const settings = await getPublicSettings();
-    if (!settings.acceptingOrders) {
-      return {
-        success: false,
-        message:
-          "Online ordering is paused right now. Please call us to place an order.",
-      };
-    }
-
-    if (details.paymentMethod === "COD" && !settings.codEnabled) {
-      return { success: false, message: "Cash on delivery is unavailable." };
-    }
-    if (details.paymentMethod === "ESEWA" && !settings.esewaEnabled) {
-      return { success: false, message: "eSewa is unavailable right now." };
-    }
-    if (details.paymentMethod === "KHALTI" && !settings.khaltiEnabled) {
-      return { success: false, message: "Khalti is unavailable right now." };
-    }
-
-    const paymentAvailability = onlinePaymentAvailability();
-    if (details.paymentMethod === "ESEWA" && !paymentAvailability.esewa) {
-      return {
-        success: false,
-        message:
-          "eSewa is not configured correctly. Please choose cash or contact us.",
-      };
-    }
-    if (details.paymentMethod === "KHALTI" && !paymentAvailability.khalti) {
-      return {
-        success: false,
-        message:
-          "Khalti is not configured correctly. Please choose cash or contact us.",
-      };
-    }
-
-    const dishIds = [...new Set(items.map((item) => item.dishId))];
-    const dishes = await prisma.dish.findMany({
-      where: { id: { in: dishIds } },
-      include: {
-        variants: true,
-        addOns: { include: { addOn: true } },
-      },
-    });
-    const dishMap = new Map(dishes.map((dish) => [dish.id, dish]));
-
-    const orderItems: Array<{
-      dishId: string;
-      name: string;
-      variantName: string | null;
-      addOns: string;
-      instructions: string | null;
-      unitPrice: number;
-      quantity: number;
-      lineTotal: number;
-    }> = [];
-
-    for (const item of items) {
-      const dish = dishMap.get(item.dishId);
-      if (!dish || !dish.isAvailable) {
-        return {
-          success: false,
-          message:
-            "One of the dishes in your cart is unavailable. Please refresh the menu.",
-        };
-      }
-
-      let unitPrice = dish.price;
-      let variantName: string | null = null;
-      if (item.variantId) {
-        const variant = dish.variants.find(
-          (option) => option.id === item.variantId && option.isAvailable,
-        );
-        if (!variant) {
-          return {
-            success: false,
-            message: `The selected option for ${dish.name} is unavailable.`,
-          };
-        }
-        unitPrice += variant.priceDelta;
-        variantName = variant.name;
-      }
-
-      const validAddOnIds = new Set(dish.addOns.map(({ addOn }) => addOn.id));
-      const selectedAddOns = item.addOnIds.map((id) => {
-        if (!validAddOnIds.has(id)) return null;
-        return dish.addOns.find(({ addOn }) => addOn.id === id)?.addOn ?? null;
-      });
-      if (selectedAddOns.some((addOn) => addOn === null || !addOn.isActive)) {
-        return {
-          success: false,
-          message: `One of the extras for ${dish.name} is unavailable.`,
-        };
-      }
-      const addOns = selectedAddOns.filter(
-        (addOn): addOn is NonNullable<typeof addOn> => Boolean(addOn),
-      );
-      unitPrice += addOns.reduce((sum, addOn) => sum + addOn.price, 0);
-
-      const quantity = Math.min(20, Math.max(1, item.quantity));
-      orderItems.push({
-        dishId: dish.id,
-        name: dish.name,
-        variantName,
-        addOns: JSON.stringify(
-          addOns.map(({ id, name, price }) => ({ id, name, price })),
-        ),
-        instructions: item.instructions || null,
-        unitPrice,
-        quantity,
-        lineTotal: unitPrice * quantity,
-      });
-    }
-
-    const subtotal = orderItems.reduce((sum, item) => sum + item.lineTotal, 0);
-
-    let deliveryFee = 0;
-    let zoneId: string | null = null;
-    let deliveryAddress: string | null = null;
-
-    if (details.type === "DELIVERY") {
-      const zone = details.zoneId
-        ? await prisma.deliveryZone.findFirst({
-            where: { id: details.zoneId, isActive: true },
-          })
-        : null;
-      if (!zone) {
-        return {
-          success: false,
-          message: "Choose a valid delivery area.",
-        };
-      }
-      if (subtotal < Math.max(settings.minDeliveryOrder, zone.minOrder)) {
-        return {
-          success: false,
-          message: `Delivery in ${zone.name} starts at ${formatNPR(
-            Math.max(settings.minDeliveryOrder, zone.minOrder),
-          )}.`,
-        };
-      }
-      deliveryFee = zone.fee;
-      zoneId = zone.id;
-      deliveryAddress = [
-        details.line1,
-        details.line2,
-        details.city,
-        details.state,
-        "Nepal",
-      ]
-        .filter(Boolean)
-        .join(", ");
-    }
-
-    let couponId: string | null = null;
-    let couponCode: string | null = null;
-    let discountAmount = 0;
-    let selectedCoupon: {
-      id: string;
-      maxUses: number | null;
-      startsAt: Date | null;
-      expiresAt: Date | null;
-    } | null = null;
-    if (details.couponCode) {
-      const coupon = await prisma.coupon.findUnique({
-        where: { code: details.couponCode.trim().toUpperCase() },
-      });
-      if (!coupon) {
-        return { success: false, message: "That coupon code is not valid." };
-      }
-      const discount = calculateCouponDiscount(coupon, subtotal);
-      if (!discount.valid) {
-        return {
-          success: false,
-          message: `${discount.reason} Remove the coupon and try again.`,
-        };
-      }
-      selectedCoupon = {
-        id: coupon.id,
-        maxUses: coupon.maxUses,
-        startsAt: coupon.startsAt,
-        expiresAt: coupon.expiresAt,
-      };
-      couponId = coupon.id;
-      couponCode = coupon.code;
-      discountAmount = discount.discount;
-    }
-
-    let scheduledFor: Date | null = null;
-    if (details.scheduledFor) {
-      const parsedDate = parseNepalDateTime(details.scheduledFor);
-      if (!parsedDate) {
-        return { success: false, message: "Choose a valid order time." };
-      }
-      const minTime = Date.now() + 10 * 60 * 1000;
-      const maxTime = Date.now() + 14 * 24 * 60 * 60 * 1000;
-      if (parsedDate.getTime() < minTime) {
-        return {
-          success: false,
-          message: "Scheduled orders need at least 10 minutes' notice.",
-        };
-      }
-      if (parsedDate.getTime() > maxTime) {
-        return {
-          success: false,
-          message: "We accept scheduled orders up to 14 days ahead.",
-        };
-      }
-      scheduledFor = parsedDate;
-    }
-
-    const totals = calculateOrderTotals({
-      subtotal,
-      deliveryFee,
-      discountAmount,
-      taxRate: settings.taxRate,
-      serviceChargeRate: settings.serviceChargeRate,
-    });
-
     const user = await getCurrentUser();
-    let addressId: string | null = null;
-    if (user && details.type === "DELIVERY" && details.saveAddress) {
-      const address = await prisma.address.create({
-        data: {
-          userId: user.id,
-          label: "Delivery",
-          fullName: details.customerName,
-          phone: details.customerPhone,
-          line1: details.line1 ?? "",
-          line2: details.line2 || null,
-          city: details.city || "Biratnagar",
-          state: details.state || "Koshi",
-          country: "Nepal",
-        },
-      });
-      addressId = address.id;
+    const result = await orderService.createOrder(
+      parsed.data,
+      user ? { id: user.id, email: user.email } : null,
+    );
+
+    if (!result.success) {
+      return { success: false, message: result.message };
     }
-
-    const publicToken = generateSecureToken(24);
-    const orderNumber = generateOrderNumber();
-    const digitalPayment = details.paymentMethod !== "COD";
-
-    const order = await prisma.$transaction(async (tx) => {
-      const created = await tx.order.create({
-        data: {
-          orderNumber,
-          publicToken,
-          userId: user?.id,
-          idempotencyKey: idempotencyKey ?? null,
-          customerName: details.customerName,
-          customerEmail: details.customerEmail,
-          customerPhone: details.customerPhone,
-          type: details.type,
-          status: "PENDING",
-          paymentStatus: digitalPayment ? "INITIATED" : "UNPAID",
-          paymentMethod: details.paymentMethod,
-          subtotal: totals.subtotal,
-          deliveryFee: totals.deliveryFee,
-          taxAmount: totals.taxAmount,
-          discountAmount: totals.discountAmount,
-          total: totals.total,
-          couponId,
-          couponCode,
-          addressId,
-          zoneId,
-          deliveryAddress,
-          tableNumber: details.tableNumber || null,
-          notes: details.notes || null,
-          scheduledFor,
-          items: {
-            create: orderItems.map((item) => ({
-              dishId: item.dishId,
-              name: item.name,
-              variantName: item.variantName,
-              addOns: item.addOns,
-              instructions: item.instructions,
-              unitPrice: item.unitPrice,
-              quantity: item.quantity,
-              lineTotal: item.lineTotal,
-            })),
-          },
-          statusHistory: {
-            create: {
-              status: "PENDING",
-              note: "Order placed from the website.",
-              changedBy: user?.email ?? details.customerEmail,
-            },
-          },
-          payments: {
-            create: {
-              provider: details.paymentMethod,
-              amount: totals.total,
-              status: details.paymentMethod === "COD" ? "PENDING" : "INITIATED",
-            },
-          },
-        },
-        include: { items: true },
-      });
-
-      if (selectedCoupon) {
-        const now = new Date();
-        // Claim the coupon inside the order transaction. The conditional
-        // update prevents two concurrent checkouts from exceeding maxUses or
-        // using a coupon that expired/was disabled after the initial check.
-        const claimed = await tx.coupon.updateMany({
-          where: {
-            id: selectedCoupon.id,
-            isActive: true,
-            ...(selectedCoupon.maxUses !== null
-              ? { usedCount: { lt: selectedCoupon.maxUses } }
-              : {}),
-            ...(selectedCoupon.startsAt ? { startsAt: { lte: now } } : {}),
-            ...(selectedCoupon.expiresAt ? { expiresAt: { gt: now } } : {}),
-          },
-          data: { usedCount: { increment: 1 } },
-        });
-        if (claimed.count !== 1) throw new CouponUnavailableError();
-      }
-
-      const payment = paymentPresentation(
-        created.paymentMethod,
-        created.paymentStatus,
-      );
-      if (!digitalPayment) {
-        await createStaffNotification(tx, {
-          eventKey: `order:${created.id}:created`,
-          type: "ORDER",
-          title: `New order ${created.orderNumber} — ${payment.label}`,
-          message: `${ORDER_TYPE_LABELS[created.type as keyof typeof ORDER_TYPE_LABELS] ?? created.type} · ${formatNPR(created.total)} · ${payment.label}`,
-          link: `/admin/orders/${created.id}`,
-          orderId: created.id,
-          isTest: created.isTest,
-        });
-      }
-
-      return created;
-    });
-
-    const confirmationUrl = `/order/${order.orderNumber}?token=${encodeURIComponent(
-      publicToken,
-    )}&placed=1`;
-
-    after(async () => {
-      if (!digitalPayment) {
-        await sendOrderConfirmation({
-          orderNumber: order.orderNumber,
-          customerName: order.customerName,
-          customerEmail: order.customerEmail,
-          type: order.type,
-          total: order.total,
-          status: order.status,
-          items: order.items.map((item) => ({
-            name: item.name,
-            quantity: item.quantity,
-            lineTotal: item.lineTotal,
-          })),
-          deliveryAddress: order.deliveryAddress,
-          scheduledFor: order.scheduledFor,
-        }).catch((error) => console.error("Order email failed", error));
-
-        await sendAdminNotification(
-          `New order ${order.orderNumber} — ${formatNPR(order.total)}`,
-          `<p style="font-size:14px;line-height:1.8;"><strong>${escapeHtml(
-            order.customerName,
-          )}</strong> · ${escapeHtml(order.customerPhone)} · ${escapeHtml(
-            order.customerEmail,
-          )}</p>
-          <p style="font-size:14px;line-height:1.8;">${escapeHtml(
-            order.type.replace("_", " "),
-          )} · ${escapeHtml(order.paymentMethod)} · ${order.items.length} lines</p>
-          <p style="font-size:14px;line-height:1.8;">${escapeHtml(
-            order.deliveryAddress ?? details.tableNumber ?? "Pickup",
-          )}</p>
-          <p style="font-size:14px;line-height:1.8;">${escapeHtml(
-            order.notes ?? "",
-          )}</p>`,
-        ).catch((error) => console.error("Admin order email failed", error));
-      }
-
-      await writeAuditLog({
-        userId: user?.id,
-        actorEmail: user?.email ?? order.customerEmail,
-        action: "order.create",
-        entity: "Order",
-        entityId: order.id,
-        details: {
-          orderNumber: order.orderNumber,
-          total: order.total,
-          type: order.type,
-          paymentMethod: order.paymentMethod,
-        },
-      });
-    });
 
     revalidatePath("/admin");
     revalidatePath("/admin/orders");
 
     return {
       success: true,
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      publicToken,
-      confirmationUrl,
-      paymentMethod: order.paymentMethod,
-      digitalPayment,
+      orderId: result.orderId,
+      orderNumber: result.orderNumber,
+      publicToken: result.publicToken,
+      confirmationUrl: result.confirmationUrl,
+      paymentMethod: result.paymentMethod,
+      digitalPayment: result.digitalPayment,
     };
   } catch (error) {
-    if (error instanceof CouponUnavailableError) {
-      return {
-        success: false,
-        message: "That coupon is no longer available. Remove it and try again.",
-      };
-    }
-    if (input.idempotencyKey && isUniqueConstraintError(error)) {
-      const existing = await prisma.order.findUnique({
-        where: { idempotencyKey: input.idempotencyKey },
-        select: {
-          id: true,
-          orderNumber: true,
-          publicToken: true,
-          paymentMethod: true,
-        },
-      });
-      if (existing) {
-        return {
-          success: true,
-          orderId: existing.id,
-          orderNumber: existing.orderNumber,
-          publicToken: existing.publicToken,
-          confirmationUrl: `/order/${existing.orderNumber}?token=${encodeURIComponent(
-            existing.publicToken,
-          )}&placed=1`,
-          paymentMethod: existing.paymentMethod,
-          digitalPayment: existing.paymentMethod !== "COD",
-        };
-      }
-    }
     console.error("Create order failed", error);
     return {
       success: false,
@@ -617,104 +151,20 @@ export async function cancelOrderAction(
   try {
     await assertSameOrigin();
     const user = await getCurrentUser();
+    const result = await orderService.cancelOrder(
+      orderId,
+      reason,
+      user?.id,
+      token,
+      false,
+    );
 
-    const order = await prisma.order.findFirst({
-      where: {
-        id: orderId,
-        OR: [
-          ...(user ? [{ userId: user.id }] : []),
-          ...(token ? [{ publicToken: token }] : []),
-        ],
-      },
-      include: { items: true },
-    });
-    if (!order) return { success: false, message: "Order not found." };
-    if (!["PENDING", "CONFIRMED"].includes(order.status)) {
-      return {
-        success: false,
-        message:
-          "This order is already being prepared. Please call us for help.",
-      };
+    if (result.success) {
+      revalidatePath("/account/orders");
+      revalidatePath("/admin/orders");
     }
 
-    const refundRequired = order.paymentStatus === "PAID";
-    const updated = await prisma.$transaction(async (tx) => {
-      const changed = await tx.order.updateMany({
-        where: {
-          id: order.id,
-          status: { in: ["PENDING", "CONFIRMED"] },
-        },
-        data: {
-          status: "CANCELLED",
-          cancelledAt: new Date(),
-          cancelReason: reason.slice(0, 300),
-          // A customer cancellation never records a refund. The funds remain
-          // PAID until an admin completes and records the refund.
-        },
-      });
-      if (changed.count !== 1) return false;
-
-      await tx.orderStatusHistory.create({
-        data: {
-          orderId: order.id,
-          status: "CANCELLED",
-          note: `${reason.slice(0, 300) || "Cancelled by customer."}${
-            refundRequired ? " Refund required." : ""
-          }`,
-          changedBy: user?.email ?? order.customerEmail,
-        },
-      });
-
-      await createStaffNotification(tx, {
-        eventKey: `order:${order.id}:status:${order.status}:CANCELLED`,
-        type: "ORDER",
-        title: `Order ${order.orderNumber} cancelled by customer`,
-        message: `${ORDER_TYPE_LABELS[order.type as keyof typeof ORDER_TYPE_LABELS] ?? order.type} · ${formatNPR(order.total)}${refundRequired ? " · refund required" : ""}`,
-        link: `/admin/orders/${order.id}`,
-        orderId: order.id,
-        isTest: order.isTest,
-      });
-
-      return true;
-    });
-
-    if (!updated) {
-      return {
-        success: false,
-        message:
-          "This order has already moved forward. Please refresh and call us if you still need to cancel.",
-      };
-    }
-
-    await writeAuditLog({
-      userId: user?.id,
-      actorEmail: user?.email ?? order.customerEmail,
-      action: "order.cancel.customer",
-      entity: "Order",
-      entityId: order.id,
-      details: {
-        orderNumber: order.orderNumber,
-        reason,
-        ...(refundRequired ? { refundRequired: true } : {}),
-      },
-    });
-
-    after(async () => {
-      await sendAdminNotification(
-        `Order ${order.orderNumber} cancelled by customer`,
-        `<p style="font-size:14px;">Reason: ${escapeHtml(reason || "Not given")}</p><p style="font-size:14px;">A paid order may need a manual refund.</p>`,
-      ).catch(() => undefined);
-    });
-
-    revalidatePath("/account/orders");
-    revalidatePath(`/order/${order.orderNumber}`);
-    return {
-      success: true,
-      message:
-        order.paymentStatus === "PAID"
-          ? "Order cancelled. Our team will contact you about the refund."
-          : "Order cancelled. We hope to see you another time.",
-    };
+    return result;
   } catch (error) {
     console.error("Cancel order failed", error);
     return {

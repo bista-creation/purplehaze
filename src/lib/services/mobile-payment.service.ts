@@ -1,0 +1,243 @@
+import "server-only";
+import { prisma } from "@/lib/prisma";
+import {
+  appUrl,
+  getEsewaConfig,
+  getKhaltiConfig,
+  lookupEsewaTransaction,
+  lookupKhaltiPayment,
+  markOrderPaid,
+  markPaymentFailed,
+  parseEsewaCallbackData,
+  signEsewa,
+} from "@/lib/payments";
+import { paisaToRupees } from "@/lib/money";
+
+export class MobilePaymentService {
+  async initiatePayment(
+    orderId: string,
+    provider: "ESEWA" | "KHALTI",
+    appScheme = "purplehaze",
+  ) {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+
+    if (!order) {
+      throw new Error("Order not found.");
+    }
+
+    if (order.paymentStatus === "PAID") {
+      return {
+        alreadyPaid: true,
+        orderNumber: order.orderNumber,
+        status: "PAID",
+      };
+    }
+
+    const totalRupees = paisaToRupees(order.total).toFixed(2);
+    const returnUrl = `${appUrl()}/api/v1/payments/${provider.toLowerCase()}/verify?orderId=${encodeURIComponent(
+      order.id,
+    )}&scheme=${encodeURIComponent(appScheme)}`;
+
+    if (provider === "ESEWA") {
+      const config = getEsewaConfig();
+      if (!config) {
+        throw new Error("eSewa is not configured.");
+      }
+
+      const transactionUuid = `${order.id}-${Date.now()}`;
+      const message = `total_amount=${totalRupees},transaction_uuid=${transactionUuid},product_code=${config.merchantCode}`;
+      const signature = signEsewa(message, config.secretKey);
+
+      return {
+        provider: "ESEWA",
+        formUrl: config.formUrl,
+        params: {
+          amount: totalRupees,
+          tax_amount: "0",
+          total_amount: totalRupees,
+          transaction_uuid: transactionUuid,
+          product_code: config.merchantCode,
+          product_service_charge: "0",
+          product_delivery_charge: "0",
+          success_url: returnUrl,
+          failure_url: `${returnUrl}&failed=1`,
+          signed_field_names: "total_amount,transaction_uuid,product_code",
+          signature,
+        },
+      };
+    }
+
+    if (provider === "KHALTI") {
+      const config = getKhaltiConfig();
+      if (!config) {
+        throw new Error("Khalti is not configured.");
+      }
+
+      const res = await fetch(`${config.baseUrl}/epayment/initiate/`, {
+        method: "POST",
+        headers: {
+          Authorization: `key ${config.secretKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          return_url: returnUrl,
+          website_url: appUrl(),
+          amount: order.total, // paisa
+          purchase_order_id: order.id,
+          purchase_order_name: `Order ${order.orderNumber}`,
+          customer_info: {
+            name: order.customerName,
+            email: order.customerEmail,
+            phone: order.customerPhone,
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.payment_url) {
+        throw new Error(data.detail ?? data.error_message ?? "Failed to initiate Khalti payment.");
+      }
+
+      await prisma.payment.create({
+        data: {
+          orderId: order.id,
+          provider: "KHALTI",
+          transactionId: data.pidx,
+          amount: order.total,
+          status: "INITIATED",
+          payload: JSON.stringify(data),
+        },
+      });
+
+      return {
+        provider: "KHALTI",
+        paymentUrl: data.payment_url,
+        pidx: data.pidx,
+      };
+    }
+
+    throw new Error(`Unsupported payment provider ${provider}`);
+  }
+
+  async handleEsewaCallback(orderId: string, encodedData?: string, failed?: boolean) {
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) return { success: false, reason: "Order not found" };
+
+    if (order.paymentStatus === "PAID") {
+      return { success: true, order, alreadyPaid: true };
+    }
+
+    if (failed) {
+      await markPaymentFailed({
+        orderId: order.id,
+        provider: "ESEWA",
+        reason: "Payment cancelled by user in eSewa.",
+      });
+      return { success: false, order, reason: "Payment cancelled." };
+    }
+
+    if (!encodedData) {
+      console.warn(`[Payment Callback] Missing eSewa callback payload for order ${order.id}. Payment state unchanged.`);
+      return { success: false, order, reason: "Missing callback payload." };
+    }
+
+    const parsed = parseEsewaCallbackData(encodedData);
+    if (!parsed) {
+      console.warn(`[Payment Callback] Invalid or unreadable eSewa callback payload for order ${order.id}. Payment state unchanged.`);
+      return { success: false, order, reason: "Invalid callback payload." };
+    }
+
+    const config = getEsewaConfig();
+    if (!config) {
+      return { success: false, order, reason: "eSewa is not configured." };
+    }
+
+    // Verify eSewa callback signature if signed fields are present
+    if (parsed.signature && parsed.signed_field_names) {
+      const { verifyEsewaSignature } = await import("@/lib/payments");
+      const signatureValid = verifyEsewaSignature(parsed, config.secretKey);
+      if (!signatureValid) {
+        console.warn(`[Payment Callback] eSewa signature verification rejected for order ${order.id}. Payment state unchanged.`);
+        return { success: false, order, reason: "Invalid signature." };
+      }
+    }
+
+    // Verify amount matches order total in NPR rupees (do not mark FAILED on mismatch)
+    const expectedNpr = paisaToRupees(order.total).toFixed(2);
+    const parsedNpr = parseFloat(parsed.total_amount || "0").toFixed(2);
+    if (parsedNpr !== expectedNpr) {
+      console.warn(
+        `[Payment Callback] eSewa amount mismatch rejected for order ${order.id}: expected ${expectedNpr}, received ${parsedNpr}. Payment state unchanged.`,
+      );
+      return { success: false, order, reason: "Payment amount mismatch." };
+    }
+
+    // Always perform server-side lookup!
+    const lookup = await lookupEsewaTransaction({
+      config,
+      transactionUuid: parsed.transaction_uuid,
+      totalAmountNpr: parsed.total_amount,
+    });
+
+    if (!lookup.ok || lookup.data.status !== "COMPLETE") {
+      console.warn(
+        `[Payment Callback] eSewa server lookup failed/uncompleted for order ${order.id}. Payment state unchanged.`,
+      );
+      return { success: false, order, reason: "Transaction not completed." };
+    }
+
+    await markOrderPaid({
+      orderId: order.id,
+      provider: "ESEWA",
+      transactionId: parsed.transaction_code || parsed.transaction_uuid,
+      payload: lookup.data,
+      note: "Paid via eSewa (Mobile Verified)",
+    });
+
+    return { success: true, order };
+  }
+
+  async handleKhaltiCallback(orderId: string, pidx: string) {
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) return { success: false, reason: "Order not found" };
+
+    if (order.paymentStatus === "PAID") {
+      return { success: true, order, alreadyPaid: true };
+    }
+
+    const config = getKhaltiConfig();
+    if (!config) return { success: false, order, reason: "Khalti not configured" };
+
+    // Always perform server-side lookup!
+    const lookup = await lookupKhaltiPayment({ config, pidx });
+    if (!lookup.ok || lookup.data.status !== "Completed") {
+      console.warn(
+        `[Payment Callback] Khalti lookup failed or uncompleted (status: ${lookup.data?.status ?? "unknown"}) for order ${order.id}. Payment state unchanged.`,
+      );
+      return { success: false, order, reason: "Payment incomplete." };
+    }
+
+    // Verify amount in paisa matches order total (do not mark FAILED on mismatch)
+    if (typeof lookup.data.total_amount === "number" && lookup.data.total_amount !== order.total) {
+      console.warn(
+        `[Payment Callback] Khalti amount mismatch rejected for order ${order.id}: expected ${order.total} paisa, received ${lookup.data.total_amount} paisa. Payment state unchanged.`,
+      );
+      return { success: false, order, reason: "Payment amount mismatch." };
+    }
+
+    await markOrderPaid({
+      orderId: order.id,
+      provider: "KHALTI",
+      transactionId: pidx,
+      payload: lookup.data,
+      note: "Paid via Khalti (Mobile Verified)",
+    });
+
+    return { success: true, order };
+  }
+}
+
+export const mobilePaymentService = new MobilePaymentService();

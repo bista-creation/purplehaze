@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 import {
   Check,
   CheckCircle2,
@@ -186,16 +187,59 @@ export function RealtimeOrderTracker({
     poll();
     if (!isActive) return;
 
-    // Poll every 4 seconds when active
+    let realtimeClient: ReturnType<typeof createClient> | null = null;
+    const connectRealtime = async () => {
+      try {
+        const authRes = await fetch("/api/v1/realtime/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderNumber: initialOrderNumber, publicToken: token }),
+        });
+        if (!authRes.ok) return;
+        const resJson = await authRes.json();
+        const authData = resJson.data;
+        if (!authData?.url || !authData?.anonKey || !authData?.token || ignore) return;
+
+        realtimeClient = createClient(authData.url, authData.anonKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+          realtime: { params: { eventsPerSecond: 5 } },
+        });
+
+        await realtimeClient.realtime.setAuth(authData.token);
+        if (ignore) {
+          await realtimeClient.removeAllChannels();
+          return;
+        }
+
+        const trackingChannel = authData.channels?.find((ch: string) => ch.startsWith("orders:"));
+        if (trackingChannel) {
+          realtimeClient
+            .channel(trackingChannel)
+            .on("broadcast", { event: "order.status_updated" }, () => {
+              void poll();
+            })
+            .subscribe();
+        }
+      } catch {
+        // Fallback polling continues seamlessly
+      }
+    };
+
+    void connectRealtime();
+
+    // Poll every 10 seconds as authoritative fallback
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") {
         poll();
       }
-    }, 4000);
+    }, 10_000);
 
     return () => {
       ignore = true;
       clearInterval(timer);
+      if (realtimeClient) {
+        void realtimeClient.removeAllChannels();
+      }
     };
   }, [isActive, initialOrderNumber, token, soundEnabled]);
 

@@ -1,16 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/security";
+import { getAuthContext } from "@/lib/api/auth-context";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   getSupabaseRealtimeConfig,
-  signStaffRealtimeToken,
+  signRealtimeToken,
 } from "@/lib/supabase-realtime";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user || (user.role !== "STAFF" && user.role !== "ADMIN")) {
+export async function GET(req: NextRequest) {
+  // Support both mobile Bearer tokens and web cookie sessions
+  const user = (await getAuthContext(req)) || (await getCurrentUser());
+  if (!user) {
     return NextResponse.json(
       { enabled: false, message: "Not authorized." },
       { status: 401, headers: { "Cache-Control": "no-store" } },
@@ -32,7 +34,11 @@ export async function GET() {
     );
   }
 
-  const signed = await signStaffRealtimeToken(user);
+  const signed = await signRealtimeToken({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+  });
   if (!signed) {
     return NextResponse.json(
       { enabled: false, message: "Realtime is not configured." },
@@ -41,7 +47,17 @@ export async function GET() {
   }
 
   return NextResponse.json(
-    { enabled: true, token: signed.token, expiresInSeconds: signed.expiresInSeconds },
+    {
+      enabled: true,
+      token: signed.token,
+      expiresInSeconds: signed.expiresInSeconds,
+      channels: {
+        user: `user-${user.id}`,
+        menuAvailability: "menu-availability",
+        adminOrders:
+          user.role === "STAFF" || user.role === "ADMIN" ? "admin-orders" : null,
+      },
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

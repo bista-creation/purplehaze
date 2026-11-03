@@ -148,6 +148,34 @@ Google sign-in is optional and only appears when both `GOOGLE_CLIENT_ID` and `GO
 
 The app normalizes trailing and duplicate path slashes in `AUTH_URL` and derives `NEXT_PUBLIC_APP_URL` from the Vercel deployment host when it is unset. A `localhost` value is ignored on Vercel so production never emits local links. The value registered in Google Cloud Console must still use the exact single-slash callback above.
 
+## Mobile App & Unified REST API (/api/v1)
+
+The backend provides a complete, versioned REST API (`/api/v1`) designed for the React Native mobile app (`https://github.com/bista-creation/purplehaze-mobile.git`) and external integrations, while sharing the same business service layer (`src/lib/services/*`) with web server actions and admin pages.
+
+Interactive OpenAPI documentation & Swagger UI is available at:
+- **Swagger UI:** `/api/docs`
+- **OpenAPI 3.0 JSON:** `/api/v1/openapi.json`
+
+### Authentication Architecture
+- **Dual Auth Resolver:** API routes accept either Bearer JWT tokens (mobile) or Auth.js session cookies (web), mapping transparently to the same `UserSession` model.
+- **Access Tokens:** Short-lived JWTs (15 minutes expiry) signed with `AUTH_SECRET`.
+- **Refresh Token Rotation:** 30-day refresh tokens stored as SHA-256 hashes in PostgreSQL. Every token refresh generates a new refresh token and invalidates the previous one. If a previously-used token is re-submitted, the entire token family is revoked immediately to prevent replay attacks.
+- **Role Guards:** Administrative routes under `/api/v1/admin/*` are protected server-side by `requireAdminAuth(req)` returning `401 Unauthorized` for missing/invalid tokens and `403 Forbidden` for non-admin accounts.
+
+### Mobile Payment Verification
+- Supports **eSewa** and **Khalti** via `/api/v1/payments/initiate` with deep-link returns (`purplehaze://payment-result?orderId=...`).
+- App claims of successful payment are never trusted. The backend executes direct server-to-server gateway lookups and signature verifications before updating order status to `PAID`.
+
+### Realtime Broadcast & Push Notifications
+- **Supabase Realtime Broadcast:**
+  - `orders:admin` — broadcasts `order.created` for live kitchen dashboard alerts.
+  - `orders:{orderId}` — broadcasts `order.status_updated` for customer order tracking.
+  - `orders:user:{userId}` — private customer channel for order updates.
+  - `menu:public` — broadcasts `menu.updated` when dish availability or prices change.
+- **Expo Push Notifications:**
+  - Mobile clients register push tokens at `/api/v1/notifications/push-token`.
+  - Push notifications are dispatched on order placement, status updates, and booking confirmations. Tokens returning `DeviceNotRegistered` are automatically cleaned up from the database.
+
 ## Checks
 
 ```bash

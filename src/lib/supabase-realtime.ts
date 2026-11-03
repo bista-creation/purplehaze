@@ -17,11 +17,11 @@ export function getSupabaseRealtimeConfig(): RealtimeConfig | null {
 }
 
 /**
- * Supabase Realtime Postgres Changes authorizes each row through RLS using the
- * JWT sent by the browser. Auth.js remains the source of truth; this token only
- * carries the already-verified staff identity and a short expiry.
+ * Supabase Realtime Postgres Changes authorizes each channel/row through RLS using
+ * the JWT sent by the client. Auth.js/API session remains the source of truth;
+ * this token carries the verified identity, app_role, and short expiry.
  */
-export async function signStaffRealtimeToken(user: {
+export async function signRealtimeToken(user: {
   id: string;
   email: string;
   role: string;
@@ -32,6 +32,9 @@ export async function signStaffRealtimeToken(user: {
   const token = await new SignJWT({
     role: "authenticated",
     app_role: user.role as Role,
+    user_metadata: {
+      role: user.role,
+    },
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(user.id)
@@ -43,3 +46,5 @@ export async function signStaffRealtimeToken(user: {
 
   return { token, expiresInSeconds: 300 };
 }
+
+export const signStaffRealtimeToken = signRealtimeToken;

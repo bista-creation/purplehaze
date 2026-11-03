@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { sound } from "@/lib/sound";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface LiveOrderResponse {
   pendingCount: number;
@@ -94,14 +95,17 @@ export function StaffLiveOrderListener() {
     }
   };
 
-  // Live Polling
+  // Live Polling & Supabase Realtime
   useEffect(() => {
+    let ignore = false;
+    let realtimeClient: SupabaseClient | null = null;
+
     const poll = async () => {
       try {
         const res = await fetch("/api/admin/orders/live", {
           cache: "no-store",
         });
-        if (!res.ok) return;
+        if (!res.ok || ignore) return;
 
         const data: LiveOrderResponse = await res.json();
         setPendingCount(data.pendingCount);
@@ -179,11 +183,63 @@ export function StaffLiveOrderListener() {
       }
     };
 
-    // Run immediately and then every 5 seconds
-    poll();
-    const timer = setInterval(poll, 5000);
+    const connectRealtime = async () => {
+      try {
+        const authRes = await fetch("/api/v1/realtime/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!authRes.ok) return;
 
-    return () => clearInterval(timer);
+        const authJson = await authRes.json();
+        const authData = authJson.data;
+        if (!authData?.url || !authData?.anonKey || !authData?.token || ignore) return;
+
+        const { createClient } = await import("@supabase/supabase-js");
+        realtimeClient = createClient(authData.url, authData.anonKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+          realtime: { params: { eventsPerSecond: 5 } },
+        });
+
+        await realtimeClient.realtime.setAuth(authData.token);
+        if (ignore) {
+          await realtimeClient.removeAllChannels();
+          return;
+        }
+
+        const channel = realtimeClient.channel("admin-orders", {
+          config: { private: true },
+        });
+
+        channel
+          .on("broadcast", { event: "order.created" }, () => {
+            void poll();
+          })
+          .on("broadcast", { event: "order.status_updated" }, () => {
+            void poll();
+          })
+          .subscribe();
+      } catch {
+        // Fallback polling operates seamlessly
+      }
+    };
+
+    poll();
+    void connectRealtime();
+
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        poll();
+      }
+    }, 10_000);
+
+    return () => {
+      ignore = true;
+      clearInterval(timer);
+      if (realtimeClient) {
+        void realtimeClient.removeAllChannels();
+      }
+    };
   }, [soundEnabled, desktopNotify, lastOrderNumber, router]);
 
   return (
