@@ -37,16 +37,14 @@ export async function GET(req: NextRequest) {
         update: {
           shiftStatus: "ON_DUTY",
           licenseStatus: "VERIFIED",
-          phone: "+9779800000000",
         },
         create: {
           userId: user.id,
-          phone: "+9779800000000",
           shiftStatus: "ON_DUTY",
-          licenseNumber: "DL-TEST-9999",
           licenseStatus: "VERIFIED",
           vehicleType: "BIKE",
-          vehiclePlateNumber: "BA-99-PA-1234",
+          encryptedPlateNumber: "BA-99-PA-1234",
+          encryptedLicenseNo: "DL-TEST-9999",
         },
       });
 
