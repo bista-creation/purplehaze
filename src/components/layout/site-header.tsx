@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
+  ArrowDownToLine,
   CalendarDays,
   ChevronDown,
   Clock,
@@ -17,6 +18,7 @@ import {
   ReceiptText,
   ShieldCheck,
   ShoppingBag,
+  Smartphone,
   UserPlus,
   UserRound,
 } from "lucide-react";
@@ -101,6 +103,13 @@ export function SiteHeader() {
             </span>
           </div>
           <div className="flex items-center gap-5">
+            <Link
+              href="/download"
+              className="inline-flex items-center gap-1.5 font-medium text-gold transition hover:text-white"
+            >
+              <Smartphone className="size-3" aria-hidden />
+              Get App
+            </Link>
             <Link
               href="/reservations"
               className="inline-flex items-center gap-1.5 text-white/80 transition hover:text-gold"
@@ -417,6 +426,23 @@ export function SiteHeader() {
                 >
                   <Phone className="size-4 text-primary" /> {SITE.phone}
                 </a>
+
+                <div className="my-2 rounded-2xl border border-gold/30 bg-gold/5 p-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gold/20 text-gold">
+                      <Smartphone className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground">Purple Haze Android App</p>
+                      <p className="text-[11px] text-muted-foreground">Order with Maya AI &amp; live GPS</p>
+                    </div>
+                  </div>
+                  <Button asChild size="sm" variant="gold" className="mt-3 w-full gap-1.5 text-xs">
+                    <Link href="/download" onClick={() => setMobileOpen(false)}>
+                      <ArrowDownToLine className="size-3.5" /> Download Android APK
+                    </Link>
+                  </Button>
+                </div>
                 <div className="mt-auto space-y-3 border-t py-5">
                   <Button asChild className="w-full" size="lg">
                     <Link href="/menu" onClick={() => setMobileOpen(false)}>

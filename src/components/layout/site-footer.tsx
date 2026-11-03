@@ -1,11 +1,13 @@
 import Link from "next/link";
 import {
+  ArrowDownToLine,
   ArrowUpRight,
   Clock,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
+  Smartphone,
 } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { NewsletterForm } from "@/components/layout/newsletter-form";
@@ -24,6 +26,7 @@ const exploreLinks = [
   ),
   { href: "/reservations", label: "Reservations" },
   { href: "/track", label: "Track an order" },
+  { href: "/download", label: "Download Android App (APK)" },
 ];
 
 const serviceLinks = [
@@ -226,6 +229,19 @@ export function SiteFooter() {
             </p>
             <div className="mt-3">
               <NewsletterForm />
+            </div>
+            <div className="mt-6 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3.5">
+              <Smartphone className="size-5 text-gold shrink-0" />
+              <div className="min-w-0 flex-1 text-xs">
+                <p className="font-semibold text-white">Get Purple Haze on Android</p>
+                <p className="text-white/60 text-[11px]">Direct APK install · Maya AI &amp; live GPS</p>
+              </div>
+              <Link
+                href="/download"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-gold px-3 py-1.5 text-xs font-semibold text-gold-foreground transition hover:brightness-110"
+              >
+                <ArrowDownToLine className="size-3.5" /> Install
+              </Link>
             </div>
           </div>
           <PaymentPartners />

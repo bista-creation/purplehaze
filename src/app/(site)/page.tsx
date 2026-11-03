@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  ArrowDownToLine,
   ArrowRight,
   CalendarDays,
   ChefHat,
@@ -9,6 +10,7 @@ import {
   MapPin,
   PartyPopper,
   Quote,
+  Smartphone,
   Sparkles,
   Star,
   UtensilsCrossed,
@@ -604,6 +606,67 @@ export default async function HomePage() {
           </div>
         </section>
       ) : null}
+
+      {/* Mobile App Download Banner */}
+      <section className="container-page py-12 lg:py-16">
+        <Reveal>
+          <div className="relative overflow-hidden rounded-[2rem] border border-gold/30 bg-gradient-to-br from-ink via-primary/95 to-ink p-8 text-white shadow-2xl sm:p-12 lg:grid lg:grid-cols-12 lg:items-center lg:gap-12">
+            <div
+              className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-gold/15 blur-3xl"
+              aria-hidden
+            />
+            <div className="lg:col-span-8">
+              <Badge
+                variant="gold"
+                className="rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em]"
+              >
+                <Smartphone className="mr-1.5 size-3" /> Android App Available
+              </Badge>
+              <h2 className="mt-4 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
+                Order faster. Track live.
+                <br />
+                <span className="text-gold italic">All in the mobile app.</span>
+              </h2>
+              <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
+                Get real-time GPS rider tracking from Airport Road to your door, talk to Maya AI for dish suggestions, and unlock app-exclusive treats with one tap.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3.5">
+                <Button asChild variant="gold" size="lg" className="gap-2">
+                  <Link href="/download">
+                    <ArrowDownToLine className="size-4" /> Download APK (Android)
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="border-white/20 bg-white/5 text-white hover:bg-white/10"
+                >
+                  <Link href="/download">Learn more &amp; setup</Link>
+                </Button>
+              </div>
+            </div>
+            <div className="mt-8 hidden lg:col-span-4 lg:block">
+              <div className="relative mx-auto w-64 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                  <div className="grid size-10 place-items-center rounded-xl bg-gold text-gold-foreground font-bold text-sm">
+                    PH
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Purple Haze App</p>
+                    <p className="text-xs text-white/60">Android v1.0.0 APK</p>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2 text-xs text-white/80">
+                  <p className="flex items-center gap-2">✓ Maya AI Assistant</p>
+                  <p className="flex items-center gap-2">✓ Real-time Rider GPS</p>
+                  <p className="flex items-center gap-2">✓ Instant Khalti &amp; Fonepay</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </section>
 
       <section className="container-page py-20 lg:py-28">
         <Reveal>
