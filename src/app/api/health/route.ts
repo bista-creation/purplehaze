@@ -17,7 +17,16 @@ export async function GET() {
       ? { email: user.email, role: user.role, hasHash: !!user.passwordHash, verified: !!user.emailVerified, blocked: user.isBlocked }
       : "NOT_FOUND";
     const dbTarget = process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:\/\/[^:]+:[^@]+@/, "://***:***@") : "NONE";
-    (riderInfo as any) = typeof riderInfo === "object" ? { ...riderInfo, dbTarget } : { status: riderInfo, dbTarget };
+    let tableCounts: any = {};
+    try {
+      tableCounts.users = await prisma.user.count();
+      tableCounts.menuItems = await prisma.menuItem.count();
+      tableCounts.sampleUsers = await prisma.user.findMany({ take: 5, select: { email: true, role: true } });
+      tableCounts.hasRiderTable = !!(prisma as any).riderProfile;
+    } catch (e: any) {
+      tableCounts.error = e.message;
+    }
+    (riderInfo as any) = typeof riderInfo === "object" ? { ...riderInfo, dbTarget, tableCounts } : { status: riderInfo, dbTarget, tableCounts };
   } catch (err) {
     dbStatus = "unreachable";
     return NextResponse.json(
