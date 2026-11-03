@@ -223,6 +223,26 @@ export async function updateOrderStatusAction(
         },
       });
 
+      if (next === "COMPLETED") {
+        await tx.delivery.updateMany({
+          where: { orderId: order.id, status: { not: "DELIVERED" } },
+          data: {
+            status: "DELIVERED",
+            deliveredAt: new Date(),
+            otpVerifiedAt: new Date(),
+          },
+        });
+      } else if (next === "CANCELLED") {
+        await tx.delivery.updateMany({
+          where: { orderId: order.id, status: { notIn: ["DELIVERED", "FAILED"] } },
+          data: {
+            status: "FAILED",
+            failureReason: "ORDER_CANCELLED",
+            failedAt: new Date(),
+          },
+        });
+      }
+
       await createStaffNotification(tx, {
         eventKey: `order:${order.id}:status:${current}:${next}`,
         type: "ORDER",
