@@ -676,6 +676,28 @@ export class OrderService {
         },
       });
 
+      if (order.delivery) {
+        if (newStatus === "COMPLETED" && order.delivery.status !== "DELIVERED") {
+          await tx.delivery.update({
+            where: { id: order.delivery.id },
+            data: {
+              status: "DELIVERED",
+              deliveredAt: new Date(),
+              otpVerifiedAt: new Date(),
+            },
+          });
+        } else if (newStatus === "CANCELLED" && order.delivery.status !== "FAILED" && order.delivery.status !== "DELIVERED") {
+          await tx.delivery.update({
+            where: { id: order.delivery.id },
+            data: {
+              status: "FAILED",
+              failureReason: "ORDER_CANCELLED",
+              failedAt: new Date(),
+            },
+          });
+        }
+      }
+
       await createStaffNotification(tx, {
         eventKey: `order:${order.id}:${newStatus.toLowerCase()}`,
         type: "ORDER",

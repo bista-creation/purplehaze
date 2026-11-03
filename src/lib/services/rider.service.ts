@@ -390,6 +390,9 @@ export const riderService = {
         deliveries: {
           where: {
             status: { in: ["ASSIGNED", "ACCEPTED", "PICKED_UP", "ARRIVED_AT_CUSTOMER"] },
+            order: {
+              status: { notIn: ["COMPLETED", "CANCELLED"] },
+            },
           },
         },
       },
@@ -455,6 +458,9 @@ export const riderService = {
       where: {
         riderId: rider.id,
         status: { in: ["ASSIGNED", "ACCEPTED", "PICKED_UP", "ARRIVED_AT_CUSTOMER"] },
+        order: {
+          status: { notIn: ["COMPLETED", "CANCELLED"] },
+        },
       },
       include: {
         order: {
