@@ -7,6 +7,7 @@ import {
   Loader2,
   Lock,
   MapPin,
+  Navigation,
   RefreshCw,
   Send,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { LiveDeliveryMap } from "@/components/orders/live-delivery-map";
 
 export interface DispatchDelivery {
   id: string;
@@ -97,6 +99,16 @@ export function DispatchBoard({
   const [selectedRiderId, setSelectedRiderId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Tracking modal
+  const [trackingModalOpen, setTrackingModalOpen] = useState(false);
+  const [trackingDelivery, setTrackingDelivery] = useState<DispatchDelivery | null>(null);
+  const [riderLocation, setRiderLocation] = useState<{
+    lat: number;
+    lng: number;
+    updatedAt?: string;
+    isStale?: boolean;
+  } | null>(null);
+
   // Override modal (Admin only)
   const [overrideModalOpen, setOverrideModalOpen] = useState(false);
   const [overrideDelivery, setOverrideDelivery] = useState<DispatchDelivery | null>(null);
@@ -137,6 +149,31 @@ export function DispatchBoard({
     const timer = setInterval(loadData, 15000); // Poll every 15s
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!trackingModalOpen || !trackingDelivery) return;
+    let active = true;
+
+    const fetchLoc = async () => {
+      try {
+        const res = await fetch(`/api/v1/orders/${trackingDelivery.orderId}/location`);
+        if (!res.ok) return;
+        const resData = await res.json();
+        if (active && resData.success && resData.data?.location) {
+          setRiderLocation(resData.data.location);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    void fetchLoc();
+    const interval = setInterval(fetchLoc, 8000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [trackingModalOpen, trackingDelivery]);
 
   const handleOpenDispatch = (order: UndispatchedOrder | DispatchDelivery) => {
     setSelectedOrder(order);
@@ -402,7 +439,19 @@ export function DispatchBoard({
                         {deliv.paymentMethod === "COD" ? "Cash on Delivery" : "Prepaid"}
                       </span>
                       <div className="flex items-center gap-1">
-                        {deliv.otpLocked && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] gap-1 text-primary border-primary/30 hover:bg-primary/10"
+                            onClick={() => {
+                              setTrackingDelivery(deliv);
+                              setRiderLocation(null);
+                              setTrackingModalOpen(true);
+                            }}
+                          >
+                            <Navigation className="size-2.5" /> Track
+                          </Button>
+                          {deliv.otpLocked && (
                           <Button
                             size="sm"
                             variant="destructive"
@@ -666,6 +715,34 @@ export function DispatchBoard({
               </Button>
             </DialogFooter>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Live Rider Tracking Modal */}
+      <Dialog open={trackingModalOpen} onOpenChange={setTrackingModalOpen}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-0">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Navigation className="size-4 text-primary" />
+              <span>Rider Live Telemetry • {trackingDelivery?.orderNumber}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Live GPS feed from on-duty rider app. Telemetry auto-refreshes every 8s.
+            </DialogDescription>
+          </DialogHeader>
+
+          {trackingDelivery && (
+            <div className="p-4 pt-2">
+              <LiveDeliveryMap
+                riderLocation={riderLocation}
+                destinationAddress={trackingDelivery.deliveryAddress}
+                orderNumber={trackingDelivery.orderNumber}
+                riderName={trackingDelivery.rider?.name}
+                riderPhone={trackingDelivery.rider?.phone}
+                compact
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

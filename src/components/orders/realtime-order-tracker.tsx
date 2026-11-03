@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SITE } from "@/lib/constants";
+import { LiveDeliveryMap } from "./live-delivery-map";
 
 interface StatusHistoryEntry {
   status: string;
@@ -517,78 +518,12 @@ export function RealtimeOrderTracker({
               </div>
             )}
 
-            {/* Live Rider Location & Map Widget */}
-            <div className="rounded-2xl border border-border/80 bg-card p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Compass className="size-4 text-primary animate-spin" />
-                  <span className="text-sm font-semibold text-foreground">
-                    Live Rider Tracking
-                  </span>
-                </div>
-                {riderLocation ? (
-                  <Badge
-                    variant={riderLocation.isStale ? "amber" : "green"}
-                    className="text-[10px]"
-                  >
-                    {riderLocation.isStale ? "Location updating..." : "Live GPS (12s)"}
-                  </Badge>
-                ) : (
-                  <Badge variant="muted" className="text-[10px]">
-                    Connecting GPS...
-                  </Badge>
-                )}
-              </div>
-
-              {riderLocation?.isStale && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5">
-                  Rider location updating... (Signal may be weak or phone locked in transit).
-                </p>
-              )}
-
-              <div className="rounded-xl bg-muted/40 p-3 space-y-2 text-xs">
-                <div className="flex items-start gap-2">
-                  <MapPin className="size-3.5 text-primary shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-foreground">From: </span>
-                    <span className="text-muted-foreground">
-                      Purple Haze Restro & Garden, Airport Road, Biratnagar
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-foreground">To: </span>
-                    <span className="text-muted-foreground">
-                      {data?.deliveryAddress || "Customer address"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {riderLocation && (
-                <div className="pt-1 flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-muted-foreground">
-                    Rider GPS: {riderLocation.lat.toFixed(4)}, {riderLocation.lng.toFixed(4)}
-                  </span>
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs border-primary/40 text-primary hover:bg-primary/10"
-                  >
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${riderLocation.lat}%2C${riderLocation.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View on Google Maps →
-                    </a>
-                  </Button>
-                </div>
-              )}
-            </div>
+            {/* Live Interactive Rider Map */}
+            <LiveDeliveryMap
+              riderLocation={riderLocation}
+              destinationAddress={data?.deliveryAddress}
+              orderNumber={data?.orderNumber || initialOrderNumber}
+            />
           </div>
         ) : status === "COMPLETED" ? (
           <div className="rounded-2xl border border-emerald-300/80 bg-emerald-50/80 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/30">

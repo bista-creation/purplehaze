@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const activeDelivery = await prisma.delivery.findFirst({
       where: {
         riderId: rider.id,
-        status: "PICKED_UP",
+        status: { in: ["ACCEPTED", "PICKED_UP", "ARRIVED_AT_CUSTOMER"] },
       },
       select: {
         id: true,

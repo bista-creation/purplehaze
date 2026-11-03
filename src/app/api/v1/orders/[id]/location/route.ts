@@ -43,7 +43,8 @@ export async function GET(
     return jsonError("FORBIDDEN", "Unauthorized to view tracking location", 403);
   }
 
-  if (order.status !== "OUT_FOR_DELIVERY") {
+  const isStaffOrAdmin = Boolean(user && (user.role === "ADMIN" || user.role === "STAFF"));
+  if (order.status !== "OUT_FOR_DELIVERY" && !isStaffOrAdmin) {
     return jsonOk({
       active: false,
       status: order.status,
