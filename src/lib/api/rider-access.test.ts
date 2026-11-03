@@ -52,7 +52,7 @@ vi.mock("@/lib/services/order.service", () => ({
   },
 }));
 
-import { requireRiderAuth, requireAdminAuth, requireAdminOnlyAuth } from "./auth-context";
+import { requireRiderAuth, requireAdminAuth } from "./auth-context";
 import { signAccessToken } from "./tokens";
 import { GET as trackOrderGet, POST as trackOrderPost } from "@/app/api/v1/orders/track/route";
 import { GET as getOrderByIdRoute } from "@/app/api/v1/orders/[id]/route";

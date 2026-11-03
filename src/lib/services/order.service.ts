@@ -603,7 +603,7 @@ export class OrderService {
   ) {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: true },
+      include: { items: true, delivery: true },
     });
     if (!order) {
       return { success: false, message: "Order not found." };
@@ -628,6 +628,24 @@ export class OrderService {
       const decision = evaluateOrderAcceptance(order);
       if (!decision.allowed) {
         return { success: false, message: decision.reason };
+      }
+    }
+
+    // 3. For own-rider delivery orders, block direct manual transition to OUT_FOR_DELIVERY or COMPLETED
+    if (order.type === "DELIVERY" && (order.deliveryProvider === "OWN_RIDER" || order.delivery)) {
+      if (newStatus === "OUT_FOR_DELIVERY") {
+        return {
+          success: false,
+          message:
+            "Delivery orders automatically move to 'On the way' when the assigned rider picks up the order at the kitchen.",
+        };
+      }
+      if (newStatus === "COMPLETED") {
+        return {
+          success: false,
+          message:
+            "Delivery orders must be completed via rider OTP verification at the customer location (or via Dispatch Board override).",
+        };
       }
     }
 

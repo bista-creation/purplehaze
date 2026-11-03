@@ -65,6 +65,8 @@ export interface RiderActiveOrder {
   assignedAt: Date;
   acceptedAt: Date | null;
   pickedUpAt: Date | null;
+  otpLocked: boolean;
+  otpAttempts: number;
 }
 
 export interface CreateRiderInput {
@@ -499,6 +501,8 @@ export const riderService = {
       assignedAt: d.assignedAt,
       acceptedAt: d.acceptedAt,
       pickedUpAt: d.pickedUpAt,
+      otpLocked: d.otpLocked,
+      otpAttempts: d.otpAttempts,
     }));
 
     return { success: true, data: sanitized };

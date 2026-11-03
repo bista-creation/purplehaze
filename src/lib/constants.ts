@@ -101,6 +101,7 @@ export const ADMIN_NAV_GROUPS = [
     label: "Service",
     items: [
       { href: "/admin/orders", label: "Orders", icon: "receipt" },
+      { href: "/admin/dispatch", label: "Dispatch board", icon: "receipt" },
       { href: "/admin/riders", label: "Delivery riders", icon: "shield" },
       {
         href: "/admin/reservations",
