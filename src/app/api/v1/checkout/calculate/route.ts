@@ -39,10 +39,18 @@ export async function POST(req: NextRequest) {
     let zoneName: string | null = null;
     let minOrder = settings.minDeliveryOrder;
 
-    if (type === "DELIVERY" && zoneId) {
-      const zone = await prisma.deliveryZone.findFirst({
-        where: { id: zoneId, isActive: true },
-      });
+    if (type === "DELIVERY") {
+      let zone = zoneId
+        ? await prisma.deliveryZone.findFirst({
+            where: { id: zoneId, isActive: true },
+          })
+        : null;
+      if (!zone) {
+        zone = await prisma.deliveryZone.findFirst({
+          where: { isActive: true },
+          orderBy: { sortOrder: "asc" },
+        });
+      }
       if (zone) {
         deliveryFee = zone.fee;
         zoneName = zone.name;

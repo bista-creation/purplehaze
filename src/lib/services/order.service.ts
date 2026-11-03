@@ -151,13 +151,26 @@ export class OrderService {
     let deliveryAddress: string | null = null;
 
     if (details.type === "DELIVERY") {
-      const zone = details.zoneId
+      let zone: { id: string; name: string; fee: number; minOrder: number; sortOrder: number; isActive: boolean } | null = details.zoneId
         ? await prisma.deliveryZone.findFirst({
             where: { id: details.zoneId, isActive: true },
           })
         : null;
       if (!zone) {
-        return { success: false, message: "Choose a valid delivery area." };
+        zone = await prisma.deliveryZone.findFirst({
+          where: { isActive: true },
+          orderBy: { sortOrder: "asc" },
+        });
+      }
+      if (!zone) {
+        zone = {
+          id: "default-biratnagar",
+          name: "Biratnagar City",
+          fee: 3000,
+          minOrder: settings.minDeliveryOrder || 25000,
+          sortOrder: 1,
+          isActive: true,
+        };
       }
       if (subtotal < Math.max(settings.minDeliveryOrder, zone.minOrder)) {
         return {

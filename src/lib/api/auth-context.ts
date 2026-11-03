@@ -42,6 +42,8 @@ export function checkCsrfOrigin(req: NextRequest): {
     const allowedOrigins = new Set<string>([
       req.nextUrl.origin.toLowerCase(),
       SITE.url.toLowerCase(),
+      "https://purplehaze-mobile.vercel.app",
+      "https://purplehaze.vercel.app",
     ]);
 
     const isLocalDev =
@@ -49,9 +51,12 @@ export function checkCsrfOrigin(req: NextRequest): {
       (requestOrigin?.startsWith("http://localhost:") ||
         requestOrigin?.startsWith("http://127.0.0.1:"));
 
+    const isMobileVercel =
+      Boolean(requestOrigin?.endsWith(".vercel.app") && requestOrigin?.includes("purplehaze"));
+
     if (
       !requestOrigin ||
-      (!allowedOrigins.has(requestOrigin.toLowerCase()) && !isLocalDev)
+      (!allowedOrigins.has(requestOrigin.toLowerCase()) && !isLocalDev && !isMobileVercel)
     ) {
       return {
         valid: false,

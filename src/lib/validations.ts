@@ -148,13 +148,6 @@ export const checkoutDetailsSchema = z
           message: "Enter a delivery address.",
         });
       }
-      if (!data.zoneId) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["zoneId"],
-          message: "Choose your delivery area.",
-        });
-      }
     }
     if (data.type === "DINE_IN" && !data.tableNumber) {
       ctx.addIssue({
