@@ -14,11 +14,19 @@ export async function POST(req: NextRequest) {
   }
 
   const user = await getAuthContext(req);
+  const body = await req.json().catch(() => ({}));
+  const requestedOrderId = body?.orderId || req.nextUrl.searchParams.get("orderId");
 
   // 1. menu-availability is public
   const allowedChannels: string[] = [REALTIME_CHANNELS.menuAvailability];
 
-  // 2. Private channel authorization
+  // 2. Order-specific tracking channels (if requested)
+  if (requestedOrderId && typeof requestedOrderId === "string") {
+    allowedChannels.push(REALTIME_CHANNELS.orderTracking(requestedOrderId));
+    allowedChannels.push(`order-tracking-${requestedOrderId}`);
+  }
+
+  // 3. Private channel authorization
   if (user) {
     // User can only join their own user-{userId} channel
     allowedChannels.push(REALTIME_CHANNELS.userChannel(user.id));

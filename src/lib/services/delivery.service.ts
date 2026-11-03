@@ -9,6 +9,25 @@ import { broadcastEvent } from "@/lib/realtime/broadcast";
 import { REALTIME_CHANNELS, REALTIME_EVENTS } from "@/lib/shared/realtime";
 import { locationStore } from "@/lib/location-store";
 
+async function broadcastDeliveryStatusUpdate(payload: {
+  orderId: string;
+  orderNumber?: string | null;
+  status?: string | null;
+  deliveryStatus?: string | null;
+  riderId?: string | null;
+  reason?: string | null;
+  foodReturned?: boolean | null;
+}) {
+  const fullPayload = {
+    ...payload,
+    updatedAt: new Date().toISOString(),
+  };
+  await Promise.allSettled([
+    broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, fullPayload),
+    broadcastEvent(REALTIME_CHANNELS.orderTracking(payload.orderId), REALTIME_EVENTS.orderStatusUpdated, fullPayload),
+  ]);
+}
+
 export const deliveryService = {
   /**
    * Admin/Staff dispatch order to an on-duty rider with verified license
@@ -134,7 +153,7 @@ export const deliveryService = {
     });
 
     // Broadcast realtime event
-    await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+    await broadcastDeliveryStatusUpdate({
       orderId: order.id,
       orderNumber: order.orderNumber,
       status: order.status,
@@ -213,7 +232,7 @@ export const deliveryService = {
       },
     });
 
-    await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+    await broadcastDeliveryStatusUpdate({
       orderId: delivery.orderId,
       orderNumber: delivery.order.orderNumber,
       status: delivery.order.status,
@@ -281,7 +300,7 @@ export const deliveryService = {
       },
     });
 
-    await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+    await broadcastDeliveryStatusUpdate({
       orderId: delivery.orderId,
       orderNumber: delivery.order.orderNumber,
       status: delivery.order.status,
@@ -376,7 +395,7 @@ export const deliveryService = {
       }),
     ]);
 
-    await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+    await broadcastDeliveryStatusUpdate({
       orderId: delivery.orderId,
       orderNumber: delivery.order.orderNumber,
       status: "OUT_FOR_DELIVERY",
@@ -445,7 +464,7 @@ export const deliveryService = {
       },
     });
 
-    await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+    await broadcastDeliveryStatusUpdate({
       orderId: delivery.orderId,
       orderNumber: delivery.order.orderNumber,
       status: "OUT_FOR_DELIVERY",
@@ -578,7 +597,7 @@ export const deliveryService = {
       }),
     ]);
 
-    await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+    await broadcastDeliveryStatusUpdate({
       orderId: delivery.orderId,
       orderNumber: delivery.order.orderNumber,
       status: "COMPLETED",
@@ -658,7 +677,7 @@ export const deliveryService = {
       },
     });
 
-    await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+    await broadcastDeliveryStatusUpdate({
       orderId: delivery.orderId,
       orderNumber: delivery.order.orderNumber,
       status: delivery.order.status,
@@ -716,7 +735,7 @@ export const deliveryService = {
         },
       });
 
-      await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+      await broadcastDeliveryStatusUpdate({
         orderId: delivery.orderId,
         orderNumber: delivery.order.orderNumber,
         status: delivery.order.status,
@@ -900,7 +919,7 @@ export const deliveryService = {
       },
     });
 
-    await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+    await broadcastDeliveryStatusUpdate({
       orderId: delivery.orderId,
       orderNumber: delivery.order.orderNumber,
       status: delivery.order.status,

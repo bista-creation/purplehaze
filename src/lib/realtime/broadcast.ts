@@ -117,6 +117,7 @@ export async function broadcastOrderStatusUpdated(params: {
 
   const tasks: Promise<boolean>[] = [
     broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, payload),
+    broadcastEvent(REALTIME_CHANNELS.orderTracking(params.orderId), REALTIME_EVENTS.orderStatusUpdated, payload),
   ];
 
   if (params.userId) {

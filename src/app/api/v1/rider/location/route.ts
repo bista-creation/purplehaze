@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { locationStore } from "@/lib/location-store";
 import { broadcastEvent } from "@/lib/realtime/broadcast";
+import { REALTIME_CHANNELS } from "@/lib/shared/realtime";
 
 // Coordinate validation: realistic globe coordinates
 const locationSchema = z.object({
@@ -67,14 +68,18 @@ export async function POST(req: NextRequest) {
       lng: longitude,
     });
 
-    // 2. Broadcast transient coordinates to customer tracking channel
-    const channelTopic = `order-tracking-${activeDelivery.orderId}`;
-    await broadcastEvent(channelTopic, "rider.location", {
+    // 2. Broadcast transient coordinates to customer tracking channels
+    const payload = {
       orderId: activeDelivery.orderId,
       lat: latitude,
       lng: longitude,
       updatedAt: new Date().toISOString(),
-    });
+    };
+
+    await Promise.allSettled([
+      broadcastEvent(REALTIME_CHANNELS.orderTracking(activeDelivery.orderId), "rider.location", payload),
+      broadcastEvent(`order-tracking-${activeDelivery.orderId}`, "rider.location", payload),
+    ]);
 
     return jsonOk({
       active: true,
