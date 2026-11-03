@@ -49,6 +49,7 @@
     "@radix-ui/react-tabs": "^1.2.1",
     "@supabase/supabase-js": "^2.118.0",
     "@uploadthing/react": "^7.3.3",
+    "@upstash/qstash": "^2.12.1",
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.39.0",
     "@vercel/blob": "^2.8.2",

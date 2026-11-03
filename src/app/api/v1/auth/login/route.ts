@@ -22,9 +22,10 @@ export async function POST(req: NextRequest) {
       return jsonError("RATE_LIMIT_EXCEEDED", "Too many login attempts from this network. Please wait a few minutes.", 429);
     }
 
-    // 2. Per-email rate limit against targeted account brute force (10 attempts / 10 minutes)
-    const emailLimit = await checkRateLimit(`api:login:email:${ip}:${parsed.data.email}`, 10, 10 * 60 * 1000);
-    if (!emailLimit.success) {
+    // 2. Per-account rate limit against targeted account brute force (5 attempts / 10 minutes)
+    const emailKey = parsed.data.email.toLowerCase().trim();
+    const accountLimit = await checkRateLimit(`api:login:account:${emailKey}`, 5, 10 * 60 * 1000);
+    if (!accountLimit.success) {
       return jsonError("RATE_LIMIT_EXCEEDED", "Too many login attempts for this account. Please wait a few minutes.", 429);
     }
 

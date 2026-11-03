@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/security";
 import { STATUS_META, type OrderStatus } from "@/lib/constants";
+import { generateDeliveryOtp } from "@/lib/security/otp";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export async function GET(
       prisma.order.findUnique({
         where: { orderNumber: decodedOrderNumber },
         include: {
+          delivery: true,
           statusHistory: { orderBy: { createdAt: "asc" } },
           items: {
             select: {
@@ -72,7 +74,14 @@ export async function GET(
       remainingMinutes = Math.max(1, targetPrep - elapsedMinutes);
     }
 
+    // Security invariant: Delivery OTP is revealed ONLY while order is actively OUT_FOR_DELIVERY
+    let deliveryOtp: string | null = null;
+    if (order.status === "OUT_FOR_DELIVERY" && order.delivery) {
+      deliveryOtp = generateDeliveryOtp(order.delivery.id, order.delivery.otpVersion);
+    }
+
     return NextResponse.json({
+      id: order.id,
       orderNumber: order.orderNumber,
       status: order.status,
       type: order.type,
@@ -88,6 +97,7 @@ export async function GET(
       progress,
       statusMeta: meta,
       remainingMinutes,
+      deliveryOtp,
       itemsCount: order.items.reduce((acc, i) => acc + i.quantity, 0),
       history: order.statusHistory.map((h) => ({
         status: h.status,

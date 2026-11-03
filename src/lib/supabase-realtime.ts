@@ -48,3 +48,33 @@ export async function signRealtimeToken(user: {
 }
 
 export const signStaffRealtimeToken = signRealtimeToken;
+
+/**
+ * Mint a scoped, short-lived (10m) Realtime JWT for customer order tracking.
+ * Strictly contains `allowed_channels: ["order-tracking-{orderId}"]`.
+ * Omits `app_role` entirely and assigns a random guest ID if unauthenticated.
+ */
+export async function signCustomerTrackingToken(input: {
+  orderId: string;
+  userId?: string;
+}) {
+  const config = getSupabaseRealtimeConfig();
+  if (!config) return null;
+
+  const subject = input.userId || `guest-${crypto.randomUUID()}`;
+  const channel = `order-tracking-${input.orderId}`;
+
+  const token = await new SignJWT({
+    role: "authenticated",
+    allowed_channels: [channel],
+  })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setSubject(subject)
+    .setAudience("authenticated")
+    .setIssuer("purple-haze")
+    .setIssuedAt()
+    .setExpirationTime("10m")
+    .sign(new TextEncoder().encode(config.jwtSecret));
+
+  return { token, expiresInSeconds: 600, channel };
+}

@@ -63,8 +63,11 @@ const ICONS = {
 const STAFF_ALLOWED = new Set([
   "/admin",
   "/admin/career",
+  "/admin/dispatch",
   "/admin/event-menus",
   "/admin/orders",
+  "/admin/riders",
+  "/admin/settlements",
   "/admin/notifications",
   "/admin/reservations",
   "/admin/event-bookings",
