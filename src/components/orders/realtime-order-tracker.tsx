@@ -18,6 +18,8 @@ import {
   Volume2,
   VolumeX,
   XCircle,
+  Compass,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { sound } from "@/lib/sound";
@@ -33,6 +35,7 @@ interface StatusHistoryEntry {
 }
 
 interface OrderLiveStatus {
+  id?: string;
   orderNumber: string;
   status: string;
   type: string;
@@ -52,6 +55,7 @@ interface OrderLiveStatus {
     tone: string;
   };
   remainingMinutes: number | null;
+  deliveryOtp?: string | null;
   itemsCount: number;
   history: StatusHistoryEntry[];
 }
@@ -100,6 +104,12 @@ export function RealtimeOrderTracker({
   );
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [riderLocation, setRiderLocation] = useState<{
+    lat: number;
+    lng: number;
+    updatedAt: string;
+    isStale: boolean;
+  } | null>(null);
   const prevStatusRef = useRef(initialStatus);
 
   const isActive = !["COMPLETED", "CANCELLED"].includes(status);
@@ -220,6 +230,49 @@ export function RealtimeOrderTracker({
             })
             .subscribe();
         }
+
+        // Phase 4: Subscribe to Rider Location Channel when order is out for delivery
+        if (data?.id && data.status === "OUT_FOR_DELIVERY") {
+          try {
+            const locRes = await fetch(`/api/v1/orders/${data.id}/location`, {
+              headers: token ? { "x-order-token": token } : {},
+            });
+            const locJson = await locRes.json();
+            if (locJson.success && locJson.data?.location) {
+              setRiderLocation(locJson.data.location);
+            }
+          } catch {
+            // Ignore initial loc fetch error
+          }
+
+          try {
+            const trackTokenRes = await fetch(`/api/v1/realtime/token?orderId=${data.id}`, {
+              headers: token ? { "x-order-token": token } : {},
+            });
+            const trackTokenJson = await trackTokenRes.json();
+            if (trackTokenJson.enabled && trackTokenJson.token && trackTokenJson.channel) {
+              realtimeClient
+                .channel(trackTokenJson.channel)
+                .on(
+                  "broadcast",
+                  { event: "rider.location" },
+                  ({ payload }: { payload?: { lat: number; lng: number; updatedAt: string } }) => {
+                    if (payload) {
+                      setRiderLocation({
+                        lat: payload.lat,
+                        lng: payload.lng,
+                        updatedAt: payload.updatedAt,
+                        isStale: false,
+                      });
+                    }
+                  }
+                )
+                .subscribe();
+            }
+          } catch {
+            // Ignore realtime track subscription error
+          }
+        }
       } catch {
         // Fallback polling continues seamlessly
       }
@@ -241,7 +294,7 @@ export function RealtimeOrderTracker({
         void realtimeClient.removeAllChannels();
       }
     };
-  }, [isActive, initialOrderNumber, token, soundEnabled]);
+  }, [isActive, initialOrderNumber, token, soundEnabled, data?.id, data?.status]);
 
   const currentIndex = steps.findIndex((s) => s.key === status);
   const activeStepIndex =
@@ -430,20 +483,110 @@ export function RealtimeOrderTracker({
             </div>
           </div>
         ) : status === "OUT_FOR_DELIVERY" ? (
-          <div className="rounded-2xl border border-indigo-300/80 bg-indigo-50/80 p-5 dark:border-indigo-900/60 dark:bg-indigo-950/30">
-            <div className="flex items-start gap-3.5">
-              <div className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-indigo-500/20 text-indigo-700 dark:text-indigo-300">
-                <Truck className="size-5 animate-pulse" />
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-indigo-300/80 bg-indigo-50/80 p-5 dark:border-indigo-900/60 dark:bg-indigo-950/30">
+              <div className="flex items-start gap-3.5">
+                <div className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-indigo-500/20 text-indigo-700 dark:text-indigo-300">
+                  <Truck className="size-5 animate-pulse" />
+                </div>
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-indigo-950 dark:text-indigo-100">
+                    On the way to your door!
+                  </h2>
+                  <p className="mt-1 text-xs leading-5 text-indigo-900/80 dark:text-indigo-200/80">
+                    Our delivery rider has left Airport Road and is navigating to your address.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-display text-lg font-semibold text-indigo-950 dark:text-indigo-100">
-                  On the way to your door!
-                </h2>
-                <p className="mt-1 text-xs leading-5 text-indigo-900/80 dark:text-indigo-200/80">
-                  Our delivery partner has left Airport Road and is navigating
-                  to your address.
+            </div>
+
+            {/* Delivery Verification PIN Box */}
+            {data?.deliveryOtp && (
+              <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-500/10 p-5 text-center space-y-1.5 shadow-xs">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  <KeyRound className="size-4" />
+                  <span>Your Delivery Verification PIN</span>
+                </div>
+                <div className="font-mono text-3xl sm:text-4xl font-black tracking-widest text-emerald-600 dark:text-emerald-400">
+                  {data.deliveryOtp}
+                </div>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  Provide this 6-digit PIN to the rider upon arrival to securely confirm food handover.
                 </p>
               </div>
+            )}
+
+            {/* Live Rider Location & Map Widget */}
+            <div className="rounded-2xl border border-border/80 bg-card p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Compass className="size-4 text-primary animate-spin" />
+                  <span className="text-sm font-semibold text-foreground">
+                    Live Rider Tracking
+                  </span>
+                </div>
+                {riderLocation ? (
+                  <Badge
+                    variant={riderLocation.isStale ? "amber" : "green"}
+                    className="text-[10px]"
+                  >
+                    {riderLocation.isStale ? "Location updating..." : "Live GPS (12s)"}
+                  </Badge>
+                ) : (
+                  <Badge variant="muted" className="text-[10px]">
+                    Connecting GPS...
+                  </Badge>
+                )}
+              </div>
+
+              {riderLocation?.isStale && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5">
+                  Rider location updating... (Signal may be weak or phone locked in transit).
+                </p>
+              )}
+
+              <div className="rounded-xl bg-muted/40 p-3 space-y-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <MapPin className="size-3.5 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-foreground">From: </span>
+                    <span className="text-muted-foreground">
+                      Purple Haze Restro & Garden, Airport Road, Biratnagar
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <MapPin className="size-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-foreground">To: </span>
+                    <span className="text-muted-foreground">
+                      {data?.deliveryAddress || "Customer address"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {riderLocation && (
+                <div className="pt-1 flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    Rider GPS: {riderLocation.lat.toFixed(4)}, {riderLocation.lng.toFixed(4)}
+                  </span>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs border-primary/40 text-primary hover:bg-primary/10"
+                  >
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${riderLocation.lat}%2C${riderLocation.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View on Google Maps →
+                    </a>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         ) : status === "COMPLETED" ? (

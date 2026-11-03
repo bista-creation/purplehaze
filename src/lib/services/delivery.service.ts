@@ -7,6 +7,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { scheduleAssignmentTimeout } from "@/lib/qstash";
 import { broadcastEvent } from "@/lib/realtime/broadcast";
 import { REALTIME_CHANNELS, REALTIME_EVENTS } from "@/lib/shared/realtime";
+import { locationStore } from "@/lib/location-store";
 
 export const deliveryService = {
   /**
@@ -597,6 +598,9 @@ export const deliveryService = {
       },
     });
 
+    // Minimization invariant: immediately purge transient GPS location from Redis
+    await locationStore.evictLocation(delivery.orderId);
+
     return { success: true, data: updatedDelivery };
   },
 
@@ -661,6 +665,9 @@ export const deliveryService = {
       deliveryStatus: "FAILED",
       reason,
     });
+
+    // Minimization invariant: purge location on failure/exception
+    await locationStore.evictLocation(delivery.orderId);
 
     return { success: true, data: updated };
   },
@@ -790,6 +797,10 @@ export const deliveryService = {
         reason,
       },
     });
+
+    if (newStatus === "DELIVERED" || newStatus === "FAILED" || newStatus === "CANCELLED") {
+      await locationStore.evictLocation(delivery.orderId);
+    }
 
     return { success: true, data: updated };
   },
