@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
     try {
       tableCounts.users = await prisma.user.count();
       tableCounts.orders = await prisma.order.count();
+      tableCounts.refreshTokens = await (prisma as any).refreshToken.count();
       tableCounts.sampleUsers = await prisma.user.findMany({ take: 3, select: { email: true, role: true } });
     } catch (e: any) {
       tableCounts.error = e.message;

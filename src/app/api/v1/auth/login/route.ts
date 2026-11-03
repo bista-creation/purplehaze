@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
       },
       tokens,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("API login failed:", error);
-    return jsonError("INTERNAL_ERROR", "Login failed. Please try again.", 500);
+    return jsonError("INTERNAL_ERROR", error?.message || "Login failed. Please try again.", 500);
   }
 }
