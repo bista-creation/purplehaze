@@ -193,6 +193,23 @@ export function DispatchBoard({
     }
   };
 
+  const handleAcknowledgeFoodReturn = async (deliveryId: string) => {
+    try {
+      const res = await fetch(`/api/v1/admin/deliveries/${deliveryId}/acknowledge-return`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Food return to kitchen acknowledged");
+        loadData();
+      } else {
+        toast.error(data.error?.message || "Failed to acknowledge food return");
+      }
+    } catch {
+      toast.error("Network error acknowledging food return");
+    }
+  };
+
   const handleOverrideSubmit = async () => {
     if (!overrideDelivery) return;
     if (!overrideReason || overrideReason.trim().length < 5) {
@@ -461,6 +478,16 @@ export function DispatchBoard({
                       {deliv.customerPhone}
                     </span>
                     <div className="flex items-center gap-1.5">
+                      {deliv.deliveryStatus === "FAILED" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-xs border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                          onClick={() => handleAcknowledgeFoodReturn(deliv.id)}
+                        >
+                          Food Returned
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         className="h-7 px-2 text-xs bg-primary hover:bg-primary/90"

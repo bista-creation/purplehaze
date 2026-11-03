@@ -319,6 +319,14 @@ export const deliveryService = {
     }
 
     if (delivery.status !== "ACCEPTED") {
+      // Idempotent retry: if already picked up or beyond (e.g. replayed from offline queue), return success
+      if (
+        delivery.status === "PICKED_UP" ||
+        delivery.status === "ARRIVED_AT_CUSTOMER" ||
+        delivery.status === "DELIVERED"
+      ) {
+        return { success: true, data: delivery };
+      }
       return {
         success: false,
         error: new ServiceError("INVALID_STATE", `Cannot pick up delivery with status '${delivery.status}'.`, 400),
@@ -407,6 +415,13 @@ export const deliveryService = {
     }
 
     if (delivery.status !== "PICKED_UP") {
+      // Idempotent retry: if already arrived or delivered (replayed from offline queue), return success
+      if (
+        delivery.status === "ARRIVED_AT_CUSTOMER" ||
+        delivery.status === "DELIVERED"
+      ) {
+        return { success: true, data: delivery };
+      }
       return {
         success: false,
         error: new ServiceError("INVALID_STATE", `Cannot mark arrived from status '${delivery.status}'.`, 400),
@@ -820,6 +835,69 @@ export const deliveryService = {
     });
 
     return { success: true, data: { otpLocked: false, otpVersion: updated.otpVersion } };
+  },
+
+  /**
+   * Kitchen / Admin acknowledges that undelivered food has returned to kitchen
+   */
+  async acknowledgeFoodReturn(
+    deliveryId: string,
+    staffUser: { id: string; email: string },
+    notes?: string
+  ): Promise<ServiceResult<any>> {
+    const delivery = await prisma.delivery.findUnique({
+      where: { id: deliveryId },
+      include: { order: true },
+    });
+
+    if (!delivery) {
+      return {
+        success: false,
+        error: new ServiceError("NOT_FOUND", "Delivery not found.", 404),
+      };
+    }
+
+    if (delivery.status !== "FAILED") {
+      return {
+        success: false,
+        error: new ServiceError(
+          "INVALID_STATE",
+          `Food return can only be acknowledged for FAILED deliveries (current status: '${delivery.status}').`,
+          400
+        ),
+      };
+    }
+
+    await prisma.deliveryAttempt.create({
+      data: {
+        deliveryId,
+        riderId: delivery.riderId,
+        action: "FOOD_RETURNED_TO_KITCHEN",
+        notes: notes || `Food return acknowledged by ${staffUser.email}`,
+      },
+    });
+
+    await writeAuditLog({
+      userId: staffUser.id,
+      actorEmail: staffUser.email,
+      action: "delivery.food_return_acknowledged",
+      entity: "Delivery",
+      entityId: deliveryId,
+      details: {
+        orderNumber: delivery.order.orderNumber,
+        notes,
+      },
+    });
+
+    await broadcastEvent(REALTIME_CHANNELS.adminOrders, REALTIME_EVENTS.orderStatusUpdated, {
+      orderId: delivery.orderId,
+      orderNumber: delivery.order.orderNumber,
+      status: delivery.order.status,
+      deliveryStatus: "FAILED",
+      foodReturned: true,
+    });
+
+    return { success: true, data: { deliveryId, foodReturned: true } };
   },
 
   /**

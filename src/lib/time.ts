@@ -39,6 +39,21 @@ export function todayInNepal() {
   }).format(new Date());
 }
 
+/**
+ * Returns UTC Date objects for start-of-day (00:00:00) and end-of-day (23:59:59.999)
+ * aligned strictly with the Asia/Kathmandu (UTC+05:45) day boundary.
+ */
+export function getNepalDayRange(dateStr?: string): {
+  startOfDay: Date;
+  endOfDay: Date;
+  dateStr: string;
+} {
+  const targetDateStr = dateStr || todayInNepal();
+  const startOfDay = new Date(`${targetDateStr}T00:00:00.000${NEPAL_OFFSET}`);
+  const endOfDay = new Date(`${targetDateStr}T23:59:59.999${NEPAL_OFFSET}`);
+  return { startOfDay, endOfDay, dateStr: targetDateStr };
+}
+
 export function isRestaurantOpen(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Kathmandu",

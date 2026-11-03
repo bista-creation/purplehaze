@@ -528,4 +528,75 @@ describe("Phase 2: Delivery Dispatch, State Machine & OTP Security", () => {
       expect(res.message).toContain("completed via rider OTP verification");
     });
   });
+
+  describe("Phase 3 Offline Queue Idempotency & Food Return", () => {
+    it("handles idempotent pickupDelivery retry when already PICKED_UP or beyond", async () => {
+      mockPrisma.delivery.findUnique.mockResolvedValueOnce({
+        id: "deliv_1",
+        status: "PICKED_UP",
+        rider: { id: "rider_1", userId: "usr_rider_1" },
+        order: { id: "ord_1", status: "OUT_FOR_DELIVERY" },
+      });
+
+      const res = await deliveryService.pickupDelivery("deliv_1", "usr_rider_1");
+      expect(res.success).toBe(true);
+      expect(res.data?.status).toBe("PICKED_UP");
+      expect(mockPrisma.delivery.update).not.toHaveBeenCalled();
+    });
+
+    it("handles idempotent arrivedDelivery retry when already ARRIVED_AT_CUSTOMER", async () => {
+      mockPrisma.delivery.findUnique.mockResolvedValueOnce({
+        id: "deliv_1",
+        status: "ARRIVED_AT_CUSTOMER",
+        rider: { id: "rider_1", userId: "usr_rider_1" },
+        order: { id: "ord_1", status: "OUT_FOR_DELIVERY" },
+      });
+
+      const res = await deliveryService.arrivedDelivery("deliv_1", "usr_rider_1");
+      expect(res.success).toBe(true);
+      expect(res.data?.status).toBe("ARRIVED_AT_CUSTOMER");
+      expect(mockPrisma.delivery.update).not.toHaveBeenCalled();
+    });
+
+    it("acknowledges food return to kitchen for FAILED delivery", async () => {
+      mockPrisma.delivery.findUnique.mockResolvedValueOnce({
+        id: "deliv_1",
+        status: "FAILED",
+        riderId: "rider_1",
+        order: { id: "ord_1", orderNumber: "PH-99", status: "CANCELLED" },
+      });
+
+      const res = await deliveryService.acknowledgeFoodReturn(
+        "deliv_1",
+        { id: "adm_1", email: "staff@purplehaze.com" },
+        "Box undamaged, momos returned to kitchen"
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.data?.foodReturned).toBe(true);
+      expect(mockPrisma.deliveryAttempt.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action: "FOOD_RETURNED_TO_KITCHEN",
+          }),
+        })
+      );
+    });
+
+    it("refuses food return acknowledgement for non-FAILED delivery", async () => {
+      mockPrisma.delivery.findUnique.mockResolvedValueOnce({
+        id: "deliv_1",
+        status: "OUT_FOR_DELIVERY",
+        order: { id: "ord_1", orderNumber: "PH-99", status: "OUT_FOR_DELIVERY" },
+      });
+
+      const res = await deliveryService.acknowledgeFoodReturn(
+        "deliv_1",
+        { id: "adm_1", email: "staff@purplehaze.com" }
+      );
+
+      expect(res.success).toBe(false);
+      expect(res.error?.code).toBe("INVALID_STATE");
+    });
+  });
 });
