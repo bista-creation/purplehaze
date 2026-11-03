@@ -16,12 +16,14 @@ type MockFn = ReturnType<typeof vi.fn>;
 interface MockPrismaType {
   user: { findUnique: MockFn };
   order: { findFirst: MockFn };
+  riderProfile: { findUnique: MockFn };
 }
 
 const { mockPrisma } = vi.hoisted(() => {
   const mp: MockPrismaType = {
     user: { findUnique: vi.fn() },
     order: { findFirst: vi.fn() },
+    riderProfile: { findUnique: vi.fn() },
   };
   return { mockPrisma: mp };
 });
@@ -38,6 +40,10 @@ vi.mock("@/lib/security", () => ({
   getClientIp: vi.fn().mockResolvedValue("127.0.0.1"),
 }));
 
+vi.mock("@/lib/audit", () => ({
+  writeAuditLog: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/services/order.service", () => ({
   orderService: {
     trackOrder: vi.fn(),
@@ -46,13 +52,16 @@ vi.mock("@/lib/services/order.service", () => ({
   },
 }));
 
-import { requireRiderAuth, requireAdminAuth } from "./auth-context";
+import { requireRiderAuth, requireAdminAuth, requireAdminOnlyAuth } from "./auth-context";
 import { signAccessToken } from "./tokens";
 import { GET as trackOrderGet, POST as trackOrderPost } from "@/app/api/v1/orders/track/route";
 import { GET as getOrderByIdRoute } from "@/app/api/v1/orders/[id]/route";
+import { GET as getRiderAdminDetailsRoute } from "@/app/api/v1/admin/riders/[id]/route";
 import { orderService } from "@/lib/services/order.service";
+import { encryptPii } from "../security/encryption";
+import { writeAuditLog } from "@/lib/audit";
 
-describe("Rider Role Boundaries & Customer OTP Leak Resistance", () => {
+describe("Rider Role Boundaries, Document Permissions & OTP Leak Resistance", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -125,7 +134,7 @@ describe("Rider Role Boundaries & Customer OTP Leak Resistance", () => {
       expect(errorResponse?.status).toBe(403);
     });
 
-    it("authorizes RIDER role successfully", async () => {
+    it("refuses regular rider endpoints with 403 PASSWORD_CHANGE_REQUIRED when mustChangePassword is true", async () => {
       const token = await signAccessToken({
         id: "usr_rider_1",
         email: "rider@example.com",
@@ -141,6 +150,71 @@ describe("Rider Role Boundaries & Customer OTP Leak Resistance", () => {
         role: "RIDER",
         sessionVersion: 1,
         isBlocked: false,
+      });
+
+      mockPrisma.riderProfile.findUnique.mockResolvedValue({
+        mustChangePassword: true,
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/v1/rider/orders", {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const { user, errorResponse } = await requireRiderAuth(req);
+
+      expect(user).toBeNull();
+      expect(errorResponse?.status).toBe(403);
+      const body = await errorResponse?.json();
+      expect(body.error.code).toBe("PASSWORD_CHANGE_REQUIRED");
+      expect(body.error.message).toContain("must change your temporary password");
+    });
+
+    it("allows first-login change password endpoint even when mustChangePassword is true", async () => {
+      const token = await signAccessToken({
+        id: "usr_rider_1",
+        email: "rider@example.com",
+        name: "Rider Santosh",
+        role: "RIDER",
+        sessionVersion: 1,
+      });
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "usr_rider_1",
+        email: "rider@example.com",
+        name: "Rider Santosh",
+        role: "RIDER",
+        sessionVersion: 1,
+        isBlocked: false,
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/v1/rider/auth/first-login", {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const { user, errorResponse } = await requireRiderAuth(req, { allowMustChangePassword: true });
+
+      expect(errorResponse).toBeNull();
+      expect(user?.id).toBe("usr_rider_1");
+    });
+
+    it("authorizes RIDER role successfully once password is changed", async () => {
+      const token = await signAccessToken({
+        id: "usr_rider_1",
+        email: "rider@example.com",
+        name: "Rider Santosh",
+        role: "RIDER",
+        sessionVersion: 1,
+      });
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "usr_rider_1",
+        email: "rider@example.com",
+        name: "Rider Santosh",
+        role: "RIDER",
+        sessionVersion: 1,
+        isBlocked: false,
+      });
+
+      mockPrisma.riderProfile.findUnique.mockResolvedValue({
+        mustChangePassword: false,
       });
 
       const req = new NextRequest("http://localhost:3000/api/v1/rider/orders", {
@@ -180,6 +254,104 @@ describe("Rider Role Boundaries & Customer OTP Leak Resistance", () => {
       expect(errorResponse?.status).toBe(403);
       const body = await errorResponse?.json();
       expect(body.error.code).toBe("FORBIDDEN");
+    });
+  });
+
+  describe("Decrypted Document View Access Control & Audit Logging", () => {
+    it("refuses STAFF role from viewing decrypted rider documents with 403 Forbidden", async () => {
+      const token = await signAccessToken({
+        id: "usr_staff_1",
+        email: "staff@purplehaze.com",
+        name: "Staff Member",
+        role: "STAFF",
+        sessionVersion: 1,
+      });
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "usr_staff_1",
+        email: "staff@purplehaze.com",
+        name: "Staff Member",
+        role: "STAFF",
+        sessionVersion: 1,
+        isBlocked: false,
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/v1/admin/riders/prof_1", {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const res = await getRiderAdminDetailsRoute(req, {
+        params: Promise.resolve({ id: "prof_1" }),
+      });
+
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body.error.code).toBe("FORBIDDEN");
+      expect(body.error.message).toContain("Administrator privileges required");
+    });
+
+    it("allows ADMIN role to view decrypted documents and records an audit log entry", async () => {
+      const token = await signAccessToken({
+        id: "usr_admin_1",
+        email: "admin@purplehaze.com",
+        name: "Admin User",
+        role: "ADMIN",
+        sessionVersion: 1,
+      });
+
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "usr_admin_1",
+        email: "admin@purplehaze.com",
+        name: "Admin User",
+        role: "ADMIN",
+        sessionVersion: 1,
+        isBlocked: false,
+      });
+
+      const encryptedPlate = encryptPii("Ko 2 Pa 1234");
+      const encryptedLicense = encryptPii("01-06-998877");
+
+      mockPrisma.riderProfile.findUnique.mockResolvedValue({
+        id: "prof_1",
+        userId: "usr_rider_1",
+        vehicleType: "MOTORCYCLE",
+        encryptedPlateNumber: encryptedPlate,
+        encryptedLicenseNo: encryptedLicense,
+        licenseStatus: "VERIFIED",
+        licenseVerifiedAt: new Date(),
+        licenseExpiresAt: null,
+        shiftStatus: "OFF_DUTY",
+        mustChangePassword: false,
+        lastActiveAt: null,
+        user: {
+          id: "usr_rider_1",
+          name: "Rider Test",
+          email: "rider@purplehaze.com",
+          phone: "9800000000",
+          isBlocked: false,
+          createdAt: new Date(),
+        },
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/v1/admin/riders/prof_1", {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const res = await getRiderAdminDetailsRoute(req, {
+        params: Promise.resolve({ id: "prof_1" }),
+      });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data.plateNumber).toBe("Ko 2 Pa 1234");
+      expect(body.data.licenseNumber).toBe("01-06-998877");
+
+      expect(writeAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "rider.pii.decrypt",
+          actorEmail: "admin@purplehaze.com",
+          entityId: "prof_1",
+        })
+      );
     });
   });
 
@@ -275,7 +447,6 @@ describe("Rider Role Boundaries & Customer OTP Leak Resistance", () => {
       const body = await res.json();
       expect(body.success).toBe(true);
 
-      // Verify zero leak of publicToken or deliveryOtp
       expect(body.data.orderNumber).toBe("PH-1001");
       expect(body.data.publicToken).toBeUndefined();
       expect(body.data.deliveryOtp).toBeUndefined();

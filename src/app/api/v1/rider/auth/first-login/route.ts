@@ -10,7 +10,9 @@ const firstLoginSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const { user, errorResponse } = await requireRiderAuth(req);
+  const { user, errorResponse } = await requireRiderAuth(req, {
+    allowMustChangePassword: true,
+  });
   if (errorResponse) return errorResponse;
 
   try {

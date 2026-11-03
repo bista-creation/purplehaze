@@ -203,7 +203,42 @@ export async function requireAdminAuth(req: NextRequest) {
   return { user, errorResponse: null } as const;
 }
 
-export async function requireRiderAuth(req: NextRequest) {
+export async function requireAdminOnlyAuth(req: NextRequest) {
+  const csrf = checkCsrfOrigin(req);
+  if (!csrf.valid) {
+    return { user: null, errorResponse: csrf.errorResponse! } as const;
+  }
+
+  const user = await getAuthContext(req);
+  if (!user) {
+    return {
+      user: null,
+      errorResponse: jsonError(
+        "UNAUTHORIZED",
+        "Authentication required.",
+        401,
+      ),
+    } as const;
+  }
+
+  if (user.role !== "ADMIN") {
+    return {
+      user: null,
+      errorResponse: jsonError(
+        "FORBIDDEN",
+        "Administrator privileges required.",
+        403,
+      ),
+    } as const;
+  }
+
+  return { user, errorResponse: null } as const;
+}
+
+export async function requireRiderAuth(
+  req: NextRequest,
+  options?: { allowMustChangePassword?: boolean }
+) {
   const csrf = checkCsrfOrigin(req);
   if (!csrf.valid) {
     return { user: null, errorResponse: csrf.errorResponse! } as const;
@@ -230,6 +265,23 @@ export async function requireRiderAuth(req: NextRequest) {
         403,
       ),
     } as const;
+  }
+
+  if (!options?.allowMustChangePassword) {
+    const profile = await prisma.riderProfile.findUnique({
+      where: { userId: user.id },
+      select: { mustChangePassword: true },
+    });
+    if (profile?.mustChangePassword) {
+      return {
+        user: null,
+        errorResponse: jsonError(
+          "PASSWORD_CHANGE_REQUIRED",
+          "You must change your temporary password before accessing rider features.",
+          403,
+        ),
+      } as const;
+    }
   }
 
   return { user, errorResponse: null } as const;
