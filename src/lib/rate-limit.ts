@@ -95,7 +95,7 @@ export async function checkRateLimit(
   }
 
   const isProduction = process.env.NODE_ENV === "production";
-  if (isProduction && !hasUpstash() && process.env.UPSTASH_FAIL_CLOSED !== "false") {
+  if (isProduction && !hasUpstash() && process.env.UPSTASH_FAIL_CLOSED?.trim().toLowerCase() !== "false") {
     console.error(
       `[RateLimit] CRITICAL: Upstash Redis configuration missing in production! Failing closed for identifier: '${identifier}'.`,
     );
