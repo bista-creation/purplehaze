@@ -9,7 +9,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch, type UseFormRegisterReturn } from "react-hook-form";
+import { useForm, useWatch, type UseFormRegisterReturn, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
@@ -302,8 +302,43 @@ export function CheckoutForm({
     });
   };
 
+  const onInvalid = (errors: FieldErrors<CheckoutDetailsInput>) => {
+    const missingName = Boolean(errors.customerName);
+    const missingAddress = type === "DELIVERY" && Boolean(errors.line1);
+    const missingPhone = Boolean(errors.customerPhone);
+
+    if (missingName && missingAddress) {
+      toast.error("Please enter your name and delivery address to continue.", {
+        description: "We need your name for the kitchen and address for our delivery rider.",
+      });
+    } else if (missingName) {
+      toast.error("Please enter your full name.", {
+        description: "So we know who to prepare and hand this order to.",
+      });
+    } else if (missingAddress) {
+      toast.error("Please enter your delivery street or landmark.", {
+        description: "Our rider needs your address to deliver your order quickly.",
+      });
+    } else if (missingPhone) {
+      toast.error("Please enter a valid mobile number.", {
+        description: "In case our rider needs directions to reach you.",
+      });
+    } else {
+      toast.error("Please complete the required details above to place your order.");
+    }
+
+    const firstErrorKey = Object.keys(errors)[0];
+    if (firstErrorKey) {
+      const element = document.getElementById(firstErrorKey);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        element.focus({ preventScroll: true });
+      }
+    }
+  };
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
-    void form.handleSubmit(onSubmit)(event);
+    void form.handleSubmit(onSubmit, onInvalid)(event);
   };
 
   return (
@@ -406,11 +441,13 @@ export function CheckoutForm({
                 label="Full name"
                 htmlFor="customerName"
                 error={form.formState.errors.customerName?.message}
+                hint={!form.watch("customerName") ? "💡 Let us know who to prepare and hand this order to." : undefined}
                 required
               >
                 <Input
                   id="customerName"
                   autoComplete="name"
+                  placeholder="Your full name"
                   {...form.register("customerName")}
                 />
               </FormField>
@@ -473,15 +510,45 @@ export function CheckoutForm({
                   label="Street / landmark"
                   htmlFor="line1"
                   error={form.formState.errors.line1?.message}
+                  hint={!form.watch("line1") ? "💡 Detailed street, house number or landmark ensures swift delivery." : undefined}
                   required
                 >
                   <Input
                     id="line1"
                     autoComplete="address-line1"
-                    placeholder="House, street, landmark"
+                    placeholder="House, street, landmark (e.g. Near Airport Road)"
                     {...form.register("line1")}
                   />
                 </FormField>
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                    <Sparkles className="size-3 text-amber-500" />
+                    <span>Popular Biratnagar areas (tap to auto-fill):</span>
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      "Airport Road",
+                      "Traffic Chowk",
+                      "Roadcess Chowk",
+                      "Bargachhi",
+                      "Tintoliya",
+                      "Hospital Chowk",
+                      "Main Road",
+                      "Kanchanbari",
+                    ].map((landmark) => (
+                      <button
+                        key={landmark}
+                        type="button"
+                        onClick={() => {
+                          form.setValue("line1", landmark, { shouldValidate: true, shouldDirty: true });
+                        }}
+                        className="inline-flex items-center rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-[11px] font-medium text-secondary-foreground transition hover:border-primary hover:bg-primary/10 hover:text-primary active:scale-95"
+                      >
+                        + {landmark}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <FormField
                   label="Apartment, floor or extra directions"
                   htmlFor="line2"
@@ -802,6 +869,22 @@ export function CheckoutForm({
               </AlertDescription>
             </Alert>
           ) : null}
+
+          {(!form.watch("customerName") || (type === "DELIVERY" && !form.watch("line1"))) && (
+            <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-200/90 flex items-start gap-2.5">
+              <Sparkles className="size-4 shrink-0 text-amber-400 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold text-amber-300">Almost ready to order!</p>
+                <p className="text-muted-foreground text-[11px] leading-relaxed">
+                  {!form.watch("customerName") && (type === "DELIVERY" && !form.watch("line1"))
+                    ? "Please add your name and delivery address so our kitchen and rider can serve you smoothly."
+                    : !form.watch("customerName")
+                      ? "Please add your name so our kitchen knows who to hand this meal to."
+                      : "Please add your street or landmark address so our rider can deliver to your doorstep."}
+                </p>
+              </div>
+            </div>
+          )}
 
           {paymentMethod === "COD" ? (
             <Button

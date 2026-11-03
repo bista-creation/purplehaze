@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       return jsonError("INVALID_COUPON", result.message, 400);
     }
 
-    return jsonOk(result.coupon, { message: result.message });
+    return jsonOk({ ...result.coupon, valid: true }, { message: result.message });
   } catch (error) {
     console.error("Coupon validation error:", error);
     return jsonError("INTERNAL_ERROR", "Failed to validate coupon.", 500);
