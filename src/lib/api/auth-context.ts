@@ -202,3 +202,35 @@ export async function requireAdminAuth(req: NextRequest) {
 
   return { user, errorResponse: null } as const;
 }
+
+export async function requireRiderAuth(req: NextRequest) {
+  const csrf = checkCsrfOrigin(req);
+  if (!csrf.valid) {
+    return { user: null, errorResponse: csrf.errorResponse! } as const;
+  }
+
+  const user = await getAuthContext(req);
+  if (!user) {
+    return {
+      user: null,
+      errorResponse: jsonError(
+        "UNAUTHORIZED",
+        "Authentication required.",
+        401,
+      ),
+    } as const;
+  }
+
+  if (user.role !== "RIDER") {
+    return {
+      user: null,
+      errorResponse: jsonError(
+        "FORBIDDEN",
+        "Rider access required.",
+        403,
+      ),
+    } as const;
+  }
+
+  return { user, errorResponse: null } as const;
+}

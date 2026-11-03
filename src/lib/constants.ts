@@ -101,6 +101,7 @@ export const ADMIN_NAV_GROUPS = [
     label: "Service",
     items: [
       { href: "/admin/orders", label: "Orders", icon: "receipt" },
+      { href: "/admin/riders", label: "Delivery riders", icon: "shield" },
       {
         href: "/admin/reservations",
         label: "Reservations",
@@ -145,7 +146,7 @@ export const ADMIN_NAV_GROUPS = [
   },
 ] as const;
 
-export const ROLES = ["CUSTOMER", "STAFF", "ADMIN"] as const;
+export const ROLES = ["CUSTOMER", "STAFF", "ADMIN", "RIDER"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const ORDER_STATUSES = [

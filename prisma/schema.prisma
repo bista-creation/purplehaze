@@ -43,6 +43,9 @@ model User {
   auditLogs         AuditLog[]
   refreshTokens     RefreshToken[]
   pushTokens        PushToken[]
+  riderProfile      RiderProfile?
+  cashHandoversReceived RiderCashHandover[] @relation("CashierHandovers")
+  settlementsReconciled RiderSettlement[]   @relation("AdminSettlements")
 
   @@index([role])
   @@index([role, isTest])
@@ -260,6 +263,7 @@ model Order {
   addressId       String?
   zoneId          String?
   deliveryAddress String?
+  deliveryProvider String?
   tableNumber     String?
   notes           String?
   scheduledFor    DateTime?
@@ -280,6 +284,7 @@ model Order {
   payments      Payment[]
   review        Review?
   notifications Notification[]
+  delivery      Delivery?
 
   @@index([userId])
   @@index([status])
@@ -673,4 +678,130 @@ model IdempotencyKey {
   expiresAt   DateTime
 
   @@index([key, endpoint])
+}
+
+model RiderProfile {
+  id                   String            @id @default(cuid())
+  userId               String            @unique
+  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shiftStatus          String            @default("OFF_DUTY") // ON_DUTY, OFF_DUTY
+  vehicleType          String            @default("MOTORCYCLE")
+
+  // Encrypted at rest (AES-256-GCM). Admin-only access.
+  encryptedPlateNumber String?
+  encryptedLicenseNo   String?
+  licenseStatus        String            @default("PENDING") // PENDING, VERIFIED, REJECTED, EXPIRED
+  licenseVerifiedAt    DateTime?
+  licenseExpiresAt     DateTime?
+
+  mustChangePassword   Boolean           @default(true)
+  lastActiveAt         DateTime?
+  deliveries           Delivery[]
+  attempts             DeliveryAttempt[]
+  settlements          RiderSettlement[]
+
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([shiftStatus])
+  @@index([licenseStatus])
+}
+
+model Delivery {
+  id                  String            @id @default(cuid())
+  orderId             String            @unique
+  order               Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider            String            @default("OWN_RIDER") // OWN_RIDER, PATHAO
+  status              String            @default("ASSIGNED")  // ASSIGNED, ACCEPTED, DECLINED, TIMEOUT, PICKED_UP, ARRIVED_AT_CUSTOMER, DELIVERED, FAILED
+
+  riderId             String?
+  rider               RiderProfile?     @relation(fields: [riderId], references: [id])
+  assignmentAttemptId String?           @default(cuid())
+
+  trackingNumber      String?
+  externalData        String?           // JSON string for external provider data
+
+  customerLat         Float?
+  customerLng         Float?
+
+  deliveryFeePaisa    Int               @default(0)
+  codAmountPaisa      Int               @default(0)
+  cashCollectedPaisa  Int               @default(0)
+
+  // Proof of delivery HMAC versioning
+  otpVersion          Int               @default(1)
+  otpAttempts         Int               @default(0)
+  otpLocked           Boolean           @default(false)
+  otpVerifiedAt       DateTime?
+
+  failureReason       String?
+  failureNotes        String?
+  proofPhotoUrl       String?
+
+  assignedAt          DateTime          @default(now())
+  acceptedAt          DateTime?
+  pickedUpAt          DateTime?
+  arrivedAt           DateTime?
+  deliveredAt         DateTime?
+  failedAt            DateTime?
+
+  attempts            DeliveryAttempt[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([riderId, status])
+  @@index([status])
+}
+
+model DeliveryAttempt {
+  id                  String            @id @default(cuid())
+  deliveryId          String
+  delivery            Delivery          @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  riderId             String?
+  rider               RiderProfile?     @relation(fields: [riderId], references: [id])
+  action              String            // ASSIGNED, ACCEPTED, DECLINED, TIMEOUT, REASSIGNED, FAILED
+  reason              String?
+  notes               String?
+  createdAt           DateTime          @default(now())
+
+  @@index([deliveryId])
+  @@index([riderId])
+}
+
+model RiderSettlement {
+  id                  String               @id @default(cuid())
+  riderId             String
+  rider               RiderProfile         @relation(fields: [riderId], references: [id])
+  settlementDate      DateTime             @db.Date
+  ordersDelivered     Int                  @default(0)
+  codExpectedPaisa    Int                  @default(0)
+  riderReportedPaisa  Int                  @default(0)
+  cashierCountPaisa   Int                  @default(0)
+  differencePaisa     Int                  @default(0)
+  status              String               @default("PENDING") // PENDING, RECONCILED, DISCREPANCY
+  reconciledByAdminId String?
+  reconciledByAdmin   User?                @relation("AdminSettlements", fields: [reconciledByAdminId], references: [id])
+  reconciledAt        DateTime?
+  notes               String?
+
+  handovers           RiderCashHandover[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@unique([riderId, settlementDate])
+  @@index([settlementDate])
+}
+
+model RiderCashHandover {
+  id                  String               @id @default(cuid())
+  settlementId        String
+  settlement          RiderSettlement      @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  amountPaisa         Int
+  receivedByAdminId   String
+  receivedByAdmin     User                 @relation("CashierHandovers", fields: [receivedByAdminId], references: [id])
+  receivedAt          DateTime             @default(now())
+  notes               String?
+
+  @@index([settlementId])
+  @@index([receivedByAdminId])
 }

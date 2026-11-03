@@ -495,6 +495,7 @@ export class OrderService {
         payments: true,
         address: true,
         zone: true,
+        delivery: true,
       },
     });
   }
@@ -520,6 +521,7 @@ export class OrderService {
         statusHistory: { orderBy: { createdAt: "desc" } },
         payments: true,
         zone: true,
+        delivery: true,
       },
     });
   }

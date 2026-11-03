@@ -3,6 +3,7 @@ import { z } from "zod";
 import { orderService } from "@/lib/services/order.service";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/security";
+import { getAuthContext } from "@/lib/api/auth-context";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 
 const trackQuerySchema = z.object({
@@ -10,7 +11,13 @@ const trackQuerySchema = z.object({
   phone: z.string().min(6, "Phone number is required"),
 });
 
-export async function GET(req: NextRequest) {
+async function handleTrack(req: NextRequest, data: { orderNumber: string; phone: string }) {
+  // Block RIDER role accounts strictly from customer tracking
+  const user = await getAuthContext(req);
+  if (user?.role === "RIDER") {
+    return jsonError("FORBIDDEN", "Riders cannot access customer tracking endpoints.", 403);
+  }
+
   const forwarded = req.headers.get("x-forwarded-for");
   const ip = forwarded?.split(",")[0]?.trim() || (await getClientIp());
   const limit = await checkRateLimit(`api:track:${ip}`, 20, 10 * 60 * 1000);
@@ -18,17 +25,7 @@ export async function GET(req: NextRequest) {
     return jsonError("RATE_LIMIT_EXCEEDED", "Too many tracking attempts. Please wait.", 429);
   }
 
-  const { searchParams } = new URL(req.url);
-  const parsed = trackQuerySchema.safeParse({
-    orderNumber: searchParams.get("orderNumber") ?? "",
-    phone: searchParams.get("phone") ?? "",
-  });
-
-  if (!parsed.success) {
-    return jsonZodError(parsed.error);
-  }
-
-  const order = await orderService.trackOrder(parsed.data.orderNumber, parsed.data.phone);
+  const order = await orderService.trackOrder(data.orderNumber, data.phone);
   if (!order) {
     return jsonError(
       "NOT_FOUND",
@@ -37,7 +34,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Sanitized guest tracking payload: excludes customer email and full address
+  // Sanitized guest tracking payload: strictly excludes customer email, full address, publicToken, and OTP
   const safeTrackingDto = {
     orderNumber: order.orderNumber,
     status: order.status,
@@ -65,4 +62,31 @@ export async function GET(req: NextRequest) {
   };
 
   return jsonOk(safeTrackingDto);
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const parsed = trackQuerySchema.safeParse({
+    orderNumber: searchParams.get("orderNumber") ?? "",
+    phone: searchParams.get("phone") ?? "",
+  });
+
+  if (!parsed.success) {
+    return jsonZodError(parsed.error);
+  }
+
+  return handleTrack(req, parsed.data);
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const parsed = trackQuerySchema.safeParse(body);
+    if (!parsed.success) {
+      return jsonZodError(parsed.error);
+    }
+    return handleTrack(req, parsed.data);
+  } catch {
+    return jsonError("BAD_REQUEST", "Invalid JSON payload.", 400);
+  }
 }

@@ -65,6 +65,7 @@ const STAFF_ALLOWED = new Set([
   "/admin/career",
   "/admin/event-menus",
   "/admin/orders",
+  "/admin/riders",
   "/admin/notifications",
   "/admin/reservations",
   "/admin/event-bookings",
