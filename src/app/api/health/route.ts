@@ -16,6 +16,8 @@ export async function GET() {
     riderInfo = user
       ? { email: user.email, role: user.role, hasHash: !!user.passwordHash, verified: !!user.emailVerified, blocked: user.isBlocked }
       : "NOT_FOUND";
+    const dbTarget = process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:\/\/[^:]+:[^@]+@/, "://***:***@") : "NONE";
+    (riderInfo as any) = typeof riderInfo === "object" ? { ...riderInfo, dbTarget } : { status: riderInfo, dbTarget };
   } catch (err) {
     dbStatus = "unreachable";
     return NextResponse.json(
