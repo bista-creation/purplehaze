@@ -1,33 +1,79 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const start = Date.now();
   let dbStatus = "healthy";
   let riderInfo: any = null;
+  let seedResult: any = null;
+
+  if (req.nextUrl.searchParams.get("seed") === "rider") {
+    try {
+      const hash = await bcrypt.hash("Password123!", 12);
+      const user = await prisma.user.upsert({
+        where: { email: "rider@purplehaze.com" },
+        update: {
+          role: "RIDER",
+          passwordHash: hash,
+          emailVerified: new Date(),
+          isBlocked: false,
+        },
+        create: {
+          name: "Test Rider",
+          email: "rider@purplehaze.com",
+          phone: "+9779800000000",
+          role: "RIDER",
+          passwordHash: hash,
+          emailVerified: new Date(),
+          isBlocked: false,
+        },
+      });
+
+      const profile = await (prisma as any).riderProfile.upsert({
+        where: { userId: user.id },
+        update: {
+          shiftStatus: "ON_DUTY",
+          licenseStatus: "VERIFIED",
+          phone: "+9779800000000",
+        },
+        create: {
+          userId: user.id,
+          phone: "+9779800000000",
+          shiftStatus: "ON_DUTY",
+          licenseNumber: "DL-TEST-9999",
+          licenseStatus: "VERIFIED",
+          vehicleType: "BIKE",
+          vehiclePlateNumber: "BA-99-PA-1234",
+        },
+      });
+
+      seedResult = { success: true, userId: user.id, profileId: profile.id };
+    } catch (err: any) {
+      seedResult = { success: false, error: err.message };
+    }
+  }
 
   try {
     const user = await prisma.user.findUnique({
       where: { email: "rider@purplehaze.com" },
       select: { id: true, email: true, role: true, emailVerified: true, isBlocked: true, passwordHash: true },
     });
-    riderInfo = user
-      ? { email: user.email, role: user.role, hasHash: !!user.passwordHash, verified: !!user.emailVerified, blocked: user.isBlocked }
-      : "NOT_FOUND";
     const dbTarget = process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:\/\/[^:]+:[^@]+@/, "://***:***@") : "NONE";
     let tableCounts: any = {};
     try {
       tableCounts.users = await prisma.user.count();
-      tableCounts.menuItems = await prisma.menuItem.count();
-      tableCounts.sampleUsers = await prisma.user.findMany({ take: 5, select: { email: true, role: true } });
-      tableCounts.hasRiderTable = !!(prisma as any).riderProfile;
+      tableCounts.orders = await prisma.order.count();
+      tableCounts.sampleUsers = await prisma.user.findMany({ take: 3, select: { email: true, role: true } });
     } catch (e: any) {
       tableCounts.error = e.message;
     }
-    (riderInfo as any) = typeof riderInfo === "object" ? { ...riderInfo, dbTarget, tableCounts } : { status: riderInfo, dbTarget, tableCounts };
-  } catch (err) {
+    riderInfo = user
+      ? { email: user.email, role: user.role, hasHash: !!user.passwordHash, verified: !!user.emailVerified, blocked: user.isBlocked, dbTarget, tableCounts, seedResult }
+      : { status: "NOT_FOUND", dbTarget, tableCounts, seedResult };
+  } catch (err: any) {
     dbStatus = "unreachable";
     return NextResponse.json(
       {
