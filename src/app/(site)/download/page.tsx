@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  Apple,
   ArrowDownToLine,
   ArrowRight,
   Bot,
   CheckCircle2,
   Clock,
+  Compass,
   ExternalLink,
   HelpCircle,
   MapPin,
   Navigation,
   QrCode,
+  Share2,
   ShieldCheck,
   Smartphone,
   Sparkles,
@@ -21,9 +24,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Download Purple Haze Mobile App | Android APK",
+  title: "Download Purple Haze Mobile App | Android APK & iOS iPhone",
   description:
-    "Get the official Purple Haze Restro & Garden mobile app for Android. Enjoy seamless food ordering, live rider GPS tracking, Maya AI recommendations, and exclusive discounts.",
+    "Get the official Purple Haze Restro & Garden mobile app. Download the standalone Android APK or install directly on iPhone/iPad via Safari with Maya AI, live GPS tracking, and exclusive treats.",
   alternates: { canonical: "/download" },
 };
 
@@ -53,17 +56,17 @@ const features = [
     icon: Sparkles,
     title: "Exclusive Mobile Offers",
     description:
-      "Access mobile-only coupons, flash promotions, and special chef's tastings available exclusively on the Android app.",
+      "Access mobile-only coupons, flash promotions, and special chef's tastings available exclusively on the mobile app.",
     tag: "App Treats",
   },
 ];
 
-const installSteps = [
+const androidInstallSteps = [
   {
     step: "01",
     title: "Download the APK",
     description:
-      'Tap the "Download Android APK" button below to download the official purplehaze.apk file to your phone.',
+      'Tap the "Download Android APK" button below to download the official purplehaze.apk file to your device.',
   },
   {
     step: "02",
@@ -79,21 +82,47 @@ const installSteps = [
   },
 ];
 
+const iosInstallSteps = [
+  {
+    step: "01",
+    title: "Open in Safari on iPhone",
+    description:
+      'Open purplehaze-mobile.vercel.app in Apple Safari (or tap the "Launch iOS Web App" button below).',
+  },
+  {
+    step: "02",
+    title: "Tap the Share Icon",
+    description:
+      'At the bottom toolbar of Safari, tap the Share button (the square with an arrow pointing upward).',
+  },
+  {
+    step: "03",
+    title: "Tap 'Add to Home Screen'",
+    description:
+      'Scroll down in the share sheet and tap "Add to Home Screen", then tap "Add". Purple Haze will install with its native icon and run fullscreen!',
+  },
+];
+
 const faqs = [
   {
-    question: "Is this APK safe to install?",
+    question: "How do iPhone users install the app?",
+    answer:
+      "Because Apple restricts direct .ipa sideloading from browsers, iOS users can install our official Progressive Web App (PWA) via Safari in 10 seconds: Open purplehaze-mobile.vercel.app → tap Share → tap 'Add to Home Screen'. It runs in full screen with push notifications and zero App Store download limits.",
+  },
+  {
+    question: "Is the Android APK safe to install?",
     answer:
       "Yes, 100%. This is the official Purple Haze customer app built and signed directly from our production repository. It contains zero ads and zero third-party tracking.",
   },
   {
-    question: "Which phones are supported?",
+    question: "Which phones and versions are supported?",
     answer:
-      "Any Android smartphone running Android 8.0 (Oreo) or newer — including Samsung, Xiaomi, Redmi, Poco, Vivo, Oppo, Realme, OnePlus, Motorola, and Google Pixel.",
+      "Android: Any device running Android 8.0 (Oreo) or newer (Samsung, Xiaomi, Redmi, Poco, Vivo, Oppo, Realme, OnePlus, etc.). iOS: Any iPhone or iPad running iOS 14.0 or newer.",
   },
   {
-    question: "Why download an APK instead of the Google Play Store?",
+    question: "Can I use TestFlight or Expo Go on iPhone?",
     answer:
-      "Direct APK installation provides instant updates, new menu features, and exclusive early access discounts without waiting for store review turnaround times.",
+      "Yes! If you are a beta tester or developer with TestFlight or Expo Go installed on your iPhone, you can open project @bistacreation/purplehaze-mobile directly. Contact our team to request a direct TestFlight invitation.",
   },
   {
     question: "Will my website account and cart work in the app?",
@@ -106,6 +135,7 @@ export default function DownloadPage() {
   const expoBuildUrl =
     "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/c8ad9dc1-2da0-4919-88cd-84dc009a718f";
   const apkDownloadUrl = "/api/download/apk";
+  const iosAppUrl = "https://purplehaze-mobile.vercel.app";
 
   return (
     <div className="relative overflow-hidden">
@@ -129,10 +159,10 @@ export default function DownloadPage() {
                   variant="gold"
                   className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider"
                 >
-                  <Smartphone className="mr-1.5 size-3.5" /> Official Android App
+                  <Smartphone className="mr-1.5 size-3.5" /> Android &amp; iPhone (iOS)
                 </Badge>
                 <span className="text-xs font-medium text-muted-foreground">
-                  v1.0.0 · Standalone APK
+                  Official Mobile Release · v1.0.0
                 </span>
               </div>
             </Reveal>
@@ -148,31 +178,31 @@ export default function DownloadPage() {
               <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
                 Order your favorite dishes from our Airport Road garden, track
                 your rider live on an interactive map, and let Maya AI guide
-                your palate with instant recommendations.
+                your palate with instant recommendations. Available for both Android and iPhone users.
               </p>
             </Reveal>
 
             <Reveal delay={0.24}>
               <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center">
-                <Button asChild size="lg" className="h-12 gap-2.5 px-7 shadow-lg shadow-primary/20">
+                <Button asChild size="lg" className="h-12 gap-2.5 px-6 shadow-lg shadow-primary/20">
                   <a href={apkDownloadUrl} download="purplehaze.apk">
                     <ArrowDownToLine className="size-5" />
-                    <span>Download APK for Android</span>
+                    <span>Download Android APK</span>
                   </a>
                 </Button>
                 <Button
                   asChild
                   variant="outline"
                   size="lg"
-                  className="h-12 gap-2 border-border/80 px-6"
+                  className="h-12 gap-2.5 border-border/80 px-6"
                 >
                   <a
-                    href={expoBuildUrl}
+                    href={iosAppUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <span>EAS Cloud Build</span>
-                    <ExternalLink className="size-4 opacity-70" />
+                    <Apple className="size-5" />
+                    <span>Install on iPhone (iOS)</span>
                   </a>
                 </Button>
               </div>
@@ -182,7 +212,7 @@ export default function DownloadPage() {
               <div className="mt-8 flex flex-wrap items-center gap-6 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5 font-medium text-foreground/80">
                   <ShieldCheck className="size-4 text-emerald-500" />
-                  Verified &amp; Safe APK
+                  Verified &amp; Safe
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Clock className="size-4 text-gold" />
@@ -208,12 +238,12 @@ export default function DownloadPage() {
                     <div>
                       <h2 className="text-sm font-semibold">Purple Haze App</h2>
                       <p className="text-[11px] text-muted-foreground">
-                        Android 8.0+ · ~45 MB
+                        Android &amp; iOS Support
                       </p>
                     </div>
                   </div>
                   <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-                    Active Build
+                    Live v1.0.0
                   </Badge>
                 </div>
 
@@ -247,15 +277,21 @@ export default function DownloadPage() {
                   <QrCode className="mx-auto size-12 text-gold opacity-90" />
                   <p className="mt-2 text-xs font-semibold">Scan with phone camera</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Visit purplehaze-nine.vercel.app/download
+                    Direct access for Android &amp; iPhone
                   </p>
                 </div>
 
-                <div className="mt-5">
-                  <Button asChild className="w-full gap-2" size="sm">
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <Button asChild size="sm" className="gap-1.5 text-xs">
                     <a href={apkDownloadUrl} download="purplehaze.apk">
-                      <ArrowDownToLine className="size-4" />
-                      Install APK Directly
+                      <ArrowDownToLine className="size-3.5" />
+                      Android APK
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs">
+                    <a href={iosAppUrl} target="_blank" rel="noopener noreferrer">
+                      <Apple className="size-3.5" />
+                      iPhone (iOS)
                     </a>
                   </Button>
                 </div>
@@ -265,15 +301,126 @@ export default function DownloadPage() {
         </div>
       </section>
 
+      {/* iPhone (iOS) Dedicated Section */}
+      <section id="ios" className="border-t border-border/60 bg-muted/30 py-16 md:py-24">
+        <div className="container-page">
+          <div className="mx-auto max-w-4xl">
+            <Reveal className="text-center">
+              <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider">
+                <Apple className="mr-1.5 size-3.5" /> iPhone &amp; iPad Guide
+              </Badge>
+              <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
+                How to install on iPhone in 3 steps
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
+                Apple restricts downloading .ipa files directly from browsers. You can install the full Purple Haze app directly onto your iPhone home screen in seconds via Safari.
+              </p>
+            </Reveal>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {iosInstallSteps.map((step, idx) => (
+                <Reveal key={step.step} delay={idx * 0.1}>
+                  <div className="relative flex h-full flex-col rounded-2xl border border-border/80 bg-card p-6 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="font-display text-2xl font-bold text-gold">
+                        {step.step}
+                      </span>
+                      {idx === 0 ? (
+                        <Compass className="size-5 text-muted-foreground" />
+                      ) : idx === 1 ? (
+                        <Share2 className="size-5 text-muted-foreground" />
+                      ) : (
+                        <Apple className="size-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <h3 className="mt-3 text-base font-semibold text-foreground">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 flex-1 text-xs leading-relaxed text-muted-foreground">
+                      {step.description}
+                    </p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Button asChild size="lg" className="gap-2 px-8">
+                <a href={iosAppUrl} target="_blank" rel="noopener noreferrer">
+                  <Apple className="size-4" />
+                  <span>Launch iOS App Now</span>
+                  <ExternalLink className="size-3.5 opacity-70" />
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="gap-2">
+                <a href="mailto:support@purplehazerestro.com?subject=iOS%20TestFlight%20Beta%20Access">
+                  <span>Request TestFlight Beta</span>
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Android Step by Step Guide */}
+      <section id="android" className="border-t border-border/60 py-16 md:py-24">
+        <div className="container-page">
+          <Reveal className="text-center">
+            <Badge variant="gold" className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider">
+              <Smartphone className="mr-1.5 size-3.5" /> Android Installation
+            </Badge>
+            <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
+              How to install APK on Android
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
+              Installing the standalone APK gives you instant updates and exclusive deals with no Google account needed.
+            </p>
+          </Reveal>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            {androidInstallSteps.map((step, idx) => (
+              <Reveal key={step.step} delay={idx * 0.1}>
+                <div className="relative flex h-full flex-col rounded-2xl border border-border/80 bg-card p-6 shadow-sm">
+                  <span className="font-display text-2xl font-bold text-gold">
+                    {step.step}
+                  </span>
+                  <h3 className="mt-3 text-base font-semibold text-foreground">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 flex-1 text-xs leading-relaxed text-muted-foreground">
+                    {step.description}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Button asChild size="lg" className="gap-2 px-8">
+              <a href={apkDownloadUrl} download="purplehaze.apk">
+                <ArrowDownToLine className="size-4" />
+                <span>Download APK for Android</span>
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="gap-2">
+              <a href={expoBuildUrl} target="_blank" rel="noopener noreferrer">
+                <span>View EAS Build Status</span>
+                <ExternalLink className="size-3.5 opacity-70" />
+              </a>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Features Grid */}
-      <section className="border-y border-border/60 bg-muted/30 py-16 md:py-24">
+      <section className="border-t border-border/60 bg-muted/20 py-16 md:py-24">
         <div className="container-page">
           <Reveal className="text-center">
             <Badge variant="gold" className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider">
               Mobile Exclusive
             </Badge>
             <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-              Why download the mobile app?
+              Everything you love, made faster
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
               Crafted specifically for diners in Biratnagar who love delicious food, swift delivery, and seamless service.
@@ -305,50 +452,8 @@ export default function DownloadPage() {
         </div>
       </section>
 
-      {/* Step by Step Install Guide */}
-      <section className="container-page py-16 md:py-24">
-        <Reveal className="text-center">
-          <Badge variant="outline" className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider">
-            Quick Setup
-          </Badge>
-          <h2 className="mt-3 font-display text-3xl font-semibold sm:text-4xl">
-            How to install on Android in 3 simple steps
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
-            Installing a direct APK takes less than a minute. Here is the easy walkthrough.
-          </p>
-        </Reveal>
-
-        <div className="mt-12 grid gap-8 md:grid-cols-3">
-          {installSteps.map((step, idx) => (
-            <Reveal key={step.step} delay={idx * 0.1}>
-              <div className="relative rounded-2xl border border-border/80 bg-card p-6 shadow-sm">
-                <span className="font-display text-3xl font-bold text-gold/80">
-                  {step.step}
-                </span>
-                <h3 className="mt-3 text-base font-semibold text-foreground">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  {step.description}
-                </p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-
-        <div className="mt-12 text-center">
-          <Button asChild size="lg" className="gap-2 px-8">
-            <a href={apkDownloadUrl} download="purplehaze.apk">
-              <ArrowDownToLine className="size-5" />
-              Download APK Now
-            </a>
-          </Button>
-        </div>
-      </section>
-
       {/* FAQ Section */}
-      <section className="border-t border-border/60 bg-muted/20 py-16 md:py-24">
+      <section className="border-t border-border/60 py-16 md:py-24">
         <div className="container-page max-w-3xl">
           <Reveal className="text-center">
             <div className="inline-flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">

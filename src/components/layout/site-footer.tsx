@@ -26,7 +26,7 @@ const exploreLinks = [
   ),
   { href: "/reservations", label: "Reservations" },
   { href: "/track", label: "Track an order" },
-  { href: "/download", label: "Download Android App (APK)" },
+  { href: "/download", label: "Download App (Android & iOS)" },
 ];
 
 const serviceLinks = [
@@ -233,8 +233,8 @@ export function SiteFooter() {
             <div className="mt-6 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3.5">
               <Smartphone className="size-5 text-gold shrink-0" />
               <div className="min-w-0 flex-1 text-xs">
-                <p className="font-semibold text-white">Get Purple Haze on Android</p>
-                <p className="text-white/60 text-[11px]">Direct APK install · Maya AI &amp; live GPS</p>
+                <p className="font-semibold text-white">Get Purple Haze Mobile App</p>
+                <p className="text-white/60 text-[11px]">Android APK &amp; iPhone · Maya AI &amp; live GPS</p>
               </div>
               <Link
                 href="/download"

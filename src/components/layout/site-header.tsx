@@ -433,13 +433,13 @@ export function SiteHeader() {
                       <Smartphone className="size-4" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-foreground">Purple Haze Android App</p>
-                      <p className="text-[11px] text-muted-foreground">Order with Maya AI &amp; live GPS</p>
+                      <p className="text-xs font-semibold text-foreground">Purple Haze Mobile App</p>
+                      <p className="text-[11px] text-muted-foreground">For Android &amp; iPhone (iOS)</p>
                     </div>
                   </div>
                   <Button asChild size="sm" variant="gold" className="mt-3 w-full gap-1.5 text-xs">
                     <Link href="/download" onClick={() => setMobileOpen(false)}>
-                      <ArrowDownToLine className="size-3.5" /> Download Android APK
+                      <ArrowDownToLine className="size-3.5" /> Get Mobile App
                     </Link>
                   </Button>
                 </div>

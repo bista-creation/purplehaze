@@ -620,7 +620,7 @@ export default async function HomePage() {
                 variant="gold"
                 className="rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em]"
               >
-                <Smartphone className="mr-1.5 size-3" /> Android App Available
+                <Smartphone className="mr-1.5 size-3" /> Android &amp; iPhone App
               </Badge>
               <h2 className="mt-4 font-display text-3xl font-semibold sm:text-4xl lg:text-5xl">
                 Order faster. Track live.
@@ -628,12 +628,12 @@ export default async function HomePage() {
                 <span className="text-gold italic">All in the mobile app.</span>
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
-                Get real-time GPS rider tracking from Airport Road to your door, talk to Maya AI for dish suggestions, and unlock app-exclusive treats with one tap.
+                Get real-time GPS rider tracking from Airport Road to your door, talk to Maya AI for dish suggestions, and unlock app-exclusive treats with one tap. Available for Android and iOS.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3.5">
                 <Button asChild variant="gold" size="lg" className="gap-2">
                   <Link href="/download">
-                    <ArrowDownToLine className="size-4" /> Download APK (Android)
+                    <ArrowDownToLine className="size-4" /> Download Android APK
                   </Link>
                 </Button>
                 <Button
@@ -642,7 +642,7 @@ export default async function HomePage() {
                   size="lg"
                   className="border-white/20 bg-white/5 text-white hover:bg-white/10"
                 >
-                  <Link href="/download">Learn more &amp; setup</Link>
+                  <Link href="/download#ios">Install on iPhone (iOS)</Link>
                 </Button>
               </div>
             </div>
@@ -654,7 +654,7 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold">Purple Haze App</p>
-                    <p className="text-xs text-white/60">Android v1.0.0 APK</p>
+                    <p className="text-xs text-white/60">Android &amp; iOS v1.0.0</p>
                   </div>
                 </div>
                 <div className="mt-4 space-y-2 text-xs text-white/80">
