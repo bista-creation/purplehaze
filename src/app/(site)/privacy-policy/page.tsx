@@ -26,6 +26,7 @@ const sections: LegalSection[] = [
     bullets: [
       "Account information: name, email address, phone number, password hash, profile photo and saved delivery addresses.",
       "Order information: items, prices, order type, delivery address, table number, notes, scheduled time, payment method and payment status.",
+      "Delivery and Rider GPS Location: When an order is actively out for delivery, real-time GPS coordinates (latitude and longitude) are gathered from the assigned rider's mobile device solely to display live transit progress to the customer and dispatch board. Speed, heading, and device motion data are stripped at ingestion. GPS coordinates are retained ephemerally in cache with a 120-second time-to-live (TTL) and are permanently purged the moment the delivery is completed, cancelled, or failed. Historical GPS routes and breadcrumbs are never stored in permanent database records.",
       "Booking information: name, contact details, reservation or event date, guest count, occasion, venue preference and notes.",
       "Messages and reviews: the content you submit, your name, contact details and moderation status.",
       "Technical information: IP address, browser type, basic request data and session timestamps used for security, rate limiting and fraud prevention.",
@@ -39,6 +40,7 @@ const sections: LegalSection[] = [
     ],
     bullets: [
       "To prepare, fulfil and communicate about food orders, payments, delivery, pickup and dine-in service.",
+      "To provide live delivery tracking to customers and kitchen dispatchers while orders are out for delivery.",
       "To manage reservations, event enquiries, contact messages, accessibility requests and complaints.",
       "To create and secure accounts, verify email addresses, reset passwords and prevent misuse.",
       "To send transactional messages such as order confirmations, status updates and booking replies.",
@@ -68,6 +70,7 @@ const sections: LegalSection[] = [
     bullets: [
       "Hosting, database, email delivery, image hosting, rate limiting and payment providers that process information on our behalf.",
       "Delivery riders, who receive the delivery address and contact number needed to complete an order.",
+      "Customers receiving an active delivery, who can see the approximate real-time GPS location of their assigned rider until the order is handed over.",
       "Google, if you choose Google sign-in, which provides your name, email address and profile image according to your Google settings.",
       "Government authorities or regulators where disclosure is required by applicable law, or where needed to protect the rights and safety of guests or staff.",
     ],
@@ -77,6 +80,8 @@ const sections: LegalSection[] = [
     body: [
       "Order, payment and booking records are kept for as long as needed to run the restaurant, handle refunds and disputes, and meet accounting or legal requirements.",
       "Account information is kept while your account is active. You can ask us to delete your account; some order records may be retained in a minimal form where required by law or for fraud prevention.",
+      "Ephemeral rider GPS coordinates are never permanently stored and are evicted immediately upon delivery completion or within 120 seconds of cessation of transit.",
+      "Delivery proof-of-delivery photos (where captured) are retained in private storage for up to 30 days for dispute resolution before scheduled automatic deletion.",
       "Contact messages, reviews and newsletter data are kept only as long as needed for the purpose they were collected, or until you ask for deletion where applicable.",
     ],
   },

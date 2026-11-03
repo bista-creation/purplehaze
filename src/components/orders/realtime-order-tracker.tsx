@@ -250,13 +250,14 @@ export function RealtimeOrderTracker({
               headers: token ? { "x-order-token": token } : {},
             });
             const trackTokenJson = await trackTokenRes.json();
-            if (trackTokenJson.enabled && trackTokenJson.token && trackTokenJson.channel) {
+            if (trackTokenJson.enabled && trackTokenJson.token && trackTokenJson.channel && realtimeClient) {
               realtimeClient
                 .channel(trackTokenJson.channel)
                 .on(
                   "broadcast",
                   { event: "rider.location" },
-                  ({ payload }: { payload?: { lat: number; lng: number; updatedAt: string } }) => {
+                  (msg: { payload?: { lat: number; lng: number; updatedAt: string }; [key: string]: unknown }) => {
+                    const payload = msg?.payload;
                     if (payload) {
                       setRiderLocation({
                         lat: payload.lat,
