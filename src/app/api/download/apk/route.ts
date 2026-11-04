@@ -6,7 +6,7 @@ const EAS_APK_DIRECT_URL =
 
 // Fallback EAS build overview page
 const EAS_BUILD_PAGE_URL =
-  "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/c8ad9dc1-2da0-4919-88cd-84dc009a718f";
+  "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/4cb25f18-b061-43d1-9be3-b7e253216b19";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
