@@ -26,6 +26,7 @@ export interface MenuDish {
   isVeg: boolean;
   isSpicy: boolean;
   isFeatured: boolean;
+  isAvailable?: boolean;
   prepTime: number;
   calories?: number | null;
   variants: MenuVariant[];

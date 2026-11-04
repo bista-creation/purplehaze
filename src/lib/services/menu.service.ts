@@ -74,6 +74,7 @@ export class MenuService {
             isVeg: dish.isVeg,
             isSpicy: dish.isSpicy,
             isFeatured: dish.isFeatured,
+            isAvailable: dish.isAvailable,
             prepTime: dish.prepTime,
             calories: dish.calories,
             variants: dish.variants.map((variant) => ({
@@ -125,6 +126,7 @@ export class MenuService {
           isVeg: dish.isVeg,
           isSpicy: dish.isSpicy,
           isFeatured: dish.isFeatured,
+            isAvailable: dish.isAvailable,
           prepTime: dish.prepTime,
           calories: dish.calories,
           variants: dish.variants.map((variant) => ({
@@ -173,6 +175,7 @@ export class MenuService {
       isVeg: dish.isVeg,
       isSpicy: dish.isSpicy,
       isFeatured: dish.isFeatured,
+            isAvailable: dish.isAvailable,
       prepTime: dish.prepTime,
       calories: dish.calories,
       variants: dish.variants.map((v) => ({
@@ -247,6 +250,7 @@ export class MenuService {
       isVeg: dish.isVeg,
       isSpicy: dish.isSpicy,
       isFeatured: dish.isFeatured,
+            isAvailable: dish.isAvailable,
       prepTime: dish.prepTime,
       variants: dish.variants,
       addOns: dish.addOns.map((a) => a.addOn),
