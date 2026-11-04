@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 // Direct standalone Android APK download artifact URL from EAS Build
 const EAS_APK_DIRECT_URL =
-  "https://expo.dev/artifacts/eas/P2yfP2tE8bxoabrZ-OEzUH3VljE_E_r2fTbwS2kkJ4s.apk";
+  "https://expo.dev/artifacts/eas/vB7W3ctKbP4-VL-mkh5cOox2BAFsY9YwGBIC-X26Gs4.apk";
 
 // Fallback EAS build overview page
 const EAS_BUILD_PAGE_URL =
