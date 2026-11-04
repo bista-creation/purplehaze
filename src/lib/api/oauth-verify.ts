@@ -23,9 +23,15 @@ export async function verifyGoogleIdToken(idToken: string): Promise<VerifiedSoci
       return null;
     }
 
-    const expectedClientId = process.env.GOOGLE_CLIENT_ID;
-    if (expectedClientId && data.aud !== expectedClientId) {
-      console.warn("Google ID token audience mismatch.");
+    const allowedClientIds = [
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_ANDROID_CLIENT_ID,
+      "731856766862-nd6rfig6r6862qtlujhk550knvtkm1na.apps.googleusercontent.com",
+      "731856766862-b1rg511ctdf3i5ia00mlimsmr245t8ke.apps.googleusercontent.com",
+    ].filter(Boolean) as string[];
+
+    if (allowedClientIds.length > 0 && !allowedClientIds.includes(data.aud)) {
+      console.warn("Google ID token audience mismatch:", data.aud);
       return null;
     }
 
