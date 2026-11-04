@@ -1,4 +1,5 @@
-import EventsPage, { metadata, revalidate } from "../events/page";
+import { permanentRedirect } from "next/navigation";
 
-export { metadata, revalidate };
-export default EventsPage;
+export default function VenuesRedirect() {
+  permanentRedirect("/events");
+}
