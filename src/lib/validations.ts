@@ -44,7 +44,17 @@ export const registerSchema = z
   .object({
     name: z.string().trim().min(2, "Enter your full name.").max(80),
     email: emailSchema,
-    phone: phoneSchema,
+    phone: z
+      .string()
+      .trim()
+      .max(20, "Phone number is too long.")
+      .optional()
+      .nullable()
+      .or(z.literal(""))
+      .refine(
+        (val) => !val || val.trim().length === 0 || (/^[+0-9()\-\s]+$/.test(val) && val.replace(/\D/g, "").length >= 7),
+        "Enter a valid phone number.",
+      ),
     password: passwordSchema,
     confirmPassword: z.string(),
     acceptTerms: z.literal(true, {

@@ -9,7 +9,7 @@ import type { AddressInput, ProfileInput, RegisterInput } from "@/lib/validation
 import type { Role } from "@/lib/constants";
 
 export class AuthService {
-  async registerUser(input: RegisterInput) {
+  async registerUser(input: RegisterInput, options?: { autoVerify?: boolean }) {
     const emailLower = input.email.toLowerCase().trim();
     const existing = await prisma.user.findUnique({
       where: { email: emailLower },
@@ -17,7 +17,7 @@ export class AuthService {
     });
 
     if (existing) {
-      if (!existing.emailVerified) {
+      if (!existing.emailVerified && !options?.autoVerify) {
         const rawToken = generateSecureToken(32);
         const tokenHash = hashToken(rawToken);
         const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -53,28 +53,32 @@ export class AuthService {
       data: {
         name: input.name.trim(),
         email: emailLower,
-        phone: input.phone.trim(),
+        phone: input.phone?.trim() ? input.phone.trim() : null,
         passwordHash,
         role: "CUSTOMER",
+        emailVerified: options?.autoVerify ? new Date() : null,
       },
     });
 
-    const rawToken = generateSecureToken(32);
-    const tokenHash = hashToken(rawToken);
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    let verifyUrl: string | undefined;
+    if (!options?.autoVerify) {
+      const rawToken = generateSecureToken(32);
+      const tokenHash = hashToken(rawToken);
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    await prisma.verificationToken.create({
-      data: {
-        identifier: emailLower,
-        token: tokenHash,
-        expires,
-      },
-    });
+      await prisma.verificationToken.create({
+        data: {
+          identifier: emailLower,
+          token: tokenHash,
+          expires,
+        },
+      });
 
-    const verifyUrl = `${SITE.url}/verify-email?email=${encodeURIComponent(
-      emailLower,
-    )}&token=${encodeURIComponent(rawToken)}`;
-    await sendVerificationEmail(emailLower, verifyUrl).catch(() => undefined);
+      verifyUrl = `${SITE.url}/verify-email?email=${encodeURIComponent(
+        emailLower,
+      )}&token=${encodeURIComponent(rawToken)}`;
+      await sendVerificationEmail(emailLower, verifyUrl).catch(() => undefined);
+    }
 
     await writeAuditLog({
       userId: user.id,
@@ -87,8 +91,10 @@ export class AuthService {
     return {
       success: true,
       userId: user.id,
-      requiresVerification: true,
-      message: "Account created! Please check your email to verify your address.",
+      requiresVerification: !options?.autoVerify,
+      message: options?.autoVerify
+        ? "Account created successfully."
+        : "Account created! Please check your email to verify your address.",
       devUrl: process.env.NODE_ENV !== "production" ? verifyUrl : undefined,
     };
   }
