@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { CANONICAL_VENUES } from "@/lib/venues-data";
 import type { MenuDish } from "@/types";
 
 export const getMenuCategories = cache(async () => {
@@ -117,14 +118,31 @@ export const getFeaturedDishes = cache(async (limit = 8) => {
 
 export const getPublicVenues = cache(async () => {
   try {
-    return await prisma.venue.findMany({
+    const venues = await prisma.venue.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
+    if (venues && venues.length > 0) {
+      return venues;
+    }
   } catch {
-    console.warn("Database offline in getPublicVenues; using empty fallback.");
-    return [];
+    console.warn("Database offline in getPublicVenues; using canonical fallback.");
   }
+  return CANONICAL_VENUES.map((v) => ({
+    id: v.id,
+    name: v.name,
+    slug: v.slug,
+    description: v.description,
+    longDescription: v.longDescription,
+    image: v.image,
+    capacity: v.capacity,
+    priceFrom: null,
+    features: JSON.stringify(v.features),
+    isActive: true,
+    sortOrder: v.sortOrder,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }));
 });
 
 export const getPublicGallery = cache(async () => {

@@ -752,58 +752,76 @@ async function main() {
 
   const venueSeeds = [
     {
-      name: "The Garden",
-      slug: "garden",
+      name: "Banquet Hall",
+      slug: "banquet-hall",
       description:
-        "An open-air garden for relaxed dinners, birthdays and evening celebrations under warm lights.",
+        "A grand indoor hall welcoming up to 300 guests for wedding receptions, milestone celebrations, and large corporate events.",
       longDescription:
-        "The garden is the heart of Purple Haze: leafy corners, string lights and space to spread out. Seating layouts and weather cover can be discussed with our events team. Capacity and package pricing are available on request.",
-      image: "/images/venues/garden.jpg",
-      capacity: null,
+        "Step into our spacious banquet hall, where generous staging, refined indoor acoustics, and welcoming hospitality come together. Whether you are planning an elaborate wedding reception or a prestigious company gala, our dedicated event staff coordinates seamless dining and celebration flows from welcome drinks to late evening toasts.",
+      image: "/images/venues/banquet.jpg",
+      capacity: 300,
       priceFrom: null,
       features: JSON.stringify([
-        "Open-air garden",
-        "Evening lighting",
-        "Flexible seating",
-        "Birthday & family dinners",
+        "Weddings & Receptions",
+        "Milestone Celebrations",
+        "Large Corporate Events",
+        "Staging & Dining Layouts",
       ]),
       sortOrder: 1,
     },
     {
-      name: "The Banquet Hall",
-      slug: "banquet-hall",
+      name: "Meeting Hall (100 Guests)",
+      slug: "meeting-hall-100",
       description:
-        "An indoor banquet space for receptions, weddings and larger family celebrations.",
+        "A dedicated professional hall for corporate meetings, seminars, workshops, and private gatherings for up to 100 guests.",
       longDescription:
-        "A flexible indoor hall for milestone occasions. Capacity, staging, décor and menu packages are planned with our team around your event. Photography and external suppliers can be coordinated in advance.",
-      image: "/images/venues/banquet.jpg",
-      capacity: null,
+        "Designed for productive focus and polished business presentations, this versatile hall accommodates up to 100 attendees in classroom, theater, or roundtable configurations. Ideal for regional conventions, training sessions, and executive retreats with effortless catering coordination.",
+      image: "/images/venues/meeting-hall.jpg",
+      capacity: 100,
       priceFrom: null,
       features: JSON.stringify([
-        "Indoor banquet space",
-        "Reception & wedding settings",
-        "Customisable layout",
-        "Events team support",
+        "Corporate Meetings",
+        "Seminars & Training",
+        "Interactive Workshops",
+        "Private Business Gatherings",
       ]),
       sortOrder: 2,
     },
     {
-      name: "The Meeting Room",
-      slug: "meeting-room",
+      name: "Meeting Hall (50 Guests)",
+      slug: "meeting-hall-50",
       description:
-        "A quieter room for team meetings, small conferences and private lunches.",
+        "An intimate meeting space ideally proportioned for smaller meetings, collaborative workshops, and intimate events of up to 50 guests.",
       longDescription:
-        "A practical meeting space for presentations, working sessions and corporate lunches. Day rates, equipment and catering can be arranged on request. Capacity and package pricing are confirmed with our team.",
-      image: "/images/venues/meeting-hall.jpg",
+        "Perfect when your gathering calls for privacy, collaboration, and personal connection. This compact hall provides an inviting setting for small seminars, strategy planning days, departmental workshops, or intimate family milestones.",
+      image: "/images/venues/mini-hall.jpg",
+      capacity: 50,
+      priceFrom: null,
+      features: JSON.stringify([
+        "Smaller Meetings",
+        "Collaborative Workshops",
+        "Intimate Private Events",
+        "Team Planning Sessions",
+      ]),
+      sortOrder: 3,
+    },
+    {
+      name: "Open Garden",
+      slug: "open-garden",
+      description:
+        "Our signature open-air garden setting surrounded by greenery and evening lights, perfect for weddings, outdoor celebrations, corporate gatherings, and music events.",
+      longDescription:
+        "Experience the vibrant charm of Purple Haze under the Biratnagar sky. The lush open garden offers a picturesque natural backdrop that transforms effortlessly from sunny afternoon ceremonies to enchanting evening receptions and live music performances.",
+      image: "/images/venues/garden-lawn.jpg",
       capacity: null,
       priceFrom: null,
       features: JSON.stringify([
-        "Private meeting space",
-        "Conference & seminar setup",
-        "Lunch and tea service",
-        "Equipment on request",
+        "Weddings & Receptions",
+        "Outdoor Celebrations",
+        "Corporate Gatherings",
+        "Live Music Events",
       ]),
-      sortOrder: 3,
+      sortOrder: 4,
     },
   ];
   const venues = [];
