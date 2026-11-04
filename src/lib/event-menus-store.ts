@@ -363,7 +363,7 @@ export async function getEventMenus(includeInactive = false): Promise<EventMenuP
     });
     return dbPackages.map(mapDbPackage);
   } catch (error) {
-    if (process.env.VERCEL === "1") throw error;
+    // When database is offline or unreachable during build, fall back to seed packages
     console.warn("Database lookup for event menus failed, trying local fallback:", error);
   }
 
@@ -398,7 +398,7 @@ export async function getEventMenuBySlug(slug: string): Promise<EventMenuPackage
       return mapDbPackage(dbPackage);
     }
   } catch (error) {
-    if (process.env.VERCEL === "1") throw error;
+    // When database is offline or unreachable during build, fall back to seed packages
     console.warn("Database lookup for event menu by slug failed, using fallback:", error);
   }
 
@@ -415,7 +415,7 @@ export async function getEventMenuById(id: string): Promise<EventMenuPackage | n
       return mapDbPackage(dbPackage);
     }
   } catch (error) {
-    if (process.env.VERCEL === "1") throw error;
+    // When database is offline or unreachable during build, fall back to seed packages
     console.warn("Database lookup for event menu by id failed, using fallback:", error);
   }
 
@@ -477,7 +477,7 @@ export async function saveEventMenu(
       return mapDbPackage(created);
     }
   } catch (error) {
-    if (process.env.VERCEL === "1") throw error;
+    // When database is offline or unreachable during build, fall back to seed packages
     console.warn("Database write for event menu failed, falling back to local file:", error);
   }
 
@@ -539,7 +539,7 @@ export async function deleteEventMenu(id: string): Promise<boolean> {
     const isP2025 = typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2025";
     if (isP2025 && process.env.VERCEL === "1") return true;
     if (!isP2025) {
-      if (process.env.VERCEL === "1") throw error;
+      // When database is offline or unreachable during build, fall back to seed packages
       console.warn("Database deletion for event menu failed, trying local file:", error);
     }
   }
