@@ -36,6 +36,7 @@
   --color-chart-5: var(--chart-5);
   --font-sans: var(--font-inter);
   --font-display: var(--font-playfair);
+  --font-dancing: var(--font-dancing);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -722,4 +723,9 @@ elevenlabs-convai {
   elevenlabs-convai {
     display: none !important;
   }
+}
+
+
+.font-script {
+  font-family: var(--font-dancing), cursive;
 }
