@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import {
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Clock3,
   Download,
   Search,
@@ -87,6 +89,7 @@ export default async function AdminOrdersPage({
     q?: string;
     page?: string;
     test?: string;
+    view?: string;
   }>;
 }) {
   await requireStaff("/admin/orders");
@@ -233,11 +236,23 @@ export default async function AdminOrdersPage({
     console.warn("Database offline in AdminOrdersPage; using empty orders queue.");
   }
 
+  // Determine active view: 'needs_action' vs 'all'
+  // When pending orders exist and view is unspecified, we guide operators to 'needs_action'
+  const activeView =
+    params.view === "needs_action"
+      ? "needs_action"
+      : params.view === "all"
+        ? "all"
+        : pendingCount > 0
+          ? "needs_action"
+          : "all";
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const countMap = new Map(counts.map((row) => [row.status, row._count._all]));
   const allCount = counts.reduce((sum, row) => sum + row._count._all, 0);
 
   function href(next: {
+    view?: string;
     status?: string;
     type?: string;
     q?: string;
@@ -245,10 +260,13 @@ export default async function AdminOrdersPage({
     test?: boolean;
   }) {
     const query = new URLSearchParams();
+    const nextView = next.view ?? activeView;
     const nextStatus = next.status ?? status;
     const nextType = next.type ?? type;
     const nextQ = next.q ?? q;
     const nextTest = next.test ?? includeTest;
+
+    if (nextView) query.set("view", nextView);
     if (nextStatus !== "ALL") query.set("status", nextStatus);
     if (nextType !== "ALL") query.set("type", nextType);
     if (nextQ) query.set("q", nextQ);
@@ -264,297 +282,353 @@ export default async function AdminOrdersPage({
   const exportHref = `/api/admin/reports/orders${exportQuery.toString() ? `?${exportQuery}` : ""}`;
 
   return (
-    <>
+    <div className="w-full max-w-full overflow-hidden">
       <AdminPageHeader
         eyebrow="Service floor"
         title="Orders"
-        description={`${allCount} orders all time · ${activeCount} active · ${pendingCount} awaiting acceptance. The live connection status is shown in the header.`}
+        description={`${allCount} orders all time · ${activeCount} active · ${pendingCount} awaiting acceptance.`}
         actions={
-          <>
-            <Button asChild variant="outline" size="sm">
-              <Link href={exportHref}>
-                <Download className="size-3.5" /> Export CSV
-              </Link>
-            </Button>
-          </>
+          <Button asChild variant="outline" size="sm">
+            <Link href={exportHref}>
+              <Download className="size-3.5" /> Export CSV
+            </Link>
+          </Button>
         }
       />
 
       <StaffLiveOrderListener />
 
-      <AdminCard className="mb-4 border-primary/25 p-4">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="flex items-center gap-2 font-display text-xl font-semibold">
-              <Timer className="size-5 text-primary" /> Live acceptance queue
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              Newest pending orders first. Review payment and service details
-              before accepting.
-            </p>
-          </div>
-          <Badge variant="gold" className="w-fit">
-            {pendingCount} pending
-          </Badge>
-        </div>
-
-        {queue.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-dashed border-border p-5 text-xs text-muted-foreground">
-            No pending orders. New orders will appear here.
-          </p>
-        ) : (
-          <ul className="mt-4 grid gap-3 xl:grid-cols-2">
-            {queue.map((order) => {
-              const payment = paymentPresentation(
-                order.paymentMethod,
-                order.paymentStatus,
-              );
-              const acceptance = evaluateOrderAcceptance(order);
-              const service = orderServiceSummary(order);
-              return (
-                <li
-                  key={order.id}
-                  className="rounded-2xl border border-border bg-background p-4 shadow-sm"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="font-display text-lg font-semibold text-primary hover:underline"
-                      >
-                        {order.orderNumber}
-                      </Link>
-                      <p className="mt-0.5 text-xs font-medium">
-                        {order.customerName}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={waitingTone(order.createdAt)}
-                      className="gap-1"
-                    >
-                      <Clock3 className="size-3" />
-                      {waitingLabel(order.createdAt)}
-                    </Badge>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    <Badge variant="violet">
-                      {ORDER_TYPE_LABELS[order.type as OrderType] ?? order.type}
-                    </Badge>
-                    <Badge
-                      variant={
-                        payment.tone === "muted" ? "muted" : payment.tone
-                      }
-                    >
-                      {payment.label}
-                    </Badge>
-                    <Badge variant="outline">
-                      {paymentMethodLabel(order.paymentMethod)}
-                    </Badge>
-                    {order.isTest ? <Badge variant="amber">Test</Badge> : null}
-                  </div>
-
-                  <p className="mt-3 text-xs font-medium">{service}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                    <span className="font-semibold text-foreground">
-                      {formatNPR(order.total)}
-                    </span>
-                    <span>·</span>
-                    <span>{formatDateTime(order.createdAt)}</span>
-                    {order.scheduledFor ? (
-                      <>
-                        <span>·</span>
-                        <span>
-                          Scheduled {formatDateTime(order.scheduledFor)}
-                        </span>
-                      </>
-                    ) : null}
-                  </div>
-                  {order.notes ? (
-                    <p className="mt-2 line-clamp-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] leading-5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-                      “{order.notes}”
-                    </p>
-                  ) : null}
-                  {!acceptance.allowed ? (
-                    <p className="mt-2 text-[11px] leading-5 text-amber-700 dark:text-amber-300">
-                      {acceptance.reason}
-                    </p>
-                  ) : null}
-                  <div className="mt-3">
-                    <StaffOrderQuickActions
-                      orderId={order.id}
-                      orderNumber={order.orderNumber}
-                      status={order.status}
-                      type={order.type}
-                      customerName={order.customerName}
-                      customerPhone={order.customerPhone}
-                      allowedAccept={acceptance.allowed}
-                      blockedReason={
-                        acceptance.allowed ? undefined : acceptance.reason
-                      }
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {pendingCount > queue.length ? (
-          <p className="mt-3 text-[11px] text-muted-foreground">
-            Showing the newest {queue.length} of {pendingCount} pending orders.{" "}
-            <Link
-              href={href({ status: "PENDING", page: 1 })}
-              className="font-semibold text-primary hover:underline"
-            >
-              View all pending
-            </Link>
-          </p>
-        ) : null}
-      </AdminCard>
-
-      <AdminCard className="mb-4 p-4">
-        <form
-          action="/admin/orders"
-          method="GET"
-          className="flex flex-col gap-3 lg:flex-row lg:items-end"
+      {/* Primary View Switcher: Prevents Pending Duplication on Mobile */}
+      <div className="mb-4 flex items-center gap-2 border-b border-border/70 pb-3">
+        <Link
+          href={href({ view: "needs_action", page: 1 })}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            activeView === "needs_action"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
         >
-          {includeTest ? <input type="hidden" name="test" value="1" /> : null}
-          <div className="min-w-0 flex-1">
-            <label
-              htmlFor="order-search"
-              className="mb-1.5 block text-xs font-semibold"
-            >
-              Search
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="order-search"
-                name="q"
-                defaultValue={q}
-                placeholder="Order number, customer or phone"
-                className="pl-9"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:flex">
-            <div>
-              <label
-                htmlFor="order-status-filter"
-                className="mb-1.5 block text-xs font-semibold"
-              >
-                Status
-              </label>
-              <select
-                id="order-status-filter"
-                name="status"
-                defaultValue={status}
-                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-              >
-                <option value="ALL">All statuses</option>
-                {ORDER_STATUSES.map((item) => (
-                  <option key={item} value={item}>
-                    {STATUS_META[item].label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label
-                htmlFor="order-type-filter"
-                className="mb-1.5 block text-xs font-semibold"
-              >
-                Type
-              </label>
-              <select
-                id="order-type-filter"
-                name="type"
-                defaultValue={type}
-                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
-              >
-                <option value="ALL">All types</option>
-                <option value="DELIVERY">Delivery</option>
-                <option value="PICKUP">Pickup</option>
-                <option value="DINE_IN">Dine-in</option>
-              </select>
-            </div>
-          </div>
-          <Button type="submit" variant="outline">
-            <SlidersHorizontal className="size-4" /> Apply
-          </Button>
-        </form>
-
-        <div className="mt-4 flex flex-wrap items-center gap-1.5">
-          <Link
-            href={href({ status: "ALL", page: 1 })}
-            className={cn(
-              "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
-              status === "ALL"
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background hover:border-primary/40",
-            )}
-          >
-            All <span className="opacity-70">{allCount}</span>
-          </Link>
-          {ORDER_STATUSES.map((item) => (
-            <Link
-              key={item}
-              href={href({ status: item, page: 1 })}
+          <Timer className="size-3.5" />
+          <span>Needs Action</span>
+          {pendingCount > 0 ? (
+            <span
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
-                status === item
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background hover:border-primary/40",
+                "rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none",
+                activeView === "needs_action"
+                  ? "bg-white text-primary"
+                  : "bg-amber-500 text-white",
               )}
             >
-              {STATUS_META[item].label}{" "}
-              <span className="opacity-70">{countMap.get(item) ?? 0}</span>
-            </Link>
-          ))}
-          {testControlsVisible ? (
-            <Link
-              href={href({ test: !includeTest, page: 1 })}
-              className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
-            >
-              <TestTube2 className="size-3.5" />
-              {includeTest ? "Hide test orders" : "Show test orders"}
-            </Link>
+              {pendingCount}
+            </span>
           ) : null}
-        </div>
-        {includeTest ? (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
-            Test orders are visible for local development. They are excluded
-            from dashboard metrics, reports and CSV exports.
-          </p>
-        ) : null}
-      </AdminCard>
+        </Link>
 
-      {orders.length === 0 ? (
-        <AdminEmpty
-          title="No orders match"
-          description="Try clearing the filters or search with a different order number or phone."
+        <Link
+          href={href({ view: "all", page: 1 })}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            activeView === "all"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
         >
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/orders">Clear filters</Link>
-          </Button>
-        </AdminEmpty>
-      ) : (
-        <AdminCard className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Placed</TableHead>
-                  <TableHead className="text-right">Quick Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          <ClipboardList className="size-3.5" />
+          <span>All Orders</span>
+          <span
+            className={cn(
+              "rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none",
+              activeView === "all"
+                ? "bg-white/20 text-white"
+                : "bg-muted text-muted-foreground",
+            )}
+          >
+            {allCount}
+          </span>
+        </Link>
+      </div>
+
+      {/* VIEW 1: NEEDS ACTION (Live Acceptance Queue) */}
+      {activeView === "needs_action" ? (
+        <AdminCard className="mb-4 border-primary/25 p-4 sm:p-5">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 font-display text-lg font-semibold sm:text-xl">
+                <Timer className="size-5 text-primary" /> Live acceptance queue
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Newest pending orders first. Review payment and address before accepting.
+              </p>
+            </div>
+            <Badge variant="gold" className="w-fit">
+              {pendingCount} pending
+            </Badge>
+          </div>
+
+          {queue.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center">
+              <CheckCircle2 className="mx-auto size-8 text-emerald-500" />
+              <p className="mt-2 font-display text-base font-semibold">Kitchen queue is clear</p>
+              <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+                No orders are currently waiting for acceptance. New customer orders will chime here in real time.
+              </p>
+              <Button asChild variant="outline" size="sm" className="mt-4">
+                <Link href={href({ view: "all" })}>Browse all orders</Link>
+              </Button>
+            </div>
+          ) : (
+            <ul className="mt-4 grid gap-3 lg:grid-cols-2">
+              {queue.map((order) => {
+                const payment = paymentPresentation(
+                  order.paymentMethod,
+                  order.paymentStatus,
+                );
+                const acceptance = evaluateOrderAcceptance(order);
+                const service = orderServiceSummary(order);
+                return (
+                  <li
+                    key={order.id}
+                    className="rounded-2xl border border-border bg-background p-4 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="font-display text-lg font-semibold text-primary hover:underline"
+                        >
+                          {order.orderNumber}
+                        </Link>
+                        <p className="mt-0.5 text-xs font-medium">
+                          {order.customerName} ·{" "}
+                          <a
+                            href={`tel:${order.customerPhone}`}
+                            className="text-primary hover:underline"
+                          >
+                            {order.customerPhone}
+                          </a>
+                        </p>
+                      </div>
+                      <Badge
+                        variant={waitingTone(order.createdAt)}
+                        className="gap-1"
+                      >
+                        <Clock3 className="size-3" />
+                        {waitingLabel(order.createdAt)}
+                      </Badge>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      <Badge variant="violet">
+                        {ORDER_TYPE_LABELS[order.type as OrderType] ?? order.type}
+                      </Badge>
+                      <Badge
+                        variant={
+                          payment.tone === "muted" ? "muted" : payment.tone
+                        }
+                      >
+                        {payment.label}
+                      </Badge>
+                      <Badge variant="outline">
+                        {paymentMethodLabel(order.paymentMethod)}
+                      </Badge>
+                      {order.isTest ? <Badge variant="amber">Test</Badge> : null}
+                    </div>
+
+                    <p className="mt-3 text-xs font-medium">{service}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="font-semibold text-foreground">
+                        {formatNPR(order.total)}
+                      </span>
+                      <span>·</span>
+                      <span>{formatDateTime(order.createdAt)}</span>
+                      {order.scheduledFor ? (
+                        <>
+                          <span>·</span>
+                          <span>
+                            Scheduled {formatDateTime(order.scheduledFor)}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                    {order.notes ? (
+                      <p className="mt-2 line-clamp-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] leading-5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+                        “{order.notes}”
+                      </p>
+                    ) : null}
+                    {!acceptance.allowed ? (
+                      <p className="mt-2 text-[11px] leading-5 text-amber-700 dark:text-amber-300">
+                        {acceptance.reason}
+                      </p>
+                    ) : null}
+                    <div className="mt-3">
+                      <StaffOrderQuickActions
+                        orderId={order.id}
+                        orderNumber={order.orderNumber}
+                        status={order.status}
+                        type={order.type}
+                        customerName={order.customerName}
+                        customerPhone={order.customerPhone}
+                        allowedAccept={acceptance.allowed}
+                        blockedReason={
+                          acceptance.allowed ? undefined : acceptance.reason
+                        }
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {pendingCount > queue.length ? (
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Showing the newest {queue.length} of {pendingCount} pending orders.{" "}
+              <Link
+                href={href({ view: "all", status: "PENDING", page: 1 })}
+                className="font-semibold text-primary hover:underline"
+              >
+                View all pending in orders list
+              </Link>
+            </p>
+          ) : null}
+        </AdminCard>
+      ) : null}
+
+      {/* VIEW 2: ALL ORDERS (Search, Filters & Master List) */}
+      {activeView === "all" ? (
+        <>
+          {/* Compact & Reachable Search & Filters */}
+          <AdminCard className="mb-4 p-3.5 sm:p-4">
+            <form
+              action="/admin/orders"
+              method="GET"
+              className="flex flex-col gap-2.5 sm:gap-3 lg:flex-row lg:items-end"
+            >
+              <input type="hidden" name="view" value="all" />
+              {includeTest ? <input type="hidden" name="test" value="1" /> : null}
+              <div className="min-w-0 flex-1">
+                <label
+                  htmlFor="order-search"
+                  className="mb-1 block text-xs font-semibold text-muted-foreground"
+                >
+                  Search
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="order-search"
+                    name="q"
+                    defaultValue={q}
+                    placeholder="Order number, customer or phone"
+                    className="h-9.5 pl-9 text-xs sm:text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+                <div>
+                  <label
+                    htmlFor="order-status-filter"
+                    className="mb-1 block text-xs font-semibold text-muted-foreground"
+                  >
+                    Status
+                  </label>
+                  <select
+                    id="order-status-filter"
+                    name="status"
+                    defaultValue={status}
+                    className="h-9.5 w-full rounded-lg border border-input bg-background px-2.5 text-xs sm:text-sm"
+                  >
+                    <option value="ALL">All statuses</option>
+                    {ORDER_STATUSES.map((item) => (
+                      <option key={item} value={item}>
+                        {STATUS_META[item].label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="order-type-filter"
+                    className="mb-1 block text-xs font-semibold text-muted-foreground"
+                  >
+                    Type
+                  </label>
+                  <select
+                    id="order-type-filter"
+                    name="type"
+                    defaultValue={type}
+                    className="h-9.5 w-full rounded-lg border border-input bg-background px-2.5 text-xs sm:text-sm"
+                  >
+                    <option value="ALL">All types</option>
+                    <option value="DELIVERY">Delivery</option>
+                    <option value="PICKUP">Pickup</option>
+                    <option value="DINE_IN">Dine-in</option>
+                  </select>
+                </div>
+              </div>
+              <Button type="submit" variant="outline" size="sm" className="h-9.5 shrink-0">
+                <SlidersHorizontal className="size-3.5" /> Apply
+              </Button>
+            </form>
+
+            {/* Smooth Horizontal Scrollable Filter Chips: Eliminates Mobile Overflow */}
+            <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 -mx-1 px-1">
+              <Link
+                href={href({ status: "ALL", page: 1 })}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1 text-[11px] font-semibold transition",
+                  status === "ALL"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background hover:border-primary/40",
+                )}
+              >
+                All <span className="opacity-70">{allCount}</span>
+              </Link>
+              {ORDER_STATUSES.map((item) => (
+                <Link
+                  key={item}
+                  href={href({ status: item, page: 1 })}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1 text-[11px] font-semibold transition",
+                    status === item
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:border-primary/40",
+                  )}
+                >
+                  {STATUS_META[item].label}{" "}
+                  <span className="opacity-70">{countMap.get(item) ?? 0}</span>
+                </Link>
+              ))}
+              {testControlsVisible ? (
+                <Link
+                  href={href({ test: !includeTest, page: 1 })}
+                  className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-dashed border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+                >
+                  <TestTube2 className="size-3" />
+                  {includeTest ? "Hide test" : "Test orders"}
+                </Link>
+              ) : null}
+            </div>
+            {includeTest ? (
+              <p className="mt-2.5 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
+                Test orders are visible for local development. They are excluded from dashboard metrics and exports.
+              </p>
+            ) : null}
+          </AdminCard>
+
+          {orders.length === 0 ? (
+            <AdminEmpty
+              title="No orders match"
+              description="Try clearing the filters or search with a different order number or phone."
+            >
+              <Button asChild variant="outline" size="sm">
+                <Link href={href({ status: "ALL", type: "ALL", q: "" })}>Clear filters</Link>
+              </Button>
+            </AdminEmpty>
+          ) : (
+            <>
+              {/* MOBILE PHONE ORDER CARDS (< md): Highly readable, zero horizontal overflow */}
+              <div className="space-y-3 md:hidden">
                 {orders.map((order) => {
                   const payment = paymentPresentation(
                     order.paymentMethod,
@@ -562,59 +636,72 @@ export default async function AdminOrdersPage({
                   );
                   const acceptance = evaluateOrderAcceptance(order);
                   return (
-                    <TableRow key={order.id}>
-                      <TableCell>
-                        <Link
-                          href={`/admin/orders/${order.id}`}
-                          className="font-semibold text-primary hover:underline"
-                        >
-                          {order.orderNumber}
-                        </Link>
-                        {order.isTest ? (
-                          <p className="mt-1">
-                            <Badge variant="amber" className="text-[9px]">
-                              Test
-                            </Badge>
+                    <div
+                      key={order.id}
+                      className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm"
+                    >
+                      {/* Top: Order number, time, and status badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <Link
+                            href={`/admin/orders/${order.id}`}
+                            className="font-display text-base font-bold text-primary hover:underline"
+                          >
+                            {order.orderNumber}
+                          </Link>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {formatDateTime(order.createdAt)}
                           </p>
-                        ) : null}
-                        {order.scheduledFor ? (
-                          <p className="text-[10px] text-muted-foreground">
-                            Scheduled {formatDateTime(order.scheduledFor)}
+                        </div>
+                        <StatusBadge status={order.status} />
+                      </div>
+
+                      {/* Customer details & Total amount */}
+                      <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-2.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-foreground">
+                            {order.customerName}
                           </p>
-                        ) : null}
-                      </TableCell>
-                      <TableCell>
-                        <p className="font-medium">{order.customerName}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {order.customerPhone}
+                          <a
+                            href={`tel:${order.customerPhone}`}
+                            className="mt-0.5 inline-block text-[11px] text-primary hover:underline"
+                          >
+                            {order.customerPhone}
+                          </a>
+                        </div>
+                        <p className="text-right font-display text-base font-bold text-foreground">
+                          {formatNPR(order.total)}
                         </p>
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {ORDER_TYPE_LABELS[order.type as OrderType] ??
-                          order.type}
-                      </TableCell>
-                      <TableCell>
+                      </div>
+
+                      {/* Fulfillment, payment and test badges */}
+                      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                        <Badge variant="violet" className="text-[10px]">
+                          {ORDER_TYPE_LABELS[order.type as OrderType] ?? order.type}
+                        </Badge>
                         <Badge
-                          variant={
-                            payment.tone === "muted" ? "muted" : payment.tone
-                          }
+                          variant={payment.tone === "muted" ? "muted" : payment.tone}
+                          className="text-[10px]"
                         >
                           {payment.label}
                         </Badge>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
+                        <Badge variant="outline" className="text-[10px]">
                           {paymentMethodLabel(order.paymentMethod)}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={order.status} />
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatNPR(order.total)}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-[11px] text-muted-foreground">
-                        {formatDateTime(order.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
+                        </Badge>
+                        {order.isTest ? (
+                          <Badge variant="amber" className="text-[9px]">
+                            Test
+                          </Badge>
+                        ) : null}
+                        {order.scheduledFor ? (
+                          <span className="text-[10px] text-muted-foreground">
+                            Sched: {formatDateTime(order.scheduledFor)}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {/* Contextual Next Valid Action */}
+                      <div className="mt-3 border-t border-border/50 pt-3">
                         <StaffOrderQuickActions
                           orderId={order.id}
                           orderNumber={order.orderNumber}
@@ -627,47 +714,146 @@ export default async function AdminOrdersPage({
                             acceptance.allowed ? undefined : acceptance.reason
                           }
                         />
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
-          </div>
-        </AdminCard>
-      )}
+              </div>
 
-      {totalPages > 1 ? (
-        <div className="mt-5 flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            Page {page} of {totalPages} · {total} orders
-          </p>
-          <div className="flex gap-2">
-            <Button
-              asChild
-              variant="outline"
-              size="icon"
-              className={page <= 1 ? "pointer-events-none opacity-50" : ""}
-            >
-              <Link href={href({ page: page - 1 })} aria-label="Previous page">
-                <ChevronLeft className="size-4" />
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="icon"
-              className={
-                page >= totalPages ? "pointer-events-none opacity-50" : ""
-              }
-            >
-              <Link href={href({ page: page + 1 })} aria-label="Next page">
-                <ChevronRight className="size-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
+              {/* DESKTOP TABLE VIEW (>= md): Preserves full high-density desktop tabular layout */}
+              <AdminCard className="hidden overflow-hidden md:block">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Payment</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead>Placed</TableHead>
+                        <TableHead className="text-right">Quick Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {orders.map((order) => {
+                        const payment = paymentPresentation(
+                          order.paymentMethod,
+                          order.paymentStatus,
+                        );
+                        const acceptance = evaluateOrderAcceptance(order);
+                        return (
+                          <TableRow key={order.id}>
+                            <TableCell>
+                              <Link
+                                href={`/admin/orders/${order.id}`}
+                                className="font-semibold text-primary hover:underline"
+                              >
+                                {order.orderNumber}
+                              </Link>
+                              {order.isTest ? (
+                                <p className="mt-1">
+                                  <Badge variant="amber" className="text-[9px]">
+                                    Test
+                                  </Badge>
+                                </p>
+                              ) : null}
+                              {order.scheduledFor ? (
+                                <p className="text-[10px] text-muted-foreground">
+                                  Scheduled {formatDateTime(order.scheduledFor)}
+                                </p>
+                              ) : null}
+                            </TableCell>
+                            <TableCell>
+                              <p className="font-medium">{order.customerName}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {order.customerPhone}
+                              </p>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {ORDER_TYPE_LABELS[order.type as OrderType] ??
+                                order.type}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  payment.tone === "muted" ? "muted" : payment.tone
+                                }
+                              >
+                                {payment.label}
+                              </Badge>
+                              <p className="mt-1 text-[10px] text-muted-foreground">
+                                {paymentMethodLabel(order.paymentMethod)}
+                              </p>
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge status={order.status} />
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {formatNPR(order.total)}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-[11px] text-muted-foreground">
+                              {formatDateTime(order.createdAt)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <StaffOrderQuickActions
+                                orderId={order.id}
+                                orderNumber={order.orderNumber}
+                                status={order.status}
+                                type={order.type}
+                                customerName={order.customerName}
+                                customerPhone={order.customerPhone}
+                                allowedAccept={acceptance.allowed}
+                                blockedReason={
+                                  acceptance.allowed ? undefined : acceptance.reason
+                                }
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </AdminCard>
+            </>
+          )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 ? (
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Page {page} of {totalPages} · {total} orders
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="icon"
+                  className={page <= 1 ? "pointer-events-none opacity-50" : ""}
+                >
+                  <Link href={href({ page: page - 1 })} aria-label="Previous page">
+                    <ChevronLeft className="size-4" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="icon"
+                  className={
+                    page >= totalPages ? "pointer-events-none opacity-50" : ""
+                  }
+                >
+                  <Link href={href({ page: page + 1 })} aria-label="Next page">
+                    <ChevronRight className="size-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </>
       ) : null}
-    </>
+    </div>
   );
 }

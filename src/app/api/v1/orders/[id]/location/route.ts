@@ -34,9 +34,10 @@ export async function GET(
     return jsonError("NOT_FOUND", "Order not found", 404);
   }
 
-  // Authorization check
+  // Authorization check: User session or matching public guest token (via header or query)
   const isOwner = user && (user.role === "ADMIN" || user.role === "STAFF" || order.userId === user.id);
-  const guestToken = req.headers.get("x-order-token");
+  const guestToken =
+    req.headers.get("x-order-token") || req.nextUrl.searchParams.get("token");
   const isAuthorizedGuest = Boolean(guestToken && order.publicToken && guestToken === order.publicToken);
 
   if (!isOwner && !isAuthorizedGuest) {
