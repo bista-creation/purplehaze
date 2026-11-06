@@ -288,12 +288,12 @@ export default async function HomePage() {
             </Button>
           </Reveal>
         </div>
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
           {displayCategories.map((category, index) => (
             <Reveal key={category.id} delay={index * 0.07}>
               <Link
                 href={`/menu?category=${category.slug}`}
-                className="group relative block aspect-[3/4] overflow-hidden rounded-2xl bg-ink"
+                className="group relative block aspect-square overflow-hidden rounded-2xl bg-ink sm:aspect-[3/4]"
               >
                 <SmartImage
                   src={category.image}
@@ -307,13 +307,13 @@ export default async function HomePage() {
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">
                     {category.dishes.length} dishes
                   </p>
-                  <h3 className="mt-1 font-display text-2xl font-semibold text-white">
+                  <h3 className="mt-1 font-display text-lg font-semibold text-white sm:text-2xl">
                     {category.name}
                   </h3>
-                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/55">
+                  <p className="mt-1 hidden line-clamp-2 text-xs leading-5 text-white/55 sm:block">
                     {category.description}
                   </p>
-                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-white/80 transition group-hover:text-gold">
+                  <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-white/80 transition group-hover:text-gold sm:mt-4 sm:text-xs">
                     Browse {category.name.toLowerCase()}{" "}
                     <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
                   </span>

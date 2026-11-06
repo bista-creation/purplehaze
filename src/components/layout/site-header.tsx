@@ -6,8 +6,10 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   ArrowDownToLine,
+  ArrowRight,
   CalendarDays,
   ChevronDown,
+  ChevronRight,
   Clock,
   LayoutDashboard,
   LogIn,
@@ -21,6 +23,7 @@ import {
   Smartphone,
   UserPlus,
   UserRound,
+  UtensilsCrossed,
 } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -62,8 +65,29 @@ export function SiteHeader() {
   // rendering. Normalize it so the active-link markup matches on the server
   // and first client render.
   const pathname = usePathname() || "/";
+  const routeGroup = PUBLIC_NAV.find((item) =>
+    item.children?.some((child) =>
+      child.href === "/" ? pathname === "/" : pathname.startsWith(child.href),
+    ),
+  )?.label;
   const { data: session, status } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpenState, setDesktopOpenState] = useState<{
+    pathname: string;
+    group: string | null;
+  }>({ pathname, group: null });
+  const desktopOpenGroup =
+    desktopOpenState.pathname === pathname ? desktopOpenState.group : null;
+  const setDesktopOpenGroup = (group: string | null) =>
+    setDesktopOpenState({ pathname, group });
+  const [mobileExpandedState, setMobileExpandedState] = useState<{
+    pathname: string;
+    group: string | null;
+  }>({ pathname, group: routeGroup ?? "Menu" });
+  const mobileExpandedGroup =
+    mobileExpandedState.pathname === pathname
+      ? mobileExpandedState.group
+      : routeGroup ?? "Menu";
   const mounted = useMounted();
   const items = useCartStore((state) => state.items);
   const openCart = useCartStore((state) => state.openCart);
@@ -77,7 +101,7 @@ export function SiteHeader() {
     await signOut({ callbackUrl: "/" });
   };
 
-    const isActive = (href: string) =>
+  const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   const isItemActive = (item: NavItem) => {
@@ -137,9 +161,24 @@ export function SiteHeader() {
               const active = isItemActive(item);
               if (item.children) {
                 return (
-                  <li key={item.label} className="group relative">
+                  <li
+                    key={item.label}
+                    className="relative"
+                    onMouseEnter={() => setDesktopOpenGroup(item.label)}
+                    onMouseLeave={() => setDesktopOpenGroup(null)}
+                    onFocusCapture={() => setDesktopOpenGroup(item.label)}
+                    onBlurCapture={(event) => {
+                      if (
+                        !(event.relatedTarget instanceof Node) ||
+                        !event.currentTarget.contains(event.relatedTarget)
+                      ) {
+                        setDesktopOpenGroup(null);
+                      }
+                    }}
+                  >
                     <Link
                       href={item.href}
+                      onClick={() => setDesktopOpenGroup(null)}
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "relative flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[15px] font-medium transition-colors hover:bg-secondary/70 hover:text-primary focus-visible:outline-hidden",
@@ -147,21 +186,35 @@ export function SiteHeader() {
                       )}
                     >
                       {item.label}
-                      <ChevronDown className="size-3.5 opacity-60 transition-transform duration-200 group-hover:rotate-180 group-focus-within:rotate-180" />
+                      <ChevronDown
+                        className={cn(
+                          "size-3.5 opacity-60 transition-transform duration-200",
+                          desktopOpenGroup === item.label && "rotate-180",
+                        )}
+                      />
                       {active ? (
                         <span className="absolute inset-x-3.5 -bottom-0.5 h-0.5 rounded-full bg-gold" />
                       ) : null}
                     </Link>
 
                     {/* Hover dropdown popup */}
-                    <div className="invisible absolute left-0 top-full z-50 pt-2 opacity-0 pointer-events-none transition-all duration-150 ease-out group-hover:visible group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
-                      <div className="w-56 min-w-max rounded-2xl border border-border/80 bg-card/95 p-1.5 shadow-xl backdrop-blur-md">
+                    <div
+                      className={cn(
+                        "absolute left-0 top-full z-50 pt-2 transition-all duration-150 ease-out",
+                        desktopOpenGroup === item.label
+                          ? "visible translate-y-0 opacity-100"
+                          : "invisible pointer-events-none translate-y-1 opacity-0",
+                      )}
+                    >
+                      <div className="w-60 min-w-max rounded-2xl border border-border/80 bg-card/98 p-1.5 shadow-xl shadow-ink/10 backdrop-blur-md">
                         {item.children.map((sub) => {
                           const subActive = isActive(sub.href);
                           return (
                             <Link
                               key={sub.href}
                               href={sub.href}
+                              onClick={() => setDesktopOpenGroup(null)}
+                              aria-current={subActive ? "page" : undefined}
                               className={cn(
                                 "flex items-center rounded-xl px-3.5 py-2.5 text-[15px] font-medium transition-colors hover:bg-secondary/80 hover:text-primary",
                                 subActive
@@ -251,8 +304,8 @@ export function SiteHeader() {
                 <Menu className="size-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent className="flex flex-col overflow-y-auto">
-              <SheetHeader>
+            <SheetContent className="flex w-[min(90vw,24rem)] max-w-none flex-col overflow-y-auto border-l border-primary/10 bg-background/95 p-0 shadow-2xl backdrop-blur-xl">
+              <SheetHeader className="border-b border-border/70 bg-gradient-to-br from-secondary/70 via-background to-gold/10 pb-5 pt-7">
                 <SheetTitle asChild>
                   <Logo />
                 </SheetTitle>
@@ -363,34 +416,85 @@ export function SiteHeader() {
 
               <nav
                 aria-label="Mobile navigation"
-                className="flex flex-1 flex-col px-4 pt-3"
+                className="flex flex-1 flex-col px-5 pb-32 pt-4"
               >
                 {PUBLIC_NAV.map((item) => {
                   const active = isItemActive(item);
                   if (item.children) {
                     return (
-                      <div key={item.label} className="my-1.5 space-y-1">
-                        <div className="px-4 pt-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                          {item.label}
+                      <div key={item.label} className="my-1.5">
+                        <button
+                          type="button"
+                          aria-expanded={mobileExpandedGroup === item.label}
+                          aria-controls={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                          onClick={() =>
+                            setMobileExpandedState({
+                              pathname,
+                              group:
+                                mobileExpandedGroup === item.label
+                                  ? null
+                                  : item.label,
+                            })
+                          }
+                          className={cn(
+                            "flex w-full items-center justify-between rounded-xl px-3.5 py-3 text-[15px] font-semibold transition-colors",
+                            active
+                              ? "bg-secondary/70 text-primary"
+                              : "text-foreground hover:bg-muted",
+                          )}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            {item.label}
+                            {active ? (
+                              <span className="size-1.5 rounded-full bg-gold" />
+                            ) : null}
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              "size-4 text-muted-foreground transition-transform duration-200",
+                              mobileExpandedGroup === item.label && "rotate-180",
+                            )}
+                          />
+                        </button>
+                        <div
+                          id={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                          hidden={mobileExpandedGroup !== item.label}
+                          className="mt-1 space-y-1 border-l border-border/70 pl-3"
+                        >
+                          {item.children.map((sub) => {
+                            const subActive = isActive(sub.href);
+                            return (
+                              <Link
+                                key={sub.href}
+                                href={sub.href}
+                                onClick={() => setMobileOpen(false)}
+                                aria-current={subActive ? "page" : undefined}
+                                className={cn(
+                                  "group flex items-center justify-between rounded-xl px-3.5 py-3 text-sm font-medium transition-colors",
+                                  sub.href === "/menu"
+                                    ? subActive
+                                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
+                                      : "bg-secondary/65 text-foreground hover:bg-secondary"
+                                    : subActive
+                                      ? "bg-secondary text-primary font-semibold"
+                                      : "text-foreground/80 hover:bg-muted",
+                                )}
+                              >
+                                <span className="flex items-center gap-2.5">
+                                  {sub.href === "/menu" ? (
+                                    <UtensilsCrossed className="size-4" />
+                                  ) : null}
+                                  {sub.label}
+                                </span>
+                                {sub.href === "/menu" ? (
+                                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                                ) : (
+                                  <ChevronRight className="size-4 text-muted-foreground/60" />
+                                )}
+                              </Link>
+                            );
+                          })}
                         </div>
-                        {item.children.map((sub) => {
-                          const subActive = isActive(sub.href);
-                          return (
-                            <Link
-                              key={sub.href}
-                              href={sub.href}
-                              onClick={() => setMobileOpen(false)}
-                              className={cn(
-                                "flex items-center rounded-xl px-4 py-2.5 text-[15px] font-medium transition-colors",
-                                subActive
-                                  ? "bg-secondary text-primary font-semibold"
-                                  : "text-foreground/80 hover:bg-muted",
-                              )}
-                            >
-                              <span>{sub.label}</span>
-                            </Link>
-                          );
-                        })}
                       </div>
                     );
                   }
@@ -401,7 +505,7 @@ export function SiteHeader() {
                       href={item.href}
                       onClick={() => setMobileOpen(false)}
                       className={cn(
-                        "rounded-xl px-4 py-3 text-base font-medium transition-colors",
+                        "rounded-xl px-3.5 py-3 text-[15px] font-medium transition-colors",
                         active
                           ? "bg-secondary text-primary font-semibold"
                           : "hover:bg-muted",
@@ -443,7 +547,7 @@ export function SiteHeader() {
                     </Link>
                   </Button>
                 </div>
-                <div className="mt-auto space-y-3 border-t py-5">
+                <div className="sticky bottom-0 z-10 -mx-5 mt-auto space-y-3 border-t bg-background/95 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
                   <Button asChild className="w-full" size="lg">
                     <Link href="/menu" onClick={() => setMobileOpen(false)}>
                       Order online

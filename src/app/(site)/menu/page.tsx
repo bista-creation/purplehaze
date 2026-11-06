@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Bike, Clock, Info, ShoppingBag, Store, UtensilsCrossed } from "lucide-react";
 import { MenuBrowser } from "@/components/menu/menu-browser";
 import { Badge } from "@/components/ui/badge";
-import { getMenuCategories } from "@/lib/queries";
+import { menuService } from "@/lib/services/menu.service";
 import { getPublicSettings } from "@/lib/settings";
 
 export const revalidate = 120;
@@ -27,7 +27,7 @@ export default async function MenuPage({
   searchParams: Promise<{ category?: string }>;
 }) {
   const [categories, settings, params] = await Promise.all([
-    getMenuCategories(),
+    menuService.getMenuCategories(),
     getPublicSettings(),
     searchParams,
   ]);

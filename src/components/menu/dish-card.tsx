@@ -37,7 +37,7 @@ export function DishCard({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="relative aspect-[4/3] w-full overflow-hidden bg-muted text-left"
+          className="relative aspect-[16/10] w-full overflow-hidden bg-muted text-left sm:aspect-[4/3]"
           aria-label={`View and add ${dish.name}`}
         >
           <SmartImage
