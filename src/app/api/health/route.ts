@@ -7,9 +7,9 @@ export async function GET() {
   const start = Date.now();
   let dbStatus = "healthy";
 
-  let dbInfo: any = null;
+  let dbInfo: { db: string; usr: string; addr: string | null } | null = null;
   try {
-    const res = await prisma.$queryRaw<any[]>`SELECT current_database() as db, current_user as usr, inet_server_addr()::text as addr`;
+    const res = await prisma.$queryRaw<{ db: string; usr: string; addr: string | null }[]>`SELECT current_database() as db, current_user as usr, inet_server_addr()::text as addr`;
     dbInfo = res[0] ?? null;
   } catch (err) {
     dbStatus = "unreachable";
