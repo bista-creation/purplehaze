@@ -4,22 +4,22 @@ const SUPABASE_DB_URL = 'postgresql://postgres.lcexncppqesfnsdetoqv:hackme%4099s
 const prisma = new PrismaClient({ datasources: { db: { url: SUPABASE_DB_URL } } });
 
 const CATEGORIES = [
-  { name: 'Soups', slug: 'soups', description: 'Warm, comforting and fragrant broths crafted with fresh local herbs and aromatics.', sortOrder: 1, image: '/images/menu/soup.jpg' },
-  { name: 'Salads', slug: 'salads', description: 'Crisp garden greens, zesty dressings and refreshing Himalayan crunch.', sortOrder: 2, image: '/images/menu/salad.jpg' },
-  { name: "Chef's Recommendations", slug: 'chefs-recommendations', description: "Signature slow-cooked specialties, seafood feasts and Chef's proudest creations.", sortOrder: 3, image: '/images/menu/continental.jpg' },
-  { name: 'From the Country Yard', slug: 'country-yard', description: 'Authentic Nepali and Newari comfort foods, Sekuwa, Khaja sets, Bara, and mountain delicacies.', sortOrder: 4, image: '/images/menu/nepali.jpg' },
-  { name: 'All Time Favourites', slug: 'all-time-favourites', description: 'Irresistible starters, spicy woks, crispy bites, wings, and crowd-pleasing snacks.', sortOrder: 5, image: '/images/menu/asian.jpg' },
-  { name: 'Tandoori & Kabab', slug: 'tandoori-kabab', description: 'Skewered delights slow-charred over live charcoal embers in our traditional clay oven.', sortOrder: 6, image: '/images/menu/tandoori-chicken.jpg' },
-  { name: 'Main Entrees', slug: 'main-entrees', description: 'Sizzlers, herb-grilled meats, stroganoff, and whole fish delicacies.', sortOrder: 7, image: '/images/menu/continental.jpg' },
-  { name: 'Noodles & Fried Rice', slug: 'noodles-fried-rice', description: 'Wok-tossed noodles and fragrant rice with savory seasonings and your choice of protein.', sortOrder: 8, image: '/images/menu/szechuan-noodles.jpg' },
-  { name: 'Revisited Mo:Mo', slug: 'momo', description: 'Biratnagar’s favorite handmade dumplings in steam, fried, kothey, jhol, chilly, jhaneko & tandoori.', sortOrder: 9, image: '/images/menu/momo.webp' },
-  { name: 'Pizzas', slug: 'pizzas', description: 'Hand-stretched dough baked golden with rich mozzarella and premium toppings.', sortOrder: 10, image: '/images/menu/pizza.jpg' },
-  { name: 'Pasta', slug: 'pasta', description: 'Classic Italian pastas in velvety Alfredo, spicy Arrabiata, Rosatella and Carbonara sauces.', sortOrder: 11, image: '/images/menu/alfredo pasta.jpg' },
-  { name: 'Indian Curry', slug: 'indian-curry', description: 'Rich, slow-simmered gravies, tender paneer, aromatic chicken and royal mutton curries.', sortOrder: 12, image: '/images/menu/indian.jpg' },
-  { name: 'Rice & Biryani', slug: 'rice-biryani', description: 'Fragrant dum biryanis, basmati pulao and aromatic cumin rice served with raita.', sortOrder: 13, image: '/images/menu/biryani.jpg' },
-  { name: 'Naan & Roti', slug: 'naan-roti', description: 'Clay-oven baked tandoori rotis, garlic butter naans, cheese naans and stuffed kulchas.', sortOrder: 14, image: '/images/menu/tandoori-chicken.jpg' },
-  { name: 'Thakali Thali Set', slug: 'thakali-thali', description: 'Traditional Nepali feast with steamed basmati rice, Mustang aalu, daal, saag, pickles, curd & ghee.', sortOrder: 15, image: '/images/menu/nepali.jpg' },
-  { name: 'Beverages', slug: 'beverages', description: 'Freshly brewed coffees, organic Ilam teas, chilled mocktails, smoothies and coolers.', sortOrder: 16, image: '/images/menu/beverages.jpg' },
+  { name: 'Soups', slug: 'soups', description: 'Warm, comforting and fragrant broths crafted with fresh local herbs and aromatics.', sortOrder: 1, image: null },
+  { name: 'Salads', slug: 'salads', description: 'Crisp garden greens, zesty dressings and refreshing Himalayan crunch.', sortOrder: 2, image: null },
+  { name: "Chef's Recommendations", slug: 'chefs-recommendations', description: "Signature slow-cooked specialties, seafood feasts and Chef's proudest creations.", sortOrder: 3, image: null },
+  { name: 'From the Country Yard', slug: 'country-yard', description: 'Authentic Nepali and Newari comfort foods, Sekuwa, Khaja sets, Bara, and mountain delicacies.', sortOrder: 4, image: null },
+  { name: 'All Time Favourites', slug: 'all-time-favourites', description: 'Irresistible starters, spicy woks, crispy bites, wings, and crowd-pleasing snacks.', sortOrder: 5, image: null },
+  { name: 'Tandoori & Kabab', slug: 'tandoori-kabab', description: 'Skewered delights slow-charred over live charcoal embers in our traditional clay oven.', sortOrder: 6, image: null },
+  { name: 'Main Entrees', slug: 'main-entrees', description: 'Sizzlers, herb-grilled meats, stroganoff, and whole fish delicacies.', sortOrder: 7, image: null },
+  { name: 'Noodles & Fried Rice', slug: 'noodles-fried-rice', description: 'Wok-tossed noodles and fragrant rice with savory seasonings and your choice of protein.', sortOrder: 8, image: null },
+  { name: 'Revisited Mo:Mo', slug: 'momo', description: 'Biratnagar’s favorite handmade dumplings in steam, fried, kothey, jhol, chilly, jhaneko & tandoori.', sortOrder: 9, image: null },
+  { name: 'Pizzas', slug: 'pizzas', description: 'Hand-stretched dough baked golden with rich mozzarella and premium toppings.', sortOrder: 10, image: null },
+  { name: 'Pasta', slug: 'pasta', description: 'Classic Italian pastas in velvety Alfredo, spicy Arrabiata, Rosatella and Carbonara sauces.', sortOrder: 11, image: null },
+  { name: 'Indian Curry', slug: 'indian-curry', description: 'Rich, slow-simmered gravies, tender paneer, aromatic chicken and royal mutton curries.', sortOrder: 12, image: null },
+  { name: 'Rice & Biryani', slug: 'rice-biryani', description: 'Fragrant dum biryanis, basmati pulao and aromatic cumin rice served with raita.', sortOrder: 13, image: null },
+  { name: 'Naan & Roti', slug: 'naan-roti', description: 'Clay-oven baked tandoori rotis, garlic butter naans, cheese naans and stuffed kulchas.', sortOrder: 14, image: null },
+  { name: 'Thakali Thali Set', slug: 'thakali-thali', description: 'Traditional Nepali feast with steamed basmati rice, Mustang aalu, daal, saag, pickles, curd & ghee.', sortOrder: 15, image: null },
+  { name: 'Beverages', slug: 'beverages', description: 'Freshly brewed coffees, organic Ilam teas, chilled mocktails, smoothies and coolers.', sortOrder: 16, image: null },
 ];
 
 const DISHES = [
@@ -276,7 +276,7 @@ const DISHES = [
     priceNPR: 750,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/mutton-pakku.jpg',
+    image: null,
   },
   {
     categorySlug: 'country-yard',
@@ -342,7 +342,7 @@ const DISHES = [
     priceNPR: 490,
     isVeg: true,
     isFeatured: true,
-    image: '/images/menu/samaya-baji.jpg',
+    image: null,
   },
   {
     categorySlug: 'country-yard',
@@ -352,7 +352,7 @@ const DISHES = [
     priceNPR: 650,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/samaya-baji.jpg',
+    image: null,
   },
   {
     categorySlug: 'country-yard',
@@ -387,7 +387,7 @@ const DISHES = [
     priceNPR: 550,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/mutton-sekuwa.webp',
+    image: null,
   },
   {
     categorySlug: 'country-yard',
@@ -408,7 +408,7 @@ const DISHES = [
     priceNPR: 460,
     isVeg: true,
     isFeatured: true,
-    image: '/images/menu/mustang-aalu.webp',
+    image: null,
   },
   {
     categorySlug: 'all-time-favourites',
@@ -525,7 +525,7 @@ const DISHES = [
     priceNPR: 690,
     isVeg: false,
     isSpicy: true,
-    image: '/images/menu/Hunan-Chicken.jpg',
+    image: null,
   },
   {
     categorySlug: 'all-time-favourites',
@@ -593,7 +593,7 @@ const DISHES = [
     priceNPR: 750,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/garlic-parmesan-wings.jpg',
+    image: null,
   },
   {
     categorySlug: 'all-time-favourites',
@@ -626,7 +626,7 @@ const DISHES = [
     priceNPR: 850,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/tandoori-chicken.jpg',
+    image: null,
     variants: [
       { name: 'Half (4 pcs)', priceDeltaNPR: 0, isDefault: true },
       { name: 'Full (8 pcs)', priceDeltaNPR: 750, isDefault: false },
@@ -648,7 +648,7 @@ const DISHES = [
     priceNPR: 850,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/chicken-malai-tikka.jpg',
+    image: null,
   },
   {
     categorySlug: 'tandoori-kabab',
@@ -823,7 +823,7 @@ const DISHES = [
     description: 'Wok-tossed noodles with shredded vegetables and choice of signature seasoning. Add chicken, mutton, or prawns for extra goodness.',
     priceNPR: 350,
     isVeg: true,
-    image: '/images/menu/szechuan-noodles.jpg',
+    image: null,
     variants: [
       { name: 'Hakka Noodles', priceDeltaNPR: 0, isDefault: true },
       { name: 'Hong Kong Noodles', priceDeltaNPR: 0, isDefault: false },
@@ -854,7 +854,7 @@ const DISHES = [
     priceNPR: 270,
     isVeg: true,
     isFeatured: true,
-    image: '/images/menu/momo.webp',
+    image: null,
     variants: [
       { name: 'Steam', priceDeltaNPR: 0, isDefault: true },
       { name: 'Fried', priceDeltaNPR: 10, isDefault: false },
@@ -873,7 +873,7 @@ const DISHES = [
     priceNPR: 330,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/momo.webp',
+    image: null,
     variants: [
       { name: 'Steam', priceDeltaNPR: 0, isDefault: true },
       { name: 'Fried', priceDeltaNPR: 10, isDefault: false },
@@ -893,7 +893,7 @@ const DISHES = [
     description: 'Tomato sauce, mozzarella cheese, olive oil.',
     priceNPR: 490,
     isVeg: true,
-    image: '/images/menu/pizza.jpg',
+    image: null,
     variants: [
       { name: 'Medium', priceDeltaNPR: 0, isDefault: true },
       { name: 'Large', priceDeltaNPR: 100, isDefault: false },
@@ -1032,7 +1032,7 @@ const DISHES = [
     description: 'Butter, cream, assorted veg, mushroom or chicken & parmesan.',
     priceNPR: 490,
     isVeg: true,
-    image: '/images/menu/alfredo pasta.jpg',
+    image: null,
     variants: [
       { name: 'Vegetarian', priceDeltaNPR: 0, isDefault: true },
       { name: 'Chicken', priceDeltaNPR: 100, isDefault: false },
@@ -1097,7 +1097,7 @@ const DISHES = [
     priceNPR: 595,
     isVeg: true,
     isFeatured: true,
-    image: '/images/menu/paneer-lababdar.jpg',
+    image: null,
   },
   {
     categorySlug: 'indian-curry',
@@ -1192,7 +1192,7 @@ const DISHES = [
     priceNPR: 695,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/chicken-lajawab.jpg',
+    image: null,
   },
   {
     categorySlug: 'indian-curry',
@@ -1294,7 +1294,7 @@ const DISHES = [
     priceNPR: 650,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/biryani.jpg',
+    image: null,
   },
   {
     categorySlug: 'rice-biryani',
@@ -1304,7 +1304,7 @@ const DISHES = [
     priceNPR: 770,
     isVeg: false,
     isFeatured: true,
-    image: '/images/menu/biryani.jpg',
+    image: null,
   },
 
   // 14. NAAN & ROTI
