@@ -55,7 +55,7 @@ const IMG = {
 type DishSeed = {
   name: string;
   slug: string;
-  category: "nepali" | "indian" | "asian" | "continental";
+  category: "authentic-nepali" | "continental-italian" | "pan-asian" | "indian";
   description: string;
   details: string;
   price: number;
@@ -72,35 +72,35 @@ type DishSeed = {
 
 const categories = [
   {
-    name: "Nepali",
-    slug: "nepali",
+    name: "Authentic Nepali",
+    slug: "authentic-nepali",
     description:
-      "Comfort food from the hills and the Terai — momos, sekuwa, thakali sets and familiar home-style plates.",
+      "Comfort food from the hills and the Terai — Himalayan Thakali sets, Sekuwa, handcrafted Mo:Mo, Newari Khaja, and indigenous spices.",
     image: "/images/menu/nepali.jpg",
     sortOrder: 1,
+  },
+  {
+    name: "Continental & Italian",
+    slug: "continental-italian",
+    description:
+      "Stone-baked pizzas, al dente pastas, sizzling steaks, coastal seafood platters, and garden fresh salads.",
+    image: "/images/menu/continental.jpg",
+    sortOrder: 2,
+  },
+  {
+    name: "Pan Asian",
+    slug: "pan-asian",
+    description:
+      "Wok-tossed noodles, aromatic fried rice, crispy dragon starters, and bold Szechuan & Hunan specialties.",
+    image: "/images/menu/asian.jpg",
+    sortOrder: 3,
   },
   {
     name: "Indian",
     slug: "indian",
     description:
-      "Slow-simmered curries, tandoor favourites and fragrant rice, made for sharing around the table.",
+      "Rich slow-simmered curries, live charcoal tandoori kababs, fragrant dum biryanis, and fresh clay-oven naans.",
     image: "/images/menu/indian.jpg",
-    sortOrder: 2,
-  },
-  {
-    name: "Asian",
-    slug: "asian",
-    description:
-      "Wok-fired noodles, crisp starters and bold sauces from across East and South-East Asia.",
-    image: "/images/menu/asian.jpg",
-    sortOrder: 3,
-  },
-  {
-    name: "Continental",
-    slug: "continental",
-    description:
-      "Pizza, pasta, grills and garden salads for an easy lunch or a long evening.",
-    image: "/images/menu/continental.jpg",
     sortOrder: 4,
   },
 ] as const;
@@ -110,7 +110,7 @@ const dishes: DishSeed[] = [
   {
     name: "Steamed Chicken Momo",
     slug: "steamed-chicken-momo",
-    category: "nepali",
+    category: "authentic-nepali",
     description:
       "Ten hand-folded momos filled with chicken, ginger and spring onion, served with tomato achar.",
     details:
@@ -127,7 +127,7 @@ const dishes: DishSeed[] = [
   {
     name: "Mutton Sekuwa",
     slug: "mutton-sekuwa",
-    category: "nepali",
+    category: "authentic-nepali",
     description:
       "Char-grilled mutton marinated with timur, garlic and mustard oil, with fresh salad.",
     details:
@@ -143,7 +143,7 @@ const dishes: DishSeed[] = [
   {
     name: "Samaya Baji",
     slug: "samaya-baji",
-    category: "nepali",
+    category: "authentic-nepali",
     description:
       "A Newari-style sharing platter of beaten rice, spiced chicken, egg, peanuts and achar.",
     details:
@@ -158,7 +158,7 @@ const dishes: DishSeed[] = [
   {
     name: "Mustang Aloo",
     slug: "mustang-aloo",
-    category: "nepali",
+    category: "authentic-nepali",
     description:
       "Crisp baby potatoes tossed with timur, chilli, garlic and toasted sesame.",
     details:
@@ -173,7 +173,7 @@ const dishes: DishSeed[] = [
   {
     name: "Chicken Thakali Set",
     slug: "chicken-thakali-set",
-    category: "nepali",
+    category: "authentic-nepali",
     description:
       "Chicken curry, dal, seasonal saag, aloo achar, papad and steamed rice on one generous thali.",
     details:
@@ -190,7 +190,7 @@ const dishes: DishSeed[] = [
   {
     name: "Gundruk Bodi",
     slug: "gundruk-bodi",
-    category: "nepali",
+    category: "authentic-nepali",
     description:
       "Fermented leafy greens and black-eyed beans slow-cooked with tomato and dried chilli.",
     details:
@@ -206,7 +206,7 @@ const dishes: DishSeed[] = [
   {
     name: "Chicken Choila",
     slug: "chicken-choila",
-    category: "nepali",
+    category: "authentic-nepali",
     description:
       "Warm grilled chicken tossed with mustard oil, timur, lemon and fresh coriander.",
     details:
@@ -330,7 +330,7 @@ const dishes: DishSeed[] = [
   {
     name: "Chicken Malai Tikka",
     slug: "chicken-malai-tikka",
-    category: "asian",
+    category: "pan-asian",
     description:
       "Creamy, mild chicken skewers from the tandoor with mint chutney.",
     details:
@@ -344,7 +344,7 @@ const dishes: DishSeed[] = [
   {
     name: "Devil Chicken",
     slug: "devil-chicken",
-    category: "asian",
+    category: "pan-asian",
     description:
       "Crisp chicken tossed in a sweet-hot chilli glaze with peppers and sesame.",
     details:
@@ -359,7 +359,7 @@ const dishes: DishSeed[] = [
   {
     name: "Hunan Chicken",
     slug: "hunan-chicken",
-    category: "asian",
+    category: "pan-asian",
     description:
       "Wok-seared chicken with dried chilli, garlic and a savoury brown sauce.",
     details: "Bold and aromatic rather than sweet. Served with steamed rice.",
@@ -373,7 +373,7 @@ const dishes: DishSeed[] = [
   {
     name: "Szechuan Noodles",
     slug: "szechuan-noodles",
-    category: "asian",
+    category: "pan-asian",
     description:
       "Wok-tossed noodles with vegetables, chilli oil and toasted sesame.",
     details:
@@ -391,7 +391,7 @@ const dishes: DishSeed[] = [
   {
     name: "Crispy Sea Bass",
     slug: "crispy-sea-bass",
-    category: "asian",
+    category: "pan-asian",
     description:
       "Crisp-skinned sea bass with a ginger-soy dressing and greens.",
     details:
@@ -404,7 +404,7 @@ const dishes: DishSeed[] = [
   {
     name: "Garlic Parmesan Wings",
     slug: "garlic-parmesan-wings",
-    category: "asian",
+    category: "pan-asian",
     description:
       "Crisp chicken wings tossed with garlic butter, parmesan and herbs.",
     details:
@@ -418,7 +418,7 @@ const dishes: DishSeed[] = [
   {
     name: "Thai Green Curry",
     slug: "thai-green-curry",
-    category: "asian",
+    category: "pan-asian",
     description:
       "Coconut curry with vegetables, Thai basil and fragrant jasmine rice.",
     details:
@@ -436,7 +436,7 @@ const dishes: DishSeed[] = [
   {
     name: "Margherita Pizza",
     slug: "margherita-pizza",
-    category: "continental",
+    category: "continental-italian",
     description: "Tomato, mozzarella and basil on a hand-stretched base.",
     details:
       "Baked in a hot oven for a crisp edge and a soft centre. Keep it simple or add toppings.",
@@ -452,7 +452,7 @@ const dishes: DishSeed[] = [
   {
     name: "Chicken Alfredo Pasta",
     slug: "chicken-alfredo-pasta",
-    category: "continental",
+    category: "continental-italian",
     description:
       "Fettuccine in a parmesan cream sauce with grilled chicken and herbs.",
     details:
@@ -466,7 +466,7 @@ const dishes: DishSeed[] = [
   {
     name: "Grilled Chicken Steak",
     slug: "grilled-chicken-steak",
-    category: "continental",
+    category: "continental-italian",
     description:
       "Grilled chicken breast with sautéed vegetables, potato and pepper sauce.",
     details:
@@ -480,7 +480,7 @@ const dishes: DishSeed[] = [
   {
     name: "Mushroom Stroganoff",
     slug: "mushroom-stroganoff",
-    category: "continental",
+    category: "continental-italian",
     description:
       "Mushrooms in a creamy paprika sauce with buttered rice and herbs.",
     details: "Vegetarian comfort food with a gentle smoky depth.",
@@ -494,7 +494,7 @@ const dishes: DishSeed[] = [
   {
     name: "Classic Caesar Salad",
     slug: "classic-caesar-salad",
-    category: "continental",
+    category: "continental-italian",
     description:
       "Cos lettuce, parmesan, croutons and a creamy Caesar dressing.",
     details:
@@ -509,7 +509,7 @@ const dishes: DishSeed[] = [
   {
     name: "Crispy Fish & Chips",
     slug: "crispy-fish-and-chips",
-    category: "continental",
+    category: "continental-italian",
     description: "Golden battered fish with hand-cut fries, tartare and lemon.",
     details: "A weekend favourite. Fish selection depends on availability.",
     price: 58000,
@@ -521,7 +521,7 @@ const dishes: DishSeed[] = [
   {
     name: "Chocolate Lava Cake",
     slug: "chocolate-lava-cake",
-    category: "continental",
+    category: "continental-italian",
     description:
       "Warm chocolate cake with a molten centre and vanilla ice cream.",
     details: "Please allow ten minutes. Best eaten immediately.",

@@ -280,7 +280,7 @@ export class MayaService {
           : "Authentic Thakali Thali, Jhaneko & Tandoori Mo:Mo, Royal Butter Chicken, Chef Special Wood-fired Pizzas";
 
       return {
-        text: `Welcome to Purple Haze Restro & Garden! Some of our most popular guest favorites include: ${sample}. Our full dynamic menu features 15 curated categories with fast delivery and dine-in options. Would you like to view our full menu or add anything to your order?`,
+        text: `Welcome to Purple Haze Restro & Garden! Some of our most popular guest favorites include: ${sample}. Our full dynamic menu features 4 curated cuisines: Authentic Nepali, Continental & Italian, Pan Asian, and Indian with fast delivery and dine-in options. Would you like to view our full menu or add anything to your order?`,
         actions: [
           { label: "Explore Menu", action: "NAVIGATE_MENU", payload: { href: "/menu" } },
           { label: "Event Menus", action: "NAVIGATE_EVENT_MENU", payload: { href: "/events/menu" } },

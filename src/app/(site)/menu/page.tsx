@@ -11,12 +11,12 @@ export const revalidate = 120;
 export const metadata: Metadata = {
   title: "Menu",
   description:
-    "Browse the Purple Haze menu: Nepali momos and comfort food, Indian curries, Asian favourites and continental plates. Order for delivery, pickup or dine-in in Biratnagar.",
+    "Browse the Purple Haze menu: Authentic Nepali thakali sets and momos, Continental & Italian pizzas and pastas, sizzling Pan Asian plates, and rich Indian curries. Order for delivery, pickup or dine-in in Biratnagar.",
   alternates: { canonical: "/menu" },
   openGraph: {
     title: "Menu | Purple Haze Restro & Garden",
     description:
-      "Nepali, Indian, Asian and continental food in Biratnagar. Order online.",
+      "Authentic Nepali, Continental & Italian, Pan Asian and Indian food in Biratnagar. Order online.",
     images: ["/images/menu/indian.jpg"],
   },
 };
@@ -73,9 +73,9 @@ export default async function MenuPage({
             </Badge>
             <h1 className="display-title mt-5 text-white">The menu.</h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-white/60">
-              Familiar Nepali comfort food, slow-simmered Indian curries, wok
-              favourites and continental plates. Choose an option, add a little
-              extra, and we will take it from there.
+              Authentic Nepali comfort food, Continental &amp; Italian stone-baked pizzas and
+              pastas, sizzling Pan Asian wok plates, and rich slow-simmered Indian curries.
+              Choose an option, add a little extra, and we will take it from there.
             </p>
             <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs text-white/55">
               <span className="inline-flex items-center gap-2">
