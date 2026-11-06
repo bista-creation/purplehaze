@@ -7,8 +7,10 @@ export async function GET() {
   const start = Date.now();
   let dbStatus = "healthy";
 
+  let dbInfo: any = null;
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    const res = await prisma.$queryRaw<any[]>`SELECT current_database() as db, current_user as usr, inet_server_addr()::text as addr`;
+    dbInfo = res[0] ?? null;
   } catch (err) {
     dbStatus = "unreachable";
     return NextResponse.json(
@@ -28,6 +30,7 @@ export async function GET() {
       status: "ok",
       timestamp: new Date().toISOString(),
       database: dbStatus,
+      dbInfo,
       latencyMs: Date.now() - start,
       uptime: process.uptime(),
     },
