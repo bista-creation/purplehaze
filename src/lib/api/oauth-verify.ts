@@ -11,7 +11,25 @@ export type VerifiedSocialProfile = {
   providerAccountId: string;
   email: string;
   name?: string | null;
+  image?: string | null;
 };
+
+function trustedGooglePicture(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    if (
+      url.protocol !== "https:" ||
+      !(host === "googleusercontent.com" || host.endsWith(".googleusercontent.com"))
+    ) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 
 export async function verifyGoogleIdToken(idToken: string): Promise<VerifiedSocialProfile | null> {
   try {
@@ -40,6 +58,7 @@ export async function verifyGoogleIdToken(idToken: string): Promise<VerifiedSoci
       providerAccountId: data.sub,
       email: String(data.email).toLowerCase(),
       name: data.name ?? null,
+      image: trustedGooglePicture(data.picture),
     };
   } catch (error) {
     console.error("Google ID token verification failed:", error);
@@ -70,7 +89,7 @@ export async function verifyAppleIdToken(idToken: string): Promise<VerifiedSocia
 
 export async function handleSocialSignIn(profile: VerifiedSocialProfile): Promise<{
   tokens: AuthTokens;
-  user: { id: string; email: string; name: string | null; role: string };
+  user: { id: string; email: string; name: string | null; role: string; image: string | null };
 }> {
   let user = await prisma.user.findUnique({
     where: { email: profile.email },
@@ -85,14 +104,18 @@ export async function handleSocialSignIn(profile: VerifiedSocialProfile): Promis
       data: {
         email: profile.email,
         name: profile.name || "Customer",
+        image: profile.image || null,
         emailVerified: new Date(),
         role: "CUSTOMER",
       },
     });
-  } else if (!user.emailVerified) {
+  } else if (!user.emailVerified || (!user.image && profile.image)) {
     user = await prisma.user.update({
       where: { id: user.id },
-      data: { emailVerified: new Date() },
+      data: {
+        ...(!user.emailVerified ? { emailVerified: new Date() } : {}),
+        ...(!user.image && profile.image ? { image: profile.image } : {}),
+      },
     });
   }
 
@@ -126,6 +149,7 @@ export async function handleSocialSignIn(profile: VerifiedSocialProfile): Promis
       email: user.email,
       name: user.name,
       role: user.role,
+      image: user.image,
     },
   };
 }

@@ -65,20 +65,39 @@ export default function ContactPage() {
                     {SITE.address.country}
                   </span>
                 </a>
-                <a
-                  href={`tel:${SITE.phoneRaw}`}
-                  className="flex items-center gap-3 text-sm transition hover:text-primary"
-                >
-                  <Phone className="size-4 shrink-0 text-primary" />
-                  {SITE.phone}
-                </a>
-                <a
-                  href={`tel:${SITE.landlineRaw}`}
-                  className="flex items-center gap-3 text-sm transition hover:text-primary"
-                >
-                  <Phone className="size-4 shrink-0 text-primary" />
-                  {SITE.landline}
-                </a>
+                <div className="space-y-2 border-y border-border/50 py-3 text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Direct Contact Channels
+                  </p>
+                  <a
+                    href={`tel:${SITE.landlineRaw}`}
+                    className="flex items-center gap-3 transition hover:text-primary"
+                  >
+                    <Phone className="size-4 shrink-0 text-primary" />
+                    <span>Landline: {SITE.landline}</span>
+                  </a>
+                  <a
+                    href={`tel:${SITE.landlineSecondaryRaw}`}
+                    className="flex items-center gap-3 transition hover:text-primary"
+                  >
+                    <Phone className="size-4 shrink-0 text-primary" />
+                    <span>Landline 2: {SITE.landlineSecondary}</span>
+                  </a>
+                  <a
+                    href={`tel:${SITE.managerPhoneRaw}`}
+                    className="flex items-center gap-3 transition hover:text-primary"
+                  >
+                    <Phone className="size-4 shrink-0 text-primary" />
+                    <span>Manager &amp; WhatsApp: {SITE.managerPhone}</span>
+                  </a>
+                  <a
+                    href={`tel:${SITE.ownerPhoneRaw}`}
+                    className="flex items-center gap-3 transition hover:text-primary"
+                  >
+                    <Phone className="size-4 shrink-0 text-primary" />
+                    <span>Owner (Raju Khadka): {SITE.ownerPhone}</span>
+                  </a>
+                </div>
                 <a
                   href={`mailto:${SITE.email}`}
                   className="flex items-start gap-3 break-all text-sm transition hover:text-primary"
