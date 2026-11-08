@@ -140,6 +140,7 @@ export function CheckoutForm({
   );
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
+  const setCartOpen = useCartStore((state) => state.setCartOpen);
 
   const defaultType: OrderType = zones.length > 0 ? "DELIVERY" : "PICKUP";
 
@@ -210,6 +211,7 @@ export function CheckoutForm({
         description="Add a dish or two from the menu first. We will keep your table ready."
         actionLabel="Browse the menu"
         actionHref="/menu"
+        actionOnClick={() => setCartOpen(false)}
       />
     );
   }

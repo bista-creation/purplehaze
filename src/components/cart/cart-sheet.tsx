@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,8 @@ import { formatNPR } from "@/lib/money";
 import { useMounted } from "@/lib/use-mounted";
 
 export function CartSheet() {
+  const router = useRouter();
+  const pathname = usePathname();
   const mounted = useMounted();
   const items = useCartStore((state) => state.items);
   const isOpen = useCartStore((state) => state.isOpen);
@@ -27,6 +30,23 @@ export function CartSheet() {
 
   const count = mounted ? cartCount(items) : 0;
   const subtotal = mounted ? cartSubtotal(items) : 0;
+
+  const handleBrowseMenu = (e: React.MouseEvent<HTMLElement>) => {
+    setCartOpen(false);
+    if (pathname === "/menu") {
+      e.preventDefault();
+      const menuEl =
+        document.getElementById("menu-browser") ||
+        document.getElementById("main-content");
+      if (menuEl) {
+        menuEl.scrollIntoView({ behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } else {
+      router.push("/menu");
+    }
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={setCartOpen}>
@@ -61,6 +81,7 @@ export function CartSheet() {
               description="Explore momos, curries, pizzas and more from our kitchen."
               actionLabel="Browse the menu"
               actionHref="/menu"
+              actionOnClick={handleBrowseMenu}
               className="border-0 bg-transparent px-0"
             />
           ) : (

@@ -9,6 +9,7 @@ interface EmptyStateProps {
   description: string;
   actionLabel?: string;
   actionHref?: string;
+  actionOnClick?: (event: React.MouseEvent<HTMLElement>) => void;
   className?: string;
   children?: React.ReactNode;
 }
@@ -19,6 +20,7 @@ export function EmptyState({
   description,
   actionLabel,
   actionHref,
+  actionOnClick,
   className,
   children,
 }: EmptyStateProps) {
@@ -36,10 +38,18 @@ export function EmptyState({
       <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
         {description}
       </p>
-      {actionLabel && actionHref ? (
-        <Button asChild className="mt-6">
-          <Link href={actionHref}>{actionLabel}</Link>
-        </Button>
+      {actionLabel && (actionHref || actionOnClick) ? (
+        actionHref ? (
+          <Button asChild className="mt-6">
+            <Link href={actionHref} onClick={actionOnClick}>
+              {actionLabel}
+            </Link>
+          </Button>
+        ) : (
+          <Button className="mt-6" onClick={actionOnClick}>
+            {actionLabel}
+          </Button>
+        )
       ) : null}
       {children}
     </div>

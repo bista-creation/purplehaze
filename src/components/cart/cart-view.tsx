@@ -29,6 +29,7 @@ export function CartView({
 }) {
   const mounted = useMounted();
   const items = useCartStore((state) => state.items);
+  const setCartOpen = useCartStore((state) => state.setCartOpen);
   const setQuantity = useCartStore((state) => state.setQuantity);
   const removeItem = useCartStore((state) => state.removeItem);
   const clearCart = useCartStore((state) => state.clearCart);
@@ -64,6 +65,7 @@ export function CartView({
         description="Add something from the kitchen — momos, biryani, pizza or a garden favourite."
         actionLabel="Browse the menu"
         actionHref="/menu"
+        actionOnClick={() => setCartOpen(false)}
       />
     );
   }
