@@ -216,7 +216,7 @@ export class MayaService {
       };
     }
 
-    // 2. Approved Public Contact Channels / Owner / Manager / Phone
+    // 2. Approved Public Contact Channels / Owner / Admin / Phone
     const isContact =
       q.includes("contact") ||
       q.includes("phone") ||
@@ -253,10 +253,10 @@ export class MayaService {
           : "Grand Banquet Hall (up to 150 guests), Open-air Garden Lawn (up to 250+ guests), and Private Dining Rooms";
 
       return {
-        text: `We offer versatile venue spaces at Purple Haze: ${sample}. All spaces are fully equipped with audio/mic setup, garden ambiance, and dedicated banquet catering. You can book an event reservation online or call our manager directly.`,
+        text: `We offer versatile venue spaces at Purple Haze: ${sample}. All spaces are fully equipped with audio/mic setup, garden ambiance, and dedicated banquet catering. You can book an event reservation online or call our admin directly.`,
         actions: [
           { label: "Book Venue Online", action: "OPEN_EVENT_BOOKING", payload: { href: "/events" } },
-          { label: "WhatsApp Manager", action: "OPEN_WHATSAPP", payload: { phone: "9779851150987" } },
+          { label: "WhatsApp Admin", action: "OPEN_WHATSAPP", payload: { phone: "9779851150987" } },
         ],
       };
     }
@@ -291,7 +291,7 @@ export class MayaService {
 
     // 5. Default Warm Welcome
     return {
-      text: "Namaste! I am Maya, your Purple Haze assistant. I can help you explore our food & drink menu, recommend chef specials, share event & banquet packages (starting from NPR 950/person with customizable menus for 100+ guests), or connect you with our manager. How may I assist you today?",
+      text: "Namaste! I am Maya, your Purple Haze assistant. I can help you explore our food & drink menu, recommend chef specials, share event & banquet packages (starting from NPR 950/person with customizable menus for 100+ guests), or connect you with our admin. How may I assist you today?",
       actions: [
         { label: "Explore Menu", action: "NAVIGATE_MENU", payload: { href: "/menu" } },
         { label: "Event Packages", action: "OPEN_EVENT_BOOKING", payload: { href: "/events" } },
