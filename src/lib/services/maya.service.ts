@@ -207,7 +207,7 @@ export class MayaService {
             ].join("\n");
 
       return {
-        text: `Namaste! For banquets and special celebrations (including gatherings of 100 guests or more), our event catering packages start from budget-friendly rates:\n\n${packageLines}\n\n✨ 100% Customizable: Every package is completely customizable to match your exact budget, menu preferences, and guest count.\n\n📋 Inquiry Reference: #${refId} (Please quote this reference number when speaking with our team).\n\nPlease contact our dedicated event team to plan your celebration:\n• Restaurant Manager & WhatsApp: +977 9851150987 (Manager, Executive Chef & Social Media; calls & WhatsApp)\n• Restaurant Owner: +977 9852022202 (Raju Khadka, Owner; direct calls)\n• Landlines: +977 21 464193, +977 21 465192\n• Email: purplehaze_biratnagar@gmail.com\n\nYou can also explore package details and submit an instant event booking inquiry online: https://purplehaze.com.np/events`,
+        text: `Namaste! For banquets and special celebrations (including gatherings of 100 guests or more), our event catering packages start from budget-friendly rates:\n\n${packageLines}\n\n✨ 100% Customizable: Every package is completely customizable to match your exact budget, menu preferences, and guest count.\n\n📋 Inquiry Reference: #${refId} (Please quote this reference number when speaking with our team).\n\nPlease contact our dedicated event team to plan your celebration:\n• Admin & WhatsApp: +977 9851150987 (Admin; calls & WhatsApp)\n• Restaurant Owner: +977 9852022202 (Raju Khadka, Owner; direct calls)\n• Landlines: +977 21 464193, +977 21 465192\n• Email: purplehaze_biratnagar@gmail.com\n\nYou can also explore package details and submit an instant event booking inquiry online: https://purplehaze.com.np/events`,
         actions: [
           { label: "Book Event Online", action: "OPEN_EVENT_BOOKING", payload: { href: "/events" } },
           { label: "View Event Menus", action: "NAVIGATE_EVENT_MENU", payload: { href: "/events/menu" } },
@@ -223,6 +223,7 @@ export class MayaService {
       q.includes("number") ||
       q.includes("whatsapp") ||
       q.includes("call") ||
+      q.includes("admin") ||
       q.includes("manager") ||
       q.includes("owner") ||
       q.includes("raju") ||
@@ -235,9 +236,9 @@ export class MayaService {
 
     if (isContact) {
       return {
-        text: `Here are our approved public contact channels for Purple Haze Restro & Garden:\n\n• Restaurant Manager & WhatsApp: +977 9851150987 (Manager, Executive Chef & Social Media; calls & WhatsApp)\n• Restaurant Owner: +977 9852022202 (Raju Khadka, Owner; direct calls)\n• Landlines: +977 21 464193, +977 21 465192\n• Email: purplehaze_biratnagar@gmail.com\n• Address: Airport Road, Biratnagar 56613, Koshi Province, Nepal\n• Opening Hours: 9:00 AM – 10:00 PM daily`,
+        text: `Here are our approved public contact channels for Purple Haze Restro & Garden:\n\n• Admin & WhatsApp: +977 9851150987 (Admin; calls & WhatsApp)\n• Restaurant Owner: +977 9852022202 (Raju Khadka, Owner; direct calls)\n• Landlines: +977 21 464193, +977 21 465192\n• Email: purplehaze_biratnagar@gmail.com\n• Address: Airport Road, Biratnagar 56613, Koshi Province, Nepal\n• Opening Hours: 9:00 AM – 10:00 PM daily`,
         actions: [
-          { label: "Call Manager", action: "CALL_PHONE", payload: { phone: "+9779851150987" } },
+          { label: "Call Admin", action: "CALL_PHONE", payload: { phone: "+9779851150987" } },
           { label: "WhatsApp Us", action: "OPEN_WHATSAPP", payload: { phone: "9779851150987" } },
           { label: "View Contact Page", action: "NAVIGATE", payload: { href: "/contact" } },
         ],

@@ -84,11 +84,11 @@ export default function ContactPage() {
                     <span>Landline 2: {SITE.landlineSecondary}</span>
                   </a>
                   <a
-                    href={`tel:${SITE.managerPhoneRaw}`}
+                    href={`tel:${SITE.adminPhoneRaw}`}
                     className="flex items-center gap-3 transition hover:text-primary"
                   >
                     <Phone className="size-4 shrink-0 text-primary" />
-                    <span>Manager &amp; WhatsApp: {SITE.managerPhone}</span>
+                    <span>Admin &amp; WhatsApp: {SITE.adminPhone}</span>
                   </a>
                   <a
                     href={`tel:${SITE.ownerPhoneRaw}`}
