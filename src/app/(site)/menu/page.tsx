@@ -63,70 +63,74 @@ export default async function MenuPage({
           __html: JSON.stringify(schema).replace(/</g, "\\u003c"),
         }}
       />
-      <section className="relative overflow-hidden border-b border-border/60 bg-ink py-16 text-white lg:py-20">
+      {/* MOBILE-RESPONSIVE COMPACT HERO BANNER */}
+      <section className="relative overflow-hidden border-b border-border/60 bg-ink py-8 sm:py-12 lg:py-16 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,rgba(124,58,237,0.4),transparent_55%)]" />
         <div className="absolute inset-0 paper-texture opacity-20" />
         <div className="container-page relative">
           <div className="max-w-3xl">
-            <Badge variant="gold" className="rounded-full">
-              <UtensilsCrossed className="size-3" /> Kitchen open daily
+            <Badge variant="gold" className="rounded-full text-xs">
+              <UtensilsCrossed className="size-3 mr-1" /> Kitchen open daily
             </Badge>
-            <h1 className="display-title mt-5 text-white">The menu.</h1>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-white/60">
-              Authentic Nepali comfort food, Continental &amp; Italian stone-baked pizzas and
-              pastas, sizzling Pan Asian wok plates, and rich slow-simmered Indian curries.
-              Choose an option, add a little extra, and we will take it from there.
+            <h1 className="mt-3 text-3xl font-display font-semibold tracking-tight text-white sm:mt-4 sm:text-4xl lg:text-5xl">
+              The menu.
+            </h1>
+            <p className="mt-2.5 max-w-2xl text-xs sm:text-sm lg:text-base leading-relaxed text-white/70 sm:mt-4">
+              Authentic Nepali comfort food, Continental &amp; Italian stone-baked pizzas, sizzling
+              Pan Asian wok plates, and rich Indian curries. Freshly prepared for delivery, pickup, or dine-in.
             </p>
-            <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs text-white/55">
-              <span className="inline-flex items-center gap-2">
-                <Bike className="size-4 text-gold" /> Delivery in selected areas
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[11px] sm:text-xs text-white/60 sm:mt-6">
+              <span className="inline-flex items-center gap-1.5">
+                <Bike className="size-3.5 text-gold" /> Delivery in Biratnagar
               </span>
-              <span className="inline-flex items-center gap-2">
-                <ShoppingBag className="size-4 text-gold" /> Pickup
+              <span className="inline-flex items-center gap-1.5">
+                <ShoppingBag className="size-3.5 text-gold" /> Quick Pickup
               </span>
-              <span className="inline-flex items-center gap-2">
-                <Store className="size-4 text-gold" /> Dine-in
+              <span className="inline-flex items-center gap-1.5">
+                <Store className="size-3.5 text-gold" /> Garden Dine-in
               </span>
-              <span className="inline-flex items-center gap-2">
-                <Clock className="size-4 text-gold" /> 9 AM – 10 PM
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="size-3.5 text-gold" /> 9 AM – 10 PM
               </span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="container-page py-8 lg:py-12">
-        <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-border/70 bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
+      <section className="container-page py-5 sm:py-8 lg:py-10">
+        {/* COMPACT ORDERING STATUS BANNER */}
+        <div className="mb-5 sm:mb-8 flex flex-col gap-2.5 rounded-2xl border border-border/70 bg-card p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex items-start gap-2.5 sm:gap-3">
             <Info className="mt-0.5 size-4 shrink-0 text-primary" />
             <div>
-              <p className="text-sm font-semibold">
+              <p className="text-xs sm:text-sm font-semibold text-foreground">
                 {settings.acceptingOrders
-                  ? "Ordering is open"
+                  ? "Online ordering is open"
                   : "Ordering is temporarily paused"}
               </p>
-              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+              <p className="mt-0.5 text-[11px] sm:text-xs leading-normal text-muted-foreground">
                 {settings.acceptingOrders
-                  ? "Choose delivery, pickup or dine-in at checkout. Menu prices are in NPR; taxes are shown before you pay."
+                  ? "Choose delivery, pickup or dine-in at checkout. Menu prices in NPR; taxes shown before payment."
                   : "You can browse the menu, but online ordering is paused. Please call us to order."}
               </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 self-start sm:self-auto">
             <span
               className={`size-2 rounded-full ${
-                settings.acceptingOrders ? "bg-emerald-500" : "bg-amber-500"
+                settings.acceptingOrders ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
               }`}
             />
-            <span className="text-xs font-medium text-muted-foreground">
+            <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">
               {settings.acceptingOrders ? "Accepting orders" : "Paused"}
             </span>
           </div>
         </div>
 
+        {/* MENU BROWSER WITH MOBILE SMALL DISH IMAGES & PRACTICAL CARDS */}
         <MenuBrowser categories={categories} initialCategory={params.category} />
 
-        <div className="mt-16 rounded-2xl border border-dashed border-border bg-card/50 p-6 text-center text-sm text-muted-foreground">
+        <div className="mt-12 sm:mt-16 rounded-2xl border border-dashed border-border bg-card/50 p-5 sm:p-6 text-center text-xs sm:text-sm text-muted-foreground">
           <p>
             Allergies or a special request? Add a note to your dish or{" "}
             <Link href="/contact" className="font-semibold text-primary underline-offset-4 hover:underline">
