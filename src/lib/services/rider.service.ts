@@ -440,6 +440,35 @@ export const riderService = {
   },
 
   /**
+   * Get current duty and license status of the authenticated rider
+   */
+  async getRiderDutyStatus(userId: string): Promise<ServiceResult<{
+    shiftStatus: string;
+    licenseStatus: string;
+    mustChangePassword: boolean;
+    licenseExpiresAt: Date | null;
+  }>> {
+    const rider = await prisma.riderProfile.findUnique({
+      where: { userId },
+      select: {
+        shiftStatus: true,
+        licenseStatus: true,
+        mustChangePassword: true,
+        licenseExpiresAt: true,
+      },
+    });
+
+    if (!rider) {
+      return {
+        success: false,
+        error: new ServiceError("NOT_FOUND", "Rider profile not found.", 404),
+      };
+    }
+
+    return { success: true, data: rider };
+  },
+
+  /**
    * List active orders assigned to caller (zero publicToken or OTP exposed)
    */
   async getRiderOrders(userId: string): Promise<ServiceResult<RiderActiveOrder[]>> {

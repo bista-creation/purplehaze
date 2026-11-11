@@ -258,6 +258,14 @@ export class AuthService {
         image: true,
         emailVerified: true,
         createdAt: true,
+        riderProfile: {
+          select: {
+            id: true,
+            shiftStatus: true,
+            licenseStatus: true,
+            mustChangePassword: true,
+          },
+        },
       },
     });
   }

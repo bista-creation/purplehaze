@@ -8,6 +8,22 @@ const dutySchema = z.object({
   status: z.enum(["ON_DUTY", "OFF_DUTY"]),
 });
 
+export async function GET(req: NextRequest) {
+  const { user, errorResponse } = await requireRiderAuth(req);
+  if (errorResponse) return errorResponse;
+
+  const result = await riderService.getRiderDutyStatus(user.id);
+  if (!result.success) {
+    return jsonError(
+      result.error?.code || "FAILED",
+      result.error?.message || "Failed to retrieve duty status",
+      result.error?.statusCode || 400
+    );
+  }
+
+  return jsonOk(result.data);
+}
+
 export async function POST(req: NextRequest) {
   const { user, errorResponse } = await requireRiderAuth(req);
   if (errorResponse) return errorResponse;
