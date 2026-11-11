@@ -235,7 +235,7 @@ export function DishCard({
                   size="sm"
                   variant="outline"
                   onClick={() => setOpen(true)}
-                  className="h-7 rounded-full border-primary/30 px-2.5 text-xs font-semibold text-primary hover:bg-primary/10"
+                  className="h-7 rounded-full border border-primary/30 px-2.5 text-xs font-semibold text-primary hover:bg-primary/10 dark:border-amber-300/60 dark:text-amber-300 dark:hover:bg-amber-300/15 dark:hover:text-amber-200 transition-colors"
                 >
                   <SlidersHorizontal className="size-3 mr-1" /> Options
                 </Button>
@@ -243,9 +243,8 @@ export function DishCard({
                 <Button
                   type="button"
                   size="sm"
-                  variant="soft"
                   onClick={handleQuickAdd}
-                  className="h-7 rounded-full px-2.5 text-xs font-bold"
+                  className="h-7 rounded-full px-2.5 text-xs font-bold bg-primary/15 text-primary hover:bg-primary hover:text-primary-foreground dark:bg-amber-300 dark:text-amber-950 dark:hover:bg-amber-200 dark:hover:text-black dark:shadow-[0_2px_8px_rgba(252,211,77,0.25)] transition-colors"
                 >
                   <Plus className="size-3.5 mr-0.5" /> Add
                 </Button>
@@ -287,7 +286,7 @@ export function DishCard({
                   size="sm"
                   variant="outline"
                   onClick={() => setOpen(true)}
-                  className="h-7 w-full rounded-lg border-primary/40 bg-card px-1 text-[11px] font-semibold text-primary shadow-xs hover:bg-primary/10"
+                  className="h-7 w-full rounded-lg border border-primary/40 bg-card px-1 text-[11px] font-semibold text-primary shadow-xs hover:bg-primary/10 dark:border-amber-300/60 dark:bg-card dark:text-amber-300 dark:hover:bg-amber-300/15 dark:hover:text-amber-200 transition-colors"
                 >
                   <SlidersHorizontal className="size-3 mr-1" />
                   Options
@@ -296,9 +295,8 @@ export function DishCard({
                 <Button
                   type="button"
                   size="sm"
-                  variant="soft"
                   onClick={handleQuickAdd}
-                  className="h-7 w-full rounded-lg bg-primary/15 px-1 text-[11px] font-bold text-primary shadow-xs hover:bg-primary hover:text-primary-foreground"
+                  className="h-7 w-full rounded-lg bg-primary/15 px-1 text-[11px] font-bold text-primary shadow-xs hover:bg-primary hover:text-primary-foreground dark:bg-amber-300 dark:text-amber-950 dark:hover:bg-amber-200 dark:hover:text-black dark:shadow-[0_2px_8px_rgba(252,211,77,0.25)] transition-colors"
                 >
                   <Plus className="size-3.5 mr-0.5" />
                   Add
@@ -537,7 +535,7 @@ function DishDialog({
             </div>
             <Button
               type="button"
-              className="flex-1 font-semibold text-xs sm:text-sm h-9"
+              className="flex-1 font-semibold text-xs sm:text-sm h-9 bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-amber-300 dark:text-amber-950 dark:hover:bg-amber-200 dark:hover:text-black dark:shadow-[0_2px_12px_rgba(252,211,77,0.25)] transition-colors"
               size="default"
               onClick={addToCart}
             >
