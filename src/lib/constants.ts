@@ -9,9 +9,8 @@ export const SITE = {
   url: normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL),
   phone: "+97721464193",
   phoneRaw: "+97721464193",
-  // Display-only number for the header top bar. Calls and WhatsApp continue
-  // to use the established `phoneRaw` and `whatsapp` connections.
-  topbarPhone: "+977 9852022202",
+  // Front desk number shown in the site header.
+  topbarPhone: "021-464193",
   landline: "+977 21 464193",
   landlineRaw: "+97721464193",
   landlineSecondary: "+977 21 465192",
