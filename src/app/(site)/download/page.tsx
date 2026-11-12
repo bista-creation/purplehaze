@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import {
   Apple,
   ArrowDownToLine,
   Bike,
-  Bot,
   Clock,
   Compass,
   ExternalLink,
   HelpCircle,
   MapPin,
   Navigation,
-  QrCode,
   Share2,
   ShieldCheck,
   Smartphone,
@@ -24,17 +23,17 @@ import { Button } from "@/components/ui/button";
 export const metadata: Metadata = {
   title: "Download Purple Haze Mobile App | Android APK & iOS iPhone",
   description:
-    "Get the official Purple Haze Restro & Garden mobile app. Download the standalone Android APK or install directly on iPhone/iPad via Safari with Maya AI, live GPS tracking, and exclusive treats.",
+    "Get the official Purple Haze Restro & Garden customer app. Order online, track your rider, and download the Android APK or open the iPhone web app.",
   alternates: { canonical: "/download" },
 };
 
 const features = [
   {
-    icon: Bot,
-    title: "Maya AI Food Assistant",
+    icon: Sparkles,
+    title: "Quick Reorders",
     description:
-      "Chat or speak with Maya for personalized dish recommendations, ingredient guidance, and dietary options tailored to your taste.",
-    tag: "AI Powered",
+      "Save favorite dishes and reorder familiar meals with a faster checkout.",
+    tag: "Simple Checkout",
   },
   {
     icon: Navigation,
@@ -161,7 +160,7 @@ export default function DownloadPage() {
                   <Smartphone className="mr-1.5 size-3.5" /> Android &amp; iPhone (iOS)
                 </Badge>
                 <span className="text-xs font-medium text-muted-foreground">
-                  Official Mobile Release · v1.0.0
+                  Official Customer App
                 </span>
               </div>
             </Reveal>
@@ -176,8 +175,8 @@ export default function DownloadPage() {
             <Reveal delay={0.16}>
               <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
                 Order your favorite dishes from our Airport Road garden, track
-                your rider live on an interactive map, and let Maya AI guide
-                your palate with instant recommendations. Available for both Android and iPhone users.
+                your rider live on an interactive map, and reorder favorites
+                with ease. Available for Android and iPhone users.
               </p>
             </Reveal>
 
@@ -253,16 +252,16 @@ export default function DownloadPage() {
                     </div>
                   </div>
                   <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-                    Live v1.0.0
+                    Available now
                   </Badge>
                 </div>
 
                 <div className="my-6 space-y-3">
                   <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/40 p-3">
-                    <Bot className="size-5 text-primary shrink-0" />
+                    <Zap className="size-5 text-primary shrink-0" />
                     <div className="text-xs">
-                      <p className="font-semibold text-foreground">Maya AI Companion</p>
-                      <p className="text-muted-foreground">Voice &amp; chat ordering</p>
+                      <p className="font-semibold text-foreground">Quick Reordering</p>
+                      <p className="text-muted-foreground">Favorites and simple checkout</p>
                     </div>
                   </div>
 
@@ -284,10 +283,17 @@ export default function DownloadPage() {
                 </div>
 
                 <div className="rounded-2xl border border-gold/30 bg-gold/5 p-4 text-center">
-                  <QrCode className="mx-auto size-12 text-gold opacity-90" />
-                  <p className="mt-2 text-xs font-semibold">Scan with phone camera</p>
+                  <Image
+                    src="/purple-haze-download-qr.svg"
+                    alt="QR code linking to the Purple Haze app download page"
+                    width={160}
+                    height={160}
+                    className="mx-auto rounded-md bg-white p-2"
+                    priority
+                  />
+                  <p className="mt-2 text-xs font-semibold">Scan to open app downloads</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Direct access for Android &amp; iPhone
+                    purplehaze-nine.vercel.app/download
                   </p>
                 </div>
 
