@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 
 // Direct standalone Android APK download artifact URL for Rider App from EAS Build
 export const EAS_RIDER_APK_DIRECT_URL =
-  "https://expo.dev/artifacts/eas/8cNvzFnLxLvVoFJHaLVCUzO3Ho2FRuzGplL1RzTeH6Q.apk";
+  "https://expo.dev/artifacts/eas/r3k-KFzBeAF4MKUw4PbodBbqNkWTb_xwq7zZjfGjS-I.apk";
 
 // Fallback EAS build page URL for rider
 export const EAS_RIDER_BUILD_PAGE_URL =
-  "https://expo.dev/accounts/bistacreation/projects/purplehaze-rider/builds/b6ff012e-a425-4a0c-87b4-fa8162569a62";
+  "https://expo.dev/accounts/bistacreations-team/projects/purplehaze-rider/builds/bcb53834-cfb5-4b7c-836a-b70f2f070888";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
