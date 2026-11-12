@@ -5,10 +5,8 @@ import {
   Bike,
   Compass,
   ExternalLink,
-  Layers,
   MapPin,
   Navigation,
-  RefreshCw,
   Store,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

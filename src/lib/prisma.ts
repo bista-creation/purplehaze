@@ -12,6 +12,5 @@ export const prisma =
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Always retain client across invocations in serverless container lifecycle
+globalForPrisma.prisma = prisma;

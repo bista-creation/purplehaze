@@ -19,6 +19,10 @@ const appUrl = normalizeAppUrl(
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  compress: true,
+  experimental: {
+    optimizePackageImports: ["lucide-react", "date-fns"],
+  },
   outputFileTracingExcludes: {
     // These admin screens now use the public asset URLs and Blob for uploaded
     // media; they do not need copies of the static image tree inside Functions.

@@ -29,8 +29,32 @@ async function uniqueSlug(
   return `${base}-${Date.now()}`;
 }
 
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+let cachedCategories: CacheEntry<MenuCategoryView[]> | null = null;
+let cachedFeaturedDishes: CacheEntry<MenuDish[]> | null = null;
+const cachedDishesMap = new Map<string, CacheEntry<MenuDish[]>>();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+export function invalidateMenuCache() {
+  cachedCategories = null;
+  cachedFeaturedDishes = null;
+  cachedDishesMap.clear();
+}
+
 export class MenuService {
+  invalidateCache() {
+    invalidateMenuCache();
+  }
+
   getMenuCategories = cache(async (): Promise<MenuCategoryView[]> => {
+    if (cachedCategories && Date.now() - cachedCategories.timestamp < CACHE_TTL_MS) {
+      return cachedCategories.data;
+    }
+
     try {
       const categories = await prisma.category.findMany({
         where: { isActive: true },
@@ -52,7 +76,7 @@ export class MenuService {
         },
       });
 
-      return categories.map((category) => ({
+      const result = categories.map((category) => ({
         id: category.id,
         name: category.name,
         slug: category.slug,
@@ -91,6 +115,9 @@ export class MenuService {
           }),
         ),
       }));
+
+      cachedCategories = { data: result, timestamp: Date.now() };
+      return result;
     } catch (err) {
       console.warn("Database offline in getMenuCategories; using empty fallback.", err);
       return [];
@@ -98,6 +125,10 @@ export class MenuService {
   });
 
   getFeaturedDishes = cache(async (limit = 8): Promise<MenuDish[]> => {
+    if (limit === 8 && cachedFeaturedDishes && Date.now() - cachedFeaturedDishes.timestamp < CACHE_TTL_MS) {
+      return cachedFeaturedDishes.data;
+    }
+
     try {
       const dishes = await prisma.dish.findMany({
         where: { isAvailable: true, isFeatured: true },
@@ -110,7 +141,7 @@ export class MenuService {
         },
       });
 
-      return dishes.map(
+      const result = dishes.map(
         (dish): MenuDish => ({
           id: dish.id,
           categoryId: dish.categoryId,
@@ -126,7 +157,7 @@ export class MenuService {
           isVeg: dish.isVeg,
           isSpicy: dish.isSpicy,
           isFeatured: dish.isFeatured,
-            isAvailable: dish.isAvailable,
+          isAvailable: dish.isAvailable,
           prepTime: dish.prepTime,
           calories: dish.calories,
           variants: dish.variants.map((variant) => ({
@@ -142,6 +173,11 @@ export class MenuService {
           })),
         }),
       );
+
+      if (limit === 8) {
+        cachedFeaturedDishes = { data: result, timestamp: Date.now() };
+      }
+      return result;
     } catch (err) {
       console.warn("Database offline in getFeaturedDishes; using empty fallback.", err);
       return [];
@@ -202,6 +238,16 @@ export class MenuService {
     },
   ) {
     const q = query?.trim().toLowerCase();
+    const cacheKey = !q
+      ? `${filters?.categorySlug || 'all'}_${filters?.isVeg}_${filters?.isSpicy}_${filters?.isFeatured}`
+      : null;
+    if (cacheKey && cachedDishesMap.has(cacheKey)) {
+      const cached = cachedDishesMap.get(cacheKey)!;
+      if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        return cached.data;
+      }
+    }
+
     const where: Prisma.DishWhereInput = {
       isAvailable: true,
     };
@@ -236,7 +282,7 @@ export class MenuService {
       },
     });
 
-    return dishes.map((dish) => ({
+    const result = dishes.map((dish) => ({
       id: dish.id,
       categoryId: dish.categoryId,
       categoryName: dish.category.name,
@@ -250,14 +296,20 @@ export class MenuService {
       isVeg: dish.isVeg,
       isSpicy: dish.isSpicy,
       isFeatured: dish.isFeatured,
-            isAvailable: dish.isAvailable,
+      isAvailable: dish.isAvailable,
       prepTime: dish.prepTime,
       variants: dish.variants,
       addOns: dish.addOns.map((a) => a.addOn),
     }));
+
+    if (cacheKey) {
+      cachedDishesMap.set(cacheKey, { data: result, timestamp: Date.now() });
+    }
+    return result;
   }
 
   async saveCategory(input: CategoryAdminInput, id?: string) {
+    invalidateMenuCache();
     const slug = await uniqueSlug("category", input.name, id);
     const data = {
       name: input.name,
@@ -275,6 +327,7 @@ export class MenuService {
   }
 
   async deleteCategory(id: string) {
+    invalidateMenuCache();
     const category = await prisma.category.findUnique({
       where: { id },
       include: { _count: { select: { dishes: true } } },
@@ -289,6 +342,7 @@ export class MenuService {
   }
 
   async saveDish(input: DishAdminInput, id?: string) {
+    invalidateMenuCache();
     const slug = await uniqueSlug("dish", input.name, id);
     const data = {
       name: input.name,
@@ -359,10 +413,12 @@ export class MenuService {
   }
 
   async deleteDish(id: string) {
+    invalidateMenuCache();
     return prisma.dish.delete({ where: { id } });
   }
 
   async toggleDishAvailability(id: string, isAvailable: boolean) {
+    invalidateMenuCache();
     return prisma.dish.update({
       where: { id },
       data: { isAvailable },

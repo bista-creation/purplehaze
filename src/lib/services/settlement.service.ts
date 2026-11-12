@@ -92,7 +92,7 @@ export const settlementService = {
     
     const getNormalizedCod = (d: (typeof deliveredDeliveries)[0]) => {
       const orderTotal = d.order.total;
-      let cod = d.codAmountPaisa;
+      const cod = d.codAmountPaisa;
       if (cod > orderTotal && orderTotal > 0 && (cod === orderTotal * 100 || cod > orderTotal * 50)) {
         return orderTotal;
       }
@@ -101,7 +101,7 @@ export const settlementService = {
 
     const getNormalizedCollected = (d: (typeof deliveredDeliveries)[0]) => {
       const expected = getNormalizedCod(d);
-      let collected = d.cashCollectedPaisa ?? expected;
+      const collected = d.cashCollectedPaisa ?? expected;
       if (collected > d.order.total && d.order.total > 0 && (collected === d.order.total * 100 || collected > d.order.total * 50)) {
         return d.order.total;
       }
@@ -339,7 +339,7 @@ export const settlementService = {
       const codDeliveries = r.deliveries.filter((d) => d.order.paymentMethod === "COD");
       const codExpectedPaisa = codDeliveries.reduce((sum, d) => {
         const orderTotal = d.order.total;
-        let cod = d.codAmountPaisa;
+        const cod = d.codAmountPaisa;
         if (cod > orderTotal && orderTotal > 0 && (cod === orderTotal * 100 || cod > orderTotal * 50)) {
           return orderTotal;
         }

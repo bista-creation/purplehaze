@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { menuService } from "@/lib/services/menu.service";
 import { jsonOk } from "@/lib/api/response";
 
+export const revalidate = 60;
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const featured = searchParams.get("featured") === "true";
@@ -9,7 +11,9 @@ export async function GET(req: NextRequest) {
 
   if (featured) {
     const dishes = await menuService.getFeaturedDishes(limit);
-    return jsonOk(dishes, { total: dishes.length });
+    return jsonOk(dishes, { total: dishes.length }, 200, {
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+    });
   }
 
   const categorySlug = searchParams.get("category") || undefined;
@@ -22,5 +26,7 @@ export async function GET(req: NextRequest) {
     isSpicy,
   });
 
-  return jsonOk(dishes, { total: dishes.length, limit });
+  return jsonOk(dishes, { total: dishes.length, limit }, 200, {
+    "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+  });
 }

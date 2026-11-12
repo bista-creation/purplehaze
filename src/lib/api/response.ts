@@ -6,6 +6,7 @@ export function jsonOk<T>(
   data: T,
   meta?: Record<string, unknown>,
   status = 200,
+  headers?: HeadersInit,
 ): NextResponse<ApiResponse<T>> {
   return NextResponse.json(
     {
@@ -13,7 +14,7 @@ export function jsonOk<T>(
       data,
       meta,
     },
-    { status },
+    { status, headers },
   );
 }
 

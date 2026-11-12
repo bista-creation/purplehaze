@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { jsonOk } from "@/lib/api/response";
 import { CANONICAL_VENUES } from "@/lib/venues-data";
 
+export const revalidate = 300;
+
 export async function GET() {
   let venues = await prisma.venue.findMany({
     where: { isActive: true },
@@ -62,5 +64,7 @@ export async function GET() {
     };
   });
 
-  return jsonOk(formatted);
+  return jsonOk(formatted, undefined, 200, {
+    "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+  });
 }

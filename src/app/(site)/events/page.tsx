@@ -12,7 +12,6 @@ import {
   PartyPopper,
   Phone,
   Sparkles,
-  TreePine,
   UsersRound,
   UtensilsCrossed,
 } from "lucide-react";
@@ -27,7 +26,7 @@ import { formatNPR } from "@/lib/money";
 import { EVENT_TYPES, FALLBACK_VENUE_IMAGE, SITE } from "@/lib/constants";
 import { parseJsonArray } from "@/lib/utils";
 import { todayInNepal } from "@/lib/time";
-import { CANONICAL_VENUES, type VenueSpace } from "@/lib/venues-data";
+import { CANONICAL_VENUES } from "@/lib/venues-data";
 
 export const revalidate = 300;
 

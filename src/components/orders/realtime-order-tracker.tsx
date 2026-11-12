@@ -18,7 +18,6 @@ import {
   Volume2,
   VolumeX,
   XCircle,
-  Compass,
   KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";

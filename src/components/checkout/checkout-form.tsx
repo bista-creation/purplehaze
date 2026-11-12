@@ -179,6 +179,8 @@ export function CheckoutForm({
   });
   const couponInput = useWatch({ control: form.control, name: "couponCode" });
   const saveAddress = useWatch({ control: form.control, name: "saveAddress" });
+  const watchedCustomerName = useWatch({ control: form.control, name: "customerName" });
+  const watchedLine1 = useWatch({ control: form.control, name: "line1" });
   const zone = zones.find((item) => item.id === zoneId);
   const subtotal = cartSubtotal(items);
   const effectiveCoupon =
@@ -443,7 +445,7 @@ export function CheckoutForm({
                 label="Full name"
                 htmlFor="customerName"
                 error={form.formState.errors.customerName?.message}
-                hint={!form.watch("customerName") ? "💡 Let us know who to prepare and hand this order to." : undefined}
+                hint="💡 Let us know who to prepare and hand this order to."
                 required
               >
                 <Input
@@ -512,7 +514,7 @@ export function CheckoutForm({
                   label="Street / landmark"
                   htmlFor="line1"
                   error={form.formState.errors.line1?.message}
-                  hint={!form.watch("line1") ? "💡 Detailed street, house number or landmark ensures swift delivery." : undefined}
+                  hint="💡 Detailed street, house number or landmark ensures swift delivery."
                   required
                 >
                   <Input
@@ -872,15 +874,15 @@ export function CheckoutForm({
             </Alert>
           ) : null}
 
-          {(!form.watch("customerName") || (type === "DELIVERY" && !form.watch("line1"))) && (
+          {(!watchedCustomerName || (type === "DELIVERY" && !watchedLine1)) && (
             <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-200/90 flex items-start gap-2.5">
               <Sparkles className="size-4 shrink-0 text-amber-400 mt-0.5" />
               <div className="space-y-1">
                 <p className="font-semibold text-amber-300">Almost ready to order!</p>
                 <p className="text-muted-foreground text-[11px] leading-relaxed">
-                  {!form.watch("customerName") && (type === "DELIVERY" && !form.watch("line1"))
+                  {!watchedCustomerName && (type === "DELIVERY" && !watchedLine1)
                     ? "Please add your name and delivery address so our kitchen and rider can serve you smoothly."
-                    : !form.watch("customerName")
+                    : !watchedCustomerName
                       ? "Please add your name so our kitchen knows who to hand this meal to."
                       : "Please add your street or landmark address so our rider can deliver to your doorstep."}
                 </p>
