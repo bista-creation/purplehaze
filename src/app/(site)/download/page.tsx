@@ -4,6 +4,7 @@ import {
   Apple,
   ArrowDownToLine,
   ArrowRight,
+  Bike,
   Bot,
   CheckCircle2,
   Clock,
@@ -135,6 +136,7 @@ export default function DownloadPage() {
   const expoBuildUrl =
     "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/19d14bf6-20a9-4247-b880-3dca8d8aec71";
   const apkDownloadUrl = "/api/download/apk";
+  const riderApkDownloadUrl = "/api/download/rider-apk";
   const iosAppUrl = "https://purplehaze-mobile.vercel.app";
 
   return (
@@ -183,11 +185,22 @@ export default function DownloadPage() {
             </Reveal>
 
             <Reveal delay={0.24}>
-              <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center">
+              <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center sm:flex-wrap">
                 <Button asChild size="lg" className="h-12 gap-2.5 px-6 shadow-lg shadow-primary/20">
                   <a href={apkDownloadUrl} download="purplehaze.apk">
                     <ArrowDownToLine className="size-5" />
                     <span>Download Android APK</span>
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  variant="gold"
+                  size="lg"
+                  className="h-12 gap-2.5 px-6 shadow-lg shadow-gold/20"
+                >
+                  <a href={riderApkDownloadUrl} download="purplehaze-rider.apk">
+                    <Bike className="size-5" />
+                    <span>Rider APP download</span>
                   </a>
                 </Button>
                 <Button
@@ -295,6 +308,14 @@ export default function DownloadPage() {
                     </a>
                   </Button>
                 </div>
+                <div className="mt-2.5">
+                  <Button asChild variant="gold" size="sm" className="w-full gap-1.5 text-xs shadow-md shadow-gold/15">
+                    <a href={riderApkDownloadUrl} download="purplehaze-rider.apk">
+                      <Bike className="size-3.5" />
+                      <span>Rider APP download</span>
+                    </a>
+                  </Button>
+                </div>
               </div>
             </Reveal>
           </div>
@@ -395,11 +416,17 @@ export default function DownloadPage() {
             ))}
           </div>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Button asChild size="lg" className="gap-2 px-8">
               <a href={apkDownloadUrl} download="purplehaze.apk">
                 <ArrowDownToLine className="size-4" />
-                <span>Download APK for Android</span>
+                <span>Download Customer APK</span>
+              </a>
+            </Button>
+            <Button asChild variant="gold" size="lg" className="gap-2 px-8 shadow-md shadow-gold/20">
+              <a href={riderApkDownloadUrl} download="purplehaze-rider.apk">
+                <Bike className="size-4" />
+                <span>Rider APP download</span>
               </a>
             </Button>
             <Button asChild variant="outline" size="lg" className="gap-2">
