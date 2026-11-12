@@ -133,7 +133,7 @@ const faqs = [
 
 export default function DownloadPage() {
   const expoBuildUrl =
-    "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/9fcd415c-559f-4759-9477-4330f3004c10";
+    "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/21f74225-a671-4105-91b4-cd86a216c4f3";
   const apkDownloadUrl = "/api/download/apk";
   const iosAppUrl = "https://purplehaze-mobile.vercel.app";
 
