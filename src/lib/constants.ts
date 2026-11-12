@@ -143,6 +143,7 @@ export const ADMIN_NAV_GROUPS = [
       { href: "/admin/customers", label: "Customers", icon: "users" },
       { href: "/admin/reviews", label: "Reviews", icon: "star" },
       { href: "/admin/messages", label: "Messages", icon: "mail" },
+      { href: "/admin/subscribers", label: "Subscribers", icon: "mailCheck" },
     ],
   },
   {

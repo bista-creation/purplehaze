@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { newsletterSchema } from "@/lib/validations";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -39,6 +40,7 @@ export async function subscribeNewsletterAction(
       create: { email: parsed.data.email },
       update: { isActive: true },
     });
+    revalidatePath("/admin/subscribers");
     return {
       success: true,
       message: "You're on the list. Watch out for something delicious.",

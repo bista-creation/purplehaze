@@ -18,6 +18,7 @@ import {
   LayoutTemplate,
   LogOut,
   Mail,
+  MailCheck,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -54,6 +55,7 @@ const ICONS = {
   users: Users,
   star: Star,
   mail: Mail,
+  mailCheck: MailCheck,
   layout: LayoutTemplate,
   settings: Settings,
   shield: ShieldCheck,
@@ -75,6 +77,7 @@ const STAFF_ALLOWED = new Set([
   "/admin/event-bookings",
   "/admin/reviews",
   "/admin/messages",
+  "/admin/subscribers",
 ]);
 
 const STORAGE_SIDEBAR_COLLAPSED = "ph-admin-sidebar-collapsed";
