@@ -178,6 +178,29 @@ export async function GET() {
           },
         },
       },
+      "/auth/firebase": {
+        post: {
+          summary: "Verify Firebase ID token and exchange it for the Purple Haze API session",
+          tags: ["Auth"],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["idToken"],
+                  properties: { idToken: { type: "string" } },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": { description: "Firebase identity verified and API session issued" },
+            "401": { description: "Firebase ID token is invalid or expired" },
+            "403": { description: "Firebase email or phone identity is not verified" },
+          },
+        },
+      },
       "/auth/apple": {
         post: {
           summary: "Verify Apple identity token and sign in / register",
