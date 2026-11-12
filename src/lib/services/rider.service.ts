@@ -324,6 +324,84 @@ export const riderService = {
   },
 
   /**
+   * Admin-only reset of rider password with session revocation and forced first-login change
+   */
+  async adminResetRiderPassword(
+    riderProfileId: string,
+    adminUser: { id: string; email: string },
+    newPassword?: string
+  ): Promise<
+    ServiceResult<{
+      riderId: string;
+      email: string;
+      name: string | null;
+      temporaryPassword: string;
+    }>
+  > {
+    const rider = await prisma.riderProfile.findUnique({
+      where: { id: riderProfileId },
+      include: { user: true },
+    });
+
+    if (!rider) {
+      return {
+        success: false,
+        error: new ServiceError("NOT_FOUND", "Rider profile not found.", 404),
+      };
+    }
+
+    const tempPassword =
+      newPassword && newPassword.trim().length >= 8
+        ? newPassword.trim()
+        : `Rider@${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const passwordHash = await bcrypt.hash(tempPassword, 12);
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: rider.userId },
+        data: {
+          passwordHash,
+          sessionVersion: { increment: 1 },
+        },
+      }),
+      prisma.refreshToken.deleteMany({
+        where: { userId: rider.userId },
+      }),
+      prisma.pushToken.deleteMany({
+        where: { userId: rider.userId },
+      }),
+      prisma.riderProfile.update({
+        where: { id: riderProfileId },
+        data: { mustChangePassword: true },
+      }),
+    ]);
+
+    await writeAuditLog({
+      userId: adminUser.id,
+      actorEmail: adminUser.email,
+      action: "rider.password_reset",
+      entity: "RiderProfile",
+      entityId: riderProfileId,
+      details: {
+        riderEmail: rider.user.email,
+        sessionRevoked: true,
+        mustChangePassword: true,
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        riderId: rider.id,
+        email: rider.user.email,
+        name: rider.user.name,
+        temporaryPassword: tempPassword,
+      },
+    };
+  },
+
+  /**
    * Mandatory first-login password change for riders
    */
   async firstLoginChangePassword(

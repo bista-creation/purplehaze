@@ -306,5 +306,50 @@ describe("Rider Service & Security Layer", () => {
         })
       );
     });
+
+    it("resets rider temporary password, sets mustChangePassword to true, increments sessionVersion, and writes audit log", async () => {
+      vi.mocked(prisma.riderProfile.findUnique).mockResolvedValue({
+        id: "prof_1",
+        userId: "usr_1",
+        user: { id: "usr_1", name: "Rider Test", email: "rider@test.com" },
+      } as any);
+
+      const result = await riderService.adminResetRiderPassword(
+        "prof_1",
+        { id: "admin_1", email: "admin@test.com" },
+        "NewRiderPass@2026"
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.data?.temporaryPassword).toBe("NewRiderPass@2026");
+      expect(result.data?.email).toBe("rider@test.com");
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "usr_1" },
+          data: expect.objectContaining({
+            sessionVersion: { increment: 1 },
+          }),
+        })
+      );
+      expect(prisma.riderProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "prof_1" },
+          data: { mustChangePassword: true },
+        })
+      );
+      expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({
+        where: { userId: "usr_1" },
+      });
+      expect(prisma.pushToken.deleteMany).toHaveBeenCalledWith({
+        where: { userId: "usr_1" },
+      });
+      expect(writeAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: "rider.password_reset",
+          actorEmail: "admin@test.com",
+        })
+      );
+    });
   });
 });

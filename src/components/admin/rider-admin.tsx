@@ -4,8 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bike,
+  Check,
   CheckCircle2,
+  Copy,
   Eye,
+  KeyRound,
   Loader2,
   Plus,
   UserCheck,
@@ -78,6 +81,61 @@ export function RiderAdmin({
     licenseExpiresAt: "",
     temporaryPassword: "",
   });
+
+  // Reset password modal state
+  const [resetPwOpen, setResetPwOpen] = useState(false);
+  const [resetRider, setResetRider] = useState<RiderRow | null>(null);
+  const [customResetPassword, setCustomResetPassword] = useState("");
+  const [resetResult, setResetResult] = useState<{
+    email: string;
+    temporaryPassword: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Credentials copied to clipboard!");
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleOpenResetPassword = (rider: RiderRow) => {
+    setResetRider(rider);
+    setCustomResetPassword("");
+    setResetResult(null);
+    setCopied(false);
+    setResetPwOpen(true);
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetRider) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/v1/admin/riders/${resetRider.id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          temporaryPassword: customResetPassword.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Rider password has been reset!");
+        setResetResult({
+          email: data.data.email,
+          temporaryPassword: data.data.temporaryPassword,
+        });
+        router.refresh();
+      } else {
+        toast.error(data.error?.message || "Failed to reset password");
+      }
+    } catch {
+      toast.error("Network error resetting password");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleOpenVerify = async (rider: RiderRow) => {
     setSelectedRider(rider);
@@ -347,7 +405,16 @@ export function RiderAdmin({
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                            onClick={() => handleOpenResetPassword(r)}
+                            title="Reset rider temporary password"
+                          >
+                            <KeyRound className="mr-1 size-3.5" /> Reset PW
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -408,6 +475,27 @@ export function RiderAdmin({
                     </span>
                   </div>
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 text-xs"
+                  onClick={() =>
+                    copyToClipboard(
+                      `Purple Haze Rider Account Credentials:\nEmail: ${createdCredentials.email}\nTemporary Password: ${createdCredentials.temporaryPassword}`
+                    )
+                  }
+                >
+                  {copied ? (
+                    <>
+                      <Check className="mr-1.5 size-3.5 text-emerald-400" /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-1.5 size-3.5" /> Copy Credentials
+                    </>
+                  )}
+                </Button>
               </div>
               <DialogFooter>
                 <Button
@@ -503,6 +591,20 @@ export function RiderAdmin({
                 </FormField>
               </div>
 
+              <FormField
+                label="Initial Temporary Password"
+                hint="Optional: leave blank to auto-generate (e.g. Rider@123456)"
+              >
+                <Input
+                  type="text"
+                  placeholder="e.g. Rider@2026! or leave blank"
+                  value={createForm.temporaryPassword}
+                  onChange={(e) =>
+                    setCreateForm((f) => ({ ...f, temporaryPassword: e.target.value }))
+                  }
+                />
+              </FormField>
+
               <DialogFooter className="pt-2">
                 <Button
                   type="button"
@@ -591,6 +693,136 @@ export function RiderAdmin({
                 </Button>
               </DialogFooter>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={resetPwOpen} onOpenChange={setResetPwOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Rider Password</DialogTitle>
+            <DialogDescription>
+              Generate or assign a new temporary password for this rider. Active mobile sessions will be revoked instantly, and the rider must set a new password on their next login.
+            </DialogDescription>
+          </DialogHeader>
+
+          {resetResult ? (
+            <div className="space-y-4 py-2">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-300">
+                <p className="mb-2 font-medium">Password Reset Successfully! 🔒</p>
+                <p className="text-xs text-muted-foreground">
+                  Provide this new temporary password to the rider. Their previous sessions have been revoked.
+                </p>
+                <div className="mt-3 space-y-1.5 font-mono text-xs text-foreground">
+                  <div>
+                    <span className="text-muted-foreground">Rider: </span>
+                    {resetRider?.name || "Rider"}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Email: </span>
+                    {resetResult.email}
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">New Temporary Password: </span>
+                    <span className="font-bold text-emerald-400">
+                      {resetResult.temporaryPassword}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 text-xs"
+                  onClick={() =>
+                    copyToClipboard(
+                      `Purple Haze Rider Account Reset:\nEmail: ${resetResult.email}\nTemporary Password: ${resetResult.temporaryPassword}`
+                    )
+                  }
+                >
+                  {copied ? (
+                    <>
+                      <Check className="mr-1.5 size-3.5 text-emerald-400" /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-1.5 size-3.5" /> Copy Credentials
+                    </>
+                  )}
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={() => {
+                    setResetResult(null);
+                    setResetPwOpen(false);
+                  }}
+                >
+                  Done
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <form onSubmit={handleResetPasswordSubmit} className="space-y-4 py-2">
+              <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs space-y-1">
+                <div>
+                  <span className="text-muted-foreground">Rider: </span>
+                  <span className="font-semibold">{resetRider?.name || "Rider"}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Email: </span>
+                  <span className="font-mono">{resetRider?.email}</span>
+                </div>
+              </div>
+
+              <FormField
+                label="New Temporary Password"
+                hint="Leave blank to auto-generate a secure random temporary password (e.g. Rider@123456)"
+              >
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="e.g. Rider@2026! or leave blank"
+                    value={customResetPassword}
+                    onChange={(e) => setCustomResetPassword(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 text-xs"
+                    onClick={() =>
+                      setCustomResetPassword(
+                        `Rider@${Math.floor(100000 + Math.random() * 900000)}`
+                      )
+                    }
+                  >
+                    Generate
+                  </Button>
+                </div>
+              </FormField>
+
+              <DialogFooter className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setResetPwOpen(false)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-1.5 size-4 animate-spin" /> Resetting...
+                    </>
+                  ) : (
+                    "Confirm Reset"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
           )}
         </DialogContent>
       </Dialog>
