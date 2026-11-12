@@ -628,7 +628,7 @@ export default async function HomePage() {
                 <span className="text-gold italic">All in the mobile app.</span>
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
-                Get real-time GPS rider tracking from Airport Road to your door, talk to Maya AI for dish suggestions, and unlock app-exclusive treats with one tap. Available for Android and iOS.
+                Get real-time GPS rider tracking from Airport Road to your door, reorder favorites, and enjoy a faster checkout. Available for Android and iPhone users.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3.5">
                 <Button asChild variant="gold" size="lg" className="gap-2">
@@ -658,7 +658,7 @@ export default async function HomePage() {
                   </div>
                 </div>
                 <div className="mt-4 space-y-2 text-xs text-white/80">
-                  <p className="flex items-center gap-2">✓ Maya AI Assistant</p>
+                  <p className="flex items-center gap-2">✓ Quick mobile ordering</p>
                   <p className="flex items-center gap-2">✓ Real-time Rider GPS</p>
                   <p className="flex items-center gap-2">✓ Instant Khalti &amp; Fonepay</p>
                 </div>

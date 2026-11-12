@@ -234,7 +234,7 @@ export function SiteFooter() {
               <Smartphone className="size-5 text-gold shrink-0" />
               <div className="min-w-0 flex-1 text-xs">
                 <p className="font-semibold text-white">Get Purple Haze Mobile App</p>
-                <p className="text-white/60 text-[11px]">Android APK &amp; iPhone · Maya AI &amp; live GPS</p>
+                <p className="text-white/60 text-[11px]">Android APK &amp; iPhone · Order &amp; track</p>
               </div>
               <Link
                 href="/download"
