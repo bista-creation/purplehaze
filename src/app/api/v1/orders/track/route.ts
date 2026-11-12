@@ -64,6 +64,10 @@ async function handleTrack(req: NextRequest, data: { orderNumber: string; phone:
   return jsonOk(safeTrackingDto);
 }
 
+export async function OPTIONS() {
+  return new Response(null, { status: 204 });
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const parsed = trackQuerySchema.safeParse({

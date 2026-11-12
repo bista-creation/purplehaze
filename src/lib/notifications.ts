@@ -12,6 +12,42 @@ export type StaffNotificationInput = {
   isTest?: boolean;
 };
 
+async function broadcastToStaffPushTokens(
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+) {
+  try {
+    const tokens = await prisma.pushToken.findMany({
+      select: { token: true },
+      take: 100,
+    });
+    if (!tokens || tokens.length === 0) return;
+
+    const messages = tokens.map((t) => ({
+      to: t.token,
+      sound: "default",
+      title,
+      body,
+      data: data || {},
+      channelId: "default",
+      priority: "high",
+    }));
+
+    await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Accept-Encoding": "gzip, deflate",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(messages),
+    }).catch(() => null);
+  } catch {
+    // Background dispatch is non-blocking
+  }
+}
+
 /**
  * Notifications are durable events. The unique eventKey makes retries safe:
  * a repeated callback or status submission cannot create a second event.
@@ -20,6 +56,12 @@ export async function createStaffNotification(
   tx: Prisma.TransactionClient,
   input: StaffNotificationInput,
 ) {
+  // Fire background Expo push alert to all registered staff/admin devices
+  void broadcastToStaffPushTokens(input.title, input.message, {
+    orderId: input.orderId,
+    type: input.type,
+  });
+
   return tx.notification.upsert({
     where: { eventKey: input.eventKey },
     update: {},

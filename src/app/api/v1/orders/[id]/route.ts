@@ -5,6 +5,10 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { generateDeliveryOtp } from "@/lib/security/otp";
 import { prisma } from "@/lib/prisma";
 
+export async function OPTIONS() {
+  return new Response(null, { status: 204 });
+}
+
 export async function GET(
   req: NextRequest,
   props: { params: Promise<{ id: string }> },
