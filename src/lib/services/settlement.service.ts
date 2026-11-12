@@ -89,11 +89,27 @@ export const settlementService = {
 
     const totalDelivered = deliveredDeliveries.length;
     const codDeliveries = deliveredDeliveries.filter((d) => d.order.paymentMethod === "COD");
-    const codExpectedPaisa = codDeliveries.reduce((sum, d) => sum + d.codAmountPaisa, 0);
-    const riderReportedPaisa = codDeliveries.reduce(
-      (sum, d) => sum + (d.cashCollectedPaisa ?? d.codAmountPaisa),
-      0
-    );
+    
+    const getNormalizedCod = (d: (typeof deliveredDeliveries)[0]) => {
+      const orderTotal = d.order.total;
+      let cod = d.codAmountPaisa;
+      if (cod > orderTotal && orderTotal > 0 && (cod === orderTotal * 100 || cod > orderTotal * 50)) {
+        return orderTotal;
+      }
+      return cod || orderTotal;
+    };
+
+    const getNormalizedCollected = (d: (typeof deliveredDeliveries)[0]) => {
+      const expected = getNormalizedCod(d);
+      let collected = d.cashCollectedPaisa ?? expected;
+      if (collected > d.order.total && d.order.total > 0 && (collected === d.order.total * 100 || collected > d.order.total * 50)) {
+        return d.order.total;
+      }
+      return collected;
+    };
+
+    const codExpectedPaisa = codDeliveries.reduce((sum, d) => sum + getNormalizedCod(d), 0);
+    const riderReportedPaisa = codDeliveries.reduce((sum, d) => sum + getNormalizedCollected(d), 0);
 
     // Upsert the RiderSettlement record for today
     const settlement = await prisma.riderSettlement.upsert({
@@ -155,17 +171,21 @@ export const settlementService = {
           receivedByName: h.receivedByAdmin?.name || null,
           notes: h.notes,
         })),
-        deliveredOrders: deliveredDeliveries.map((d) => ({
-          id: d.id,
-          orderNumber: d.order.orderNumber,
-          customerName: d.order.customerName,
-          customerPhone: d.order.customerPhone,
-          paymentMethod: d.order.paymentMethod,
-          totalPaisa: d.order.total,
-          codAmountPaisa: d.codAmountPaisa,
-          cashCollectedPaisa: d.cashCollectedPaisa,
-          deliveredAt: d.deliveredAt,
-        })),
+        deliveredOrders: deliveredDeliveries.map((d) => {
+          const cod = getNormalizedCod(d);
+          const collected = getNormalizedCollected(d);
+          return {
+            id: d.id,
+            orderNumber: d.order.orderNumber,
+            customerName: d.order.customerName,
+            customerPhone: d.order.customerPhone,
+            paymentMethod: d.order.paymentMethod,
+            totalPaisa: d.order.total,
+            codAmountPaisa: cod,
+            cashCollectedPaisa: collected,
+            deliveredAt: d.deliveredAt,
+          };
+        }),
       },
     };
   },
@@ -304,7 +324,7 @@ export const settlementService = {
             id: true,
             codAmountPaisa: true,
             cashCollectedPaisa: true,
-            order: { select: { paymentMethod: true } },
+            order: { select: { paymentMethod: true, total: true } },
           },
         },
       },
@@ -317,11 +337,26 @@ export const settlementService = {
     const settlements = riders.map((r) => {
       const existingSettlement = r.settlements[0];
       const codDeliveries = r.deliveries.filter((d) => d.order.paymentMethod === "COD");
-      const codExpectedPaisa = codDeliveries.reduce((sum, d) => sum + d.codAmountPaisa, 0);
-      const riderReportedPaisa = codDeliveries.reduce(
-        (sum, d) => sum + (d.cashCollectedPaisa ?? d.codAmountPaisa),
-        0
-      );
+      const codExpectedPaisa = codDeliveries.reduce((sum, d) => {
+        const orderTotal = d.order.total;
+        let cod = d.codAmountPaisa;
+        if (cod > orderTotal && orderTotal > 0 && (cod === orderTotal * 100 || cod > orderTotal * 50)) {
+          return orderTotal;
+        }
+        return cod || orderTotal;
+      }, 0);
+      const riderReportedPaisa = codDeliveries.reduce((sum, d) => {
+        const orderTotal = d.order.total;
+        let cod = d.codAmountPaisa;
+        if (cod > orderTotal && orderTotal > 0 && (cod === orderTotal * 100 || cod > orderTotal * 50)) {
+          cod = orderTotal;
+        }
+        let collected = d.cashCollectedPaisa ?? cod;
+        if (collected > orderTotal && orderTotal > 0 && (collected === orderTotal * 100 || collected > orderTotal * 50)) {
+          collected = orderTotal;
+        }
+        return sum + collected;
+      }, 0);
 
       const cashierCountPaisa = existingSettlement?.cashierCountPaisa ?? 0;
       const differencePaisa = existingSettlement

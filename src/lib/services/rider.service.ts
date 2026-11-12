@@ -607,7 +607,9 @@ export const riderService = {
       deliveryStatus: d.status,
       orderStatus: d.order.status,
       totalPaisa: d.order.total,
-      codAmountPaisa: d.codAmountPaisa,
+      codAmountPaisa: d.order.paymentMethod === "COD"
+        ? (d.codAmountPaisa > d.order.total && d.order.total > 0 ? d.order.total : (d.codAmountPaisa || d.order.total))
+        : 0,
       paymentMethod: d.order.paymentMethod,
       paymentStatus: d.order.paymentStatus,
       items: d.order.items,

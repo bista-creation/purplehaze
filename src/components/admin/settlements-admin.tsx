@@ -55,6 +55,14 @@ export interface SettlementsAdminProps {
   };
 }
 
+export function formatRupees(paisa: number): string {
+  const rs = paisa / 100;
+  return rs.toLocaleString("en-IN", {
+    minimumFractionDigits: rs % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdminProps) {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [loading, setLoading] = useState(false);
@@ -86,9 +94,14 @@ export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdm
 
   const openHandoverModal = (row: SettlementRow) => {
     setSelectedRider(row);
-    // Default to remaining expected COD if any
-    const remainingExpected = Math.max(0, (row.codExpectedPaisa - row.cashierCountPaisa) / 100);
-    setHandoverAmountRs(remainingExpected > 0 ? remainingExpected.toString() : "");
+    // Default to remaining expected COD if any (in Rupees)
+    const remainingPaisa = Math.max(0, row.codExpectedPaisa - row.cashierCountPaisa);
+    const remainingRs = remainingPaisa / 100;
+    setHandoverAmountRs(
+      remainingPaisa > 0
+        ? (remainingRs % 1 === 0 ? remainingRs.toFixed(0) : remainingRs.toFixed(2))
+        : ""
+    );
     setHandoverNotes("");
     setHandoverModalOpen(true);
   };
@@ -187,7 +200,7 @@ export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdm
             <Banknote className="h-4 w-4 text-primary" />
           </div>
           <div className="text-2xl font-black font-mono text-foreground">
-            Rs. {(summary.totalCodExpectedPaisa / 100).toLocaleString()}
+            Rs. {formatRupees(summary.totalCodExpectedPaisa)}
           </div>
           <p className="text-[11px] text-muted-foreground">
             Calculated from completed Cash on Delivery orders
@@ -200,7 +213,7 @@ export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdm
             <Coins className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
-            Rs. {(summary.totalCashierCountPaisa / 100).toLocaleString()}
+            Rs. {formatRupees(summary.totalCashierCountPaisa)}
           </div>
           <p className="text-[11px] text-muted-foreground">
             Confirmed handovers entered into register
@@ -222,7 +235,7 @@ export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdm
             }`}
           >
             {summary.totalDifferencePaisa > 0 ? "+" : ""}
-            Rs. {(summary.totalDifferencePaisa / 100).toLocaleString()}
+            Rs. {formatRupees(summary.totalDifferencePaisa)}
           </div>
           <p className="text-[11px] text-muted-foreground">
             {summary.totalDifferencePaisa === 0
@@ -287,11 +300,11 @@ export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdm
                     </td>
 
                     <td className="py-3.5 px-4 text-right font-mono font-semibold">
-                      Rs. {(row.codExpectedPaisa / 100).toLocaleString()}
+                      Rs. {formatRupees(row.codExpectedPaisa)}
                     </td>
 
                     <td className="py-3.5 px-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                      Rs. {(row.cashierCountPaisa / 100).toLocaleString()}
+                      Rs. {formatRupees(row.cashierCountPaisa)}
                     </td>
 
                     <td
@@ -304,7 +317,7 @@ export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdm
                       }`}
                     >
                       {row.differencePaisa > 0 ? "+" : ""}
-                      Rs. {(row.differencePaisa / 100).toLocaleString()}
+                      Rs. {formatRupees(row.differencePaisa)}
                     </td>
 
                     <td className="py-3.5 px-4 text-center">
@@ -367,13 +380,13 @@ export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdm
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Expected COD Today:</span>
                   <span className="font-mono font-bold text-foreground">
-                    Rs. {(selectedRider.codExpectedPaisa / 100).toLocaleString()}
+                    Rs. {formatRupees(selectedRider.codExpectedPaisa)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Previously Received:</span>
                   <span className="font-mono text-emerald-500 font-semibold">
-                    Rs. {(selectedRider.cashierCountPaisa / 100).toLocaleString()}
+                    Rs. {formatRupees(selectedRider.cashierCountPaisa)}
                   </span>
                 </div>
               </div>
