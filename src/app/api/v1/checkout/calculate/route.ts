@@ -7,12 +7,20 @@ import { prisma } from "@/lib/prisma";
 import { cartItemSchema } from "@/lib/validations";
 import { z } from "zod";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
+import { getAuthContext } from "@/lib/api/auth-context";
+import {
+  calculateLoyaltyDiscount,
+  getLoyaltySummary,
+  LOYALTY_REDEMPTION_PERCENT,
+  LOYALTY_REDEMPTION_POINTS,
+} from "@/lib/services/loyalty.service";
 
 const calculateCheckoutSchema = z.object({
   items: z.array(cartItemSchema).min(1, "Cart cannot be empty."),
   type: z.enum(["DELIVERY", "PICKUP", "DINE_IN"]),
   zoneId: z.string().optional(),
   couponCode: z.string().optional(),
+  loyaltyPointsToRedeem: z.number().int().optional().default(0),
 });
 
 export async function POST(req: NextRequest) {
@@ -23,7 +31,19 @@ export async function POST(req: NextRequest) {
       return jsonZodError(parsed.error);
     }
 
-    const { items, type, zoneId, couponCode } = parsed.data;
+    const { items, type, zoneId, couponCode, loyaltyPointsToRedeem } = parsed.data;
+
+    if (loyaltyPointsToRedeem !== 0 && loyaltyPointsToRedeem !== LOYALTY_REDEMPTION_POINTS) {
+      return jsonError("INVALID_REDEMPTION", `Redeem exactly ${LOYALTY_REDEMPTION_POINTS} points at a time.`, 400);
+    }
+    if (loyaltyPointsToRedeem > 0 && couponCode?.trim()) {
+      return jsonError("DISCOUNTS_CANNOT_STACK", "Use a coupon code or loyalty points, not both.", 400);
+    }
+
+    const user = loyaltyPointsToRedeem > 0 ? await getAuthContext(req) : null;
+    if (loyaltyPointsToRedeem > 0 && (!user || user.role !== "CUSTOMER")) {
+      return jsonError("LOYALTY_SIGN_IN_REQUIRED", "Sign in to redeem loyalty points.", 401);
+    }
 
     // 1. Calculate items with server prices
     const cartCalc = await cartService.validateAndCalculateItems(items);
@@ -73,6 +93,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    let loyaltyDiscountAmount = 0;
+    let loyaltyPointsBalance: number | null = null;
+    if (loyaltyPointsToRedeem > 0 && user) {
+      const summary = await getLoyaltySummary(user.id);
+      loyaltyPointsBalance = summary.pointsBalance;
+      if (summary.pointsBalance < LOYALTY_REDEMPTION_POINTS) {
+        return jsonError("INSUFFICIENT_LOYALTY_POINTS", "You need 200 points to redeem this reward.", 400);
+      }
+      loyaltyDiscountAmount = calculateLoyaltyDiscount(subtotal);
+      discountAmount += loyaltyDiscountAmount;
+    }
+
     // 4. Order totals in paisa
     const totals = calculateOrderTotals({
       subtotal,
@@ -86,6 +118,10 @@ export async function POST(req: NextRequest) {
       subtotal: totals.subtotal,
       deliveryFee: totals.deliveryFee,
       discountAmount: totals.discountAmount,
+      loyaltyDiscountAmount,
+      loyaltyPointsToRedeem,
+      loyaltyPointsBalance,
+      loyaltyRedemptionPercent: LOYALTY_REDEMPTION_PERCENT,
       taxAmount: totals.taxAmount,
       serviceCharge: totals.serviceCharge,
       total: totals.total,

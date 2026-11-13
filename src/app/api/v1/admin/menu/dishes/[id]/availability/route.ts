@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { writeAuditLog } from "@/lib/audit";
 import { broadcastMenuUpdated } from "@/lib/realtime/broadcast";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
@@ -14,7 +14,7 @@ export async function PATCH(
   req: NextRequest,
   props: { params: Promise<{ id: string }> },
 ) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const params = await props.params;

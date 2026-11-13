@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminAuth, requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 import { riderService } from "@/lib/services/rider.service";
 
@@ -17,7 +17,7 @@ const createRiderSchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
-  const { errorResponse } = await requireAdminAuth(req);
+  const { user, errorResponse } = await requireAdminAuth(req);
   if (errorResponse) return errorResponse;
 
   const riders = await prisma.riderProfile.findMany({
@@ -60,11 +60,24 @@ export async function GET(req: NextRequest) {
     createdAt: r.createdAt,
   }));
 
+  if (user.role === "STAFF") {
+    return jsonOk(formatted.map(({ id, name, phone, isBlocked, vehicleType, licenseStatus, licenseExpiresAt, shiftStatus, activeDeliveriesCount }) => ({
+      id,
+      name,
+      phone,
+      isBlocked,
+      vehicleType,
+      licenseStatus,
+      licenseExpiresAt,
+      shiftStatus,
+      activeDeliveriesCount,
+    })));
+  }
   return jsonOk(formatted);
 }
 
 export async function POST(req: NextRequest) {
-  const { user, errorResponse } = await requireAdminAuth(req);
+  const { user, errorResponse } = await requireAdminOnlyAuth(req);
   if (errorResponse) return errorResponse;
 
   try {

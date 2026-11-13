@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { deliveryService } from "@/lib/services/delivery.service";
 
@@ -12,7 +12,7 @@ export async function POST(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
-  const { user, errorResponse } = await requireAdminAuth(req);
+  const { user, errorResponse } = await requireAdminOnlyAuth(req);
   if (errorResponse) return errorResponse;
 
   const params = await props.params;

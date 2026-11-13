@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
@@ -19,6 +20,10 @@ async function broadcastToStaffPushTokens(
 ) {
   try {
     const tokens = await prisma.pushToken.findMany({
+      // Staff alerts must never fan out to customer/guest devices. The staff
+      // app registers its token only after bearer authentication links it to
+      // a STAFF or ADMIN user.
+      where: { user: { is: { role: { in: ["STAFF", "ADMIN"] } } } },
       select: { token: true },
       take: 100,
     });
@@ -26,15 +31,15 @@ async function broadcastToStaffPushTokens(
 
     const messages = tokens.map((t) => ({
       to: t.token,
-      sound: "default",
+      sound: "order_alert.wav",
       title,
       body,
       data: data || {},
-      channelId: "default",
+      channelId: "incoming-orders",
       priority: "high",
     }));
 
-    await fetch("https://exp.host/--/api/v2/push/send", {
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -42,9 +47,13 @@ async function broadcastToStaffPushTokens(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(messages),
-    }).catch(() => null);
-  } catch {
+    });
+    if (!response.ok) {
+      console.warn(`[Expo Push] Staff broadcast failed with HTTP ${response.status}`);
+    }
+  } catch (error) {
     // Background dispatch is non-blocking
+    console.warn("[Expo Push] Staff broadcast failed:", error);
   }
 }
 
@@ -56,13 +65,7 @@ export async function createStaffNotification(
   tx: Prisma.TransactionClient,
   input: StaffNotificationInput,
 ) {
-  // Fire background Expo push alert to all registered staff/admin devices
-  void broadcastToStaffPushTokens(input.title, input.message, {
-    orderId: input.orderId,
-    type: input.type,
-  });
-
-  return tx.notification.upsert({
+  const notification = await tx.notification.upsert({
     where: { eventKey: input.eventKey },
     update: {},
     create: {
@@ -75,6 +78,15 @@ export async function createStaffNotification(
       isTest: input.isTest ?? false,
     },
   });
+
+  // Next.js after() keeps the send alive after the response. A bare void
+  // promise can be terminated when a Vercel function returns.
+  after(() => broadcastToStaffPushTokens(input.title, input.message, {
+    orderId: input.orderId,
+    type: input.type,
+  }));
+
+  return notification;
 }
 
 export type NotificationInboxItem = {

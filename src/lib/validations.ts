@@ -146,6 +146,7 @@ export const checkoutDetailsSchema = z
     notes: z.string().trim().max(500).optional().or(z.literal("")),
     paymentMethod: z.enum(PAYMENT_METHODS),
     couponCode: z.string().trim().max(30).optional().or(z.literal("")),
+    loyaltyPointsToRedeem: z.number().int().nonnegative().max(200).optional().default(0),
     scheduledFor: z.string().optional().or(z.literal("")),
     saveAddress: z.boolean().optional().default(false),
   })

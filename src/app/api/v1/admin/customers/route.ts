@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { jsonOk } from "@/lib/api/response";
 
 export async function GET(req: NextRequest) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const { searchParams } = new URL(req.url);

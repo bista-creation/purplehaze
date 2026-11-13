@@ -152,7 +152,7 @@ export class BookingService {
       userId: reservation.userId,
     }).catch(() => undefined);
 
-    pushNotificationService
+    await pushNotificationService
       .sendReservationNotification({
         userId: reservation.userId,
         reservationId: reservation.id,

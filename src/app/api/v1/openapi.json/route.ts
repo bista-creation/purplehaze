@@ -311,6 +311,17 @@ export async function GET() {
           },
         },
       },
+      "/loyalty": {
+        get: {
+          summary: "Get the current customer's loyalty points and recent activity",
+          tags: ["Loyalty"],
+          security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+          responses: {
+            "200": { description: "Customer reward balance and transactions" },
+            "401": { description: "Customer sign-in required" },
+          },
+        },
+      },
       "/orders": {
         get: {
           summary: "List customer orders with pagination",

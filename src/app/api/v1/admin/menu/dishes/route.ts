@@ -1,11 +1,33 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { dishAdminSchema } from "@/lib/validations";
 import { rupeesToPaisa } from "@/lib/money";
 import { slugify } from "@/lib/utils";
 import { writeAuditLog } from "@/lib/audit";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
+
+export async function GET(req: NextRequest) {
+  const authCheck = await requireAdminOnlyAuth(req);
+  if (authCheck.errorResponse) return authCheck.errorResponse;
+
+  const { searchParams } = new URL(req.url);
+  const search = searchParams.get("search")?.trim();
+  const categoryId = searchParams.get("categoryId");
+  const dishes = await prisma.dish.findMany({
+    where: {
+      ...(categoryId ? { categoryId } : {}),
+      ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
+    },
+    include: {
+      category: { select: { id: true, name: true } },
+      variants: { orderBy: { sortOrder: "asc" } },
+      addOns: { include: { addOn: true } },
+    },
+    orderBy: [{ category: { sortOrder: "asc" } }, { sortOrder: "asc" }, { name: "asc" }],
+  });
+  return jsonOk(dishes, { total: dishes.length });
+}
 
 async function uniqueDishSlug(source: string, currentId?: string) {
   const base = slugify(source) || `dish-${Date.now()}`;
@@ -21,7 +43,7 @@ async function uniqueDishSlug(source: string, currentId?: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const body = await req.json().catch(() => null);

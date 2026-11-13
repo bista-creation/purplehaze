@@ -43,6 +43,8 @@ model User {
   auditLogs         AuditLog[]
   refreshTokens     RefreshToken[]
   pushTokens        PushToken[]
+  loyaltyAccount    LoyaltyAccount?
+  loyaltyTransactions LoyaltyTransaction[]
   riderProfile      RiderProfile?
   cashHandoversReceived RiderCashHandover[] @relation("CashierHandovers")
   settlementsReconciled RiderSettlement[]   @relation("AdminSettlements")
@@ -257,6 +259,7 @@ model Order {
   deliveryFee     Int       @default(0)
   taxAmount       Int       @default(0)
   discountAmount  Int       @default(0)
+  loyaltyPointsRedeemed Int   @default(0)
   total           Int
   couponId        String?
   couponCode      String?
@@ -285,6 +288,7 @@ model Order {
   review        Review?
   notifications Notification[]
   delivery      Delivery?
+  loyaltyTransactions LoyaltyTransaction[]
 
   @@index([userId])
   @@index([status])
@@ -321,6 +325,33 @@ model OrderStatusHistory {
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
+  @@index([orderId])
+}
+
+model LoyaltyAccount {
+  userId             String   @id
+  pointsBalance      Int      @default(0)
+  lifetimePoints     Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LoyaltyTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  orderId     String?
+  kind        String
+  pointsDelta Int
+  description String
+  createdAt   DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, orderId, kind])
+  @@index([userId, createdAt])
   @@index([orderId])
 }
 

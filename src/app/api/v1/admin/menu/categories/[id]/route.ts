@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { categoryAdminSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 import { writeAuditLog } from "@/lib/audit";
@@ -23,7 +23,7 @@ export async function PUT(
   req: NextRequest,
   props: { params: Promise<{ id: string }> },
 ) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const params = await props.params;
@@ -72,7 +72,7 @@ export async function DELETE(
   req: NextRequest,
   props: { params: Promise<{ id: string }> },
 ) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const params = await props.params;

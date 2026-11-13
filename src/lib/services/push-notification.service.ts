@@ -75,6 +75,9 @@ export class PushNotificationService {
             sentCount += 1;
           } else {
             failedCount += 1;
+            console.warn(
+              `[Expo Push] Provider rejected notification: ${ticket.message} (${ticket.details?.error ?? "unknown error"})`,
+            );
             if (ticket.details?.error === "DeviceNotRegistered") {
               const badToken = chunk[idx]?.to;
               if (typeof badToken === "string") {
@@ -153,6 +156,7 @@ export class PushNotificationService {
     title: string,
     body: string,
     data?: Record<string, unknown>,
+    channelId?: string,
   ) {
     if (!userId) return { sent: 0, failed: 0, unregisteredTokens: [], tickets: [] };
 
@@ -179,6 +183,7 @@ export class PushNotificationService {
       title,
       body,
       data,
+      channelId,
       priority: "high",
     }));
 
@@ -236,7 +241,7 @@ export class PushNotificationService {
       orderId: params.orderId,
       orderNumber: params.orderNumber,
       status: params.status,
-    });
+    }, "order_updates");
   }
 
   /**

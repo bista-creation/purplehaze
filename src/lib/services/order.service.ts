@@ -32,12 +32,26 @@ import {
 import { evaluateOrderAcceptance, paymentPresentation } from "@/lib/order-state";
 import { broadcastOrderCreated, broadcastOrderStatusUpdated } from "@/lib/realtime/broadcast";
 import { pushNotificationService } from "./push-notification.service";
+import {
+  awardCompletedOrderPoints,
+  calculateLoyaltyDiscount,
+  LOYALTY_REDEMPTION_PERCENT,
+  LOYALTY_REDEMPTION_POINTS,
+  refundRedeemedPoints,
+} from "./loyalty.service";
 import type { CreateOrderInput } from "@/lib/validations";
 
 export class CouponUnavailableError extends Error {
   constructor() {
     super("Coupon is no longer available.");
     this.name = "CouponUnavailableError";
+  }
+}
+
+export class LoyaltyUnavailableError extends Error {
+  constructor(message = "Your reward points are no longer available. Refresh checkout and try again.") {
+    super(message);
+    this.name = "LoyaltyUnavailableError";
   }
 }
 
@@ -69,9 +83,22 @@ function isUniqueConstraintError(error: unknown) {
 export class OrderService {
   async createOrder(
     input: CreateOrderInput,
-    user?: { id: string; email: string; isTest?: boolean } | null,
+    user?: { id: string; email: string; isTest?: boolean; role?: string } | null,
   ): Promise<OrderCreationResult> {
     const { details, items, idempotencyKey } = input;
+    const loyaltyPointsToRedeem = details.loyaltyPointsToRedeem ?? 0;
+
+    if (loyaltyPointsToRedeem > 0) {
+      if (!user || user.role !== "CUSTOMER") {
+        return { success: false, message: "Sign in as a customer to redeem loyalty points." };
+      }
+      if (loyaltyPointsToRedeem !== LOYALTY_REDEMPTION_POINTS) {
+        return { success: false, message: `Redeem exactly ${LOYALTY_REDEMPTION_POINTS} points at a time.` };
+      }
+      if (details.couponCode?.trim()) {
+        return { success: false, message: "Use a coupon code or loyalty points, not both." };
+      }
+    }
 
     // 1. Idempotency check
     if (idempotencyKey) {
@@ -229,6 +256,11 @@ export class OrderService {
       discountAmount = discount.discount;
     }
 
+    const loyaltyDiscountAmount = loyaltyPointsToRedeem > 0
+      ? calculateLoyaltyDiscount(subtotal)
+      : 0;
+    discountAmount += loyaltyDiscountAmount;
+
     // 6. Scheduled delivery
     let scheduledFor: Date | null = null;
     if (details.scheduledFor) {
@@ -305,6 +337,7 @@ export class OrderService {
             deliveryFee: totals.deliveryFee,
             taxAmount: totals.taxAmount,
             discountAmount: totals.discountAmount,
+            loyaltyPointsRedeemed: loyaltyPointsToRedeem,
             total: totals.total,
             couponId,
             couponCode,
@@ -360,6 +393,28 @@ export class OrderService {
             data: { usedCount: { increment: 1 } },
           });
           if (claimed.count !== 1) throw new CouponUnavailableError();
+        }
+
+        if (loyaltyPointsToRedeem > 0 && user) {
+          const redeemed = await tx.loyaltyAccount.updateMany({
+            where: {
+              userId: user.id,
+              pointsBalance: { gte: loyaltyPointsToRedeem },
+            },
+            data: { pointsBalance: { decrement: loyaltyPointsToRedeem } },
+          });
+          if (redeemed.count !== 1) {
+            throw new LoyaltyUnavailableError("You need 200 points to redeem this reward. Refresh checkout and try again.");
+          }
+          await tx.loyaltyTransaction.create({
+            data: {
+              userId: user.id,
+              orderId: created.id,
+              kind: "REDEEM",
+              pointsDelta: -loyaltyPointsToRedeem,
+              description: `${LOYALTY_REDEMPTION_PERCENT}% loyalty reward redeemed.`,
+            },
+          });
         }
 
         const payment = paymentPresentation(
@@ -458,6 +513,9 @@ export class OrderService {
           success: false,
           message: "That coupon is no longer available. Remove it and try again.",
         };
+      }
+      if (error instanceof LoyaltyUnavailableError) {
+        return { success: false, message: error.message };
       }
       if (idempotencyKey && isUniqueConstraintError(error)) {
         const existing = await prisma.order.findUnique({
@@ -711,6 +769,12 @@ export class OrderService {
         }
       }
 
+      if (newStatus === "COMPLETED") {
+        await awardCompletedOrderPoints(tx, order.id);
+      } else if (newStatus === "CANCELLED") {
+        await refundRedeemedPoints(tx, order.id);
+      }
+
       await createStaffNotification(tx, {
         eventKey: `order:${order.id}:${newStatus.toLowerCase()}`,
         type: "ORDER",
@@ -750,7 +814,7 @@ export class OrderService {
         userId: updated.userId,
       }).catch((err) => console.warn("Realtime order status broadcast failed:", err));
 
-      pushNotificationService
+      await pushNotificationService
         .sendOrderStatusNotification({
           userId: updated.userId,
           orderId: updated.id,
@@ -838,6 +902,8 @@ export class OrderService {
         },
       });
 
+      await refundRedeemedPoints(tx, order.id);
+
       await createStaffNotification(tx, {
         eventKey: `order:${order.id}:cancelled`,
         type: "ORDER",
@@ -878,7 +944,7 @@ export class OrderService {
       userId: order.userId,
     }).catch((err) => console.warn("Realtime order cancel broadcast failed:", err));
 
-    pushNotificationService
+    await pushNotificationService
       .sendOrderStatusNotification({
         userId: order.userId,
         orderId: order.id,

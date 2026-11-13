@@ -114,7 +114,7 @@ export async function createOrderAction(
     const user = await getCurrentUser();
     const result = await orderService.createOrder(
       parsed.data,
-      user ? { id: user.id, email: user.email } : null,
+      user ? { id: user.id, email: user.email, role: user.role } : null,
     );
 
     if (!result.success) {

@@ -1,10 +1,20 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { categoryAdminSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
 import { writeAuditLog } from "@/lib/audit";
 import { jsonOk, jsonZodError } from "@/lib/api/response";
+
+export async function GET(req: NextRequest) {
+  const authCheck = await requireAdminOnlyAuth(req);
+  if (authCheck.errorResponse) return authCheck.errorResponse;
+  const categories = await prisma.category.findMany({
+    include: { _count: { select: { dishes: true } } },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+  return jsonOk(categories, { total: categories.length });
+}
 
 async function uniqueCategorySlug(name: string, currentId?: string) {
   const base = slugify(name) || `category-${Date.now()}`;
@@ -20,7 +30,7 @@ async function uniqueCategorySlug(name: string, currentId?: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const body = await req.json().catch(() => null);

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { writeAuditLog } from "@/lib/audit";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 
@@ -10,7 +10,7 @@ const updateSettingsSchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const records = await prisma.setting.findMany();
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   if (authCheck.user.role !== "ADMIN") {

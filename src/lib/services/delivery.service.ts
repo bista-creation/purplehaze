@@ -8,6 +8,8 @@ import { scheduleAssignmentTimeout } from "@/lib/qstash";
 import { broadcastEvent } from "@/lib/realtime/broadcast";
 import { REALTIME_CHANNELS, REALTIME_EVENTS } from "@/lib/shared/realtime";
 import { locationStore } from "@/lib/location-store";
+import { pushNotificationService } from "@/lib/services/push-notification.service";
+import { awardCompletedOrderPointsSafely } from "@/lib/services/loyalty.service";
 
 async function broadcastDeliveryStatusUpdate(payload: {
   orderId: string;
@@ -153,6 +155,15 @@ export const deliveryService = {
       assignmentAttemptId,
       delaySeconds: 120,
     });
+
+    const isCod = order.paymentMethod === "COD" || order.paymentMethod === "CASH_ON_DELIVERY";
+    await pushNotificationService.sendToUser(
+      rider.userId,
+      `New delivery assigned · #${order.orderNumber}`,
+      `Accept within 120 seconds. ${isCod ? "Cash on delivery." : "Payment received."}`,
+      { type: "rider_assignment", deliveryId: delivery.id, orderId: order.id, orderNumber: order.orderNumber },
+      "order_assignment",
+    ).catch((error) => console.warn("[Rider assignment push] Could not send push notification:", error));
 
     // Broadcast realtime event
     await broadcastDeliveryStatusUpdate({
@@ -793,6 +804,9 @@ export const deliveryService = {
       await prisma.order.update({
         where: { id: delivery.orderId },
         data: { status: "COMPLETED" },
+      });
+      await awardCompletedOrderPointsSafely(delivery.orderId).catch((error) => {
+        console.error("Failed to award loyalty points for delivered order:", error);
       });
     }
 

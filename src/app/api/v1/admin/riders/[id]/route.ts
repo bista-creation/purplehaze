@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireAdminAuth, requireAdminOnlyAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 import { riderService } from "@/lib/services/rider.service";
 
@@ -41,7 +41,7 @@ export async function PATCH(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
-  const { user, errorResponse } = await requireAdminAuth(req);
+  const { user, errorResponse } = await requireAdminOnlyAuth(req);
   if (errorResponse) return errorResponse;
 
   const params = await props.params;

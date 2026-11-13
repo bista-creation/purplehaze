@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { couponAdminSchema } from "@/lib/validations";
 import { parseNepalDateTime } from "@/lib/time";
 import { rupeesToPaisa } from "@/lib/money";
@@ -8,7 +8,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 
 export async function GET(req: NextRequest) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const coupons = await prisma.coupon.findMany({
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const body = await req.json().catch(() => null);

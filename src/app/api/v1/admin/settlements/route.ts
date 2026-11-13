@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { settlementService } from "@/lib/services/settlement.service";
 
 export async function GET(req: NextRequest) {
-  const { errorResponse } = await requireAdminAuth(req);
+  const { errorResponse } = await requireAdminOnlyAuth(req);
   if (errorResponse) return errorResponse;
 
   const url = new URL(req.url);

@@ -26,6 +26,7 @@ import {
 import { sendOrderStatusEmail } from "@/lib/email";
 import { formatNPR } from "@/lib/money";
 import { createStaffNotification } from "@/lib/notifications";
+import { awardCompletedOrderPoints, refundRedeemedPoints } from "@/lib/services/loyalty.service";
 import {
   evaluateOrderAcceptance,
   paymentPresentation,
@@ -224,6 +225,12 @@ export async function updateOrderStatusAction(
       });
 
       if (next === "COMPLETED") {
+        await awardCompletedOrderPoints(tx, order.id);
+      } else if (next === "CANCELLED") {
+        await refundRedeemedPoints(tx, order.id);
+      }
+
+      if (next === "COMPLETED") {
         await tx.delivery.updateMany({
           where: { orderId: order.id, status: { not: "DELIVERED" } },
           data: {
@@ -346,6 +353,7 @@ export async function declineOrderAction(
           changedBy: user.email,
         },
       });
+      await refundRedeemedPoints(tx, order.id);
       await createStaffNotification(tx, {
         eventKey: `order:${order.id}:declined`,
         type: "ORDER",

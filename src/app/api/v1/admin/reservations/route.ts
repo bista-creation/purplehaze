@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { bookingService } from "@/lib/services/booking.service";
-import { requireAdminAuth } from "@/lib/api/auth-context";
+import { requireAdminOnlyAuth } from "@/lib/api/auth-context";
 import { jsonError, jsonOk, jsonZodError } from "@/lib/api/response";
 
 const updateReservationSchema = z.object({
@@ -12,7 +12,7 @@ const updateReservationSchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const { searchParams } = new URL(req.url);
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const authCheck = await requireAdminAuth(req);
+  const authCheck = await requireAdminOnlyAuth(req);
   if (authCheck.errorResponse) return authCheck.errorResponse;
 
   const body = await req.json().catch(() => null);
