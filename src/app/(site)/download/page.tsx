@@ -133,6 +133,7 @@ export default function DownloadPage() {
     "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/19d14bf6-20a9-4247-b880-3dca8d8aec71";
   const apkDownloadUrl = "/api/download/apk";
   const riderApkDownloadUrl = "/api/download/rider-apk";
+  const staffApkDownloadUrl = "/api/download/staff-apk";
   const iosAppUrl = "https://purplehaze-mobile.vercel.app";
 
   return (
@@ -479,6 +480,38 @@ export default function DownloadPage() {
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Staff operations app */}
+      <section className="border-t border-border/60 py-12 md:py-16">
+        <div className="container-page max-w-5xl">
+          <Reveal>
+            <div className="flex flex-col gap-5 rounded-3xl border border-primary/15 bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-8">
+              <div className="flex items-start gap-4">
+                <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+                  <ShieldCheck className="size-6" />
+                </span>
+                <div>
+                  <Badge variant="gold" className="rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider">
+                    Staff &amp; Admin
+                  </Badge>
+                  <h2 className="mt-3 font-display text-2xl font-semibold text-foreground sm:text-3xl">
+                    Restaurant Operations App
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                    Receive live order alerts, manage kitchen progress, assign riders, and access admin tools. Sign in with your existing staff or administrator account; available controls depend on your role.
+                  </p>
+                </div>
+              </div>
+              <Button asChild size="lg" className="h-12 shrink-0 gap-2.5 px-6">
+                <a href={staffApkDownloadUrl} download="purple-haze-operations.apk">
+                  <ArrowDownToLine className="size-5" />
+                  <span>Download Staff Android APK</span>
+                </a>
+              </Button>
+            </div>
+          </Reveal>
         </div>
       </section>
 
