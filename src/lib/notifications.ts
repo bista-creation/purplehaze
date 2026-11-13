@@ -34,9 +34,14 @@ async function broadcastToStaffPushTokens(
       sound: "order_alert.wav",
       title,
       body,
-      data: data || {},
+      data: {
+        ...(data || {}),
+        urgent: true,
+        isAlarm: true,
+      },
       channelId: "incoming-orders",
       priority: "high",
+      _displayInForeground: true,
     }));
 
     const response = await fetch("https://exp.host/--/api/v2/push/send", {

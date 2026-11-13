@@ -13,6 +13,7 @@ export type PushMessage = {
   data?: Record<string, unknown>;
   channelId?: string;
   priority?: "default" | "normal" | "high";
+  _displayInForeground?: boolean;
 };
 
 export class PushNotificationService {
@@ -185,6 +186,7 @@ export class PushNotificationService {
       data,
       channelId,
       priority: "high",
+      _displayInForeground: true,
     }));
 
     return this.sendMessages(messages);
