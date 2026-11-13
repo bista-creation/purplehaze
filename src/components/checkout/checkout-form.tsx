@@ -166,6 +166,7 @@ export function CheckoutForm({
             ? "KHALTI"
             : "COD",
       couponCode: "",
+      loyaltyPointsToRedeem: 0,
       scheduledFor: "",
       saveAddress: Boolean(user?.defaultAddress),
     },
@@ -249,6 +250,7 @@ export function CheckoutForm({
         details: {
           ...values,
           couponCode: effectiveCoupon?.code ?? "",
+          loyaltyPointsToRedeem: values.loyaltyPointsToRedeem ?? 0,
           scheduledFor: values.scheduledFor || "",
         },
         items: items.map((item) => ({

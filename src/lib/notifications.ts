@@ -84,12 +84,19 @@ export async function createStaffNotification(
     },
   });
 
-  // Next.js after() keeps the send alive after the response. A bare void
-  // promise can be terminated when a Vercel function returns.
-  after(() => broadcastToStaffPushTokens(input.title, input.message, {
-    orderId: input.orderId,
-    type: input.type,
-  }));
+  // Safe background dispatch: try after() if inside Next.js request scope;
+  // fall back gracefully to a floating promise so an out-of-scope error never aborts transactions.
+  try {
+    after(() => broadcastToStaffPushTokens(input.title, input.message, {
+      orderId: input.orderId,
+      type: input.type,
+    }));
+  } catch {
+    void broadcastToStaffPushTokens(input.title, input.message, {
+      orderId: input.orderId,
+      type: input.type,
+    });
+  }
 
   return notification;
 }
