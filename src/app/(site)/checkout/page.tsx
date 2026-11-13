@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/security";
 import { getActiveDeliveryZones } from "@/lib/queries";
 import { getPublicSettings } from "@/lib/settings";
 import { onlinePaymentAvailability } from "@/lib/payments";
+import { getLoyaltySummary } from "@/lib/services/loyalty.service";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -21,12 +22,15 @@ export default async function CheckoutPage() {
     getPublicSettings(),
   ]);
 
-  const defaultAddress = user
-    ? await prisma.address.findFirst({
-        where: { userId: user.id },
-        orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
-      })
-    : null;
+  const [defaultAddress, loyaltySummary] = await Promise.all([
+    user
+      ? prisma.address.findFirst({
+          where: { userId: user.id },
+          orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+        })
+      : null,
+    user ? getLoyaltySummary(user.id).catch(() => null) : null,
+  ]);
   const availability = onlinePaymentAvailability();
   const esewaEnabled = settings.esewaEnabled && availability.esewa;
   const khaltiEnabled = settings.khaltiEnabled && availability.khalti;
@@ -99,6 +103,7 @@ export default async function CheckoutPage() {
                 }
               : null
           }
+          loyaltySummary={loyaltySummary}
           paymentMode={availability.mode}
         />
       </div>

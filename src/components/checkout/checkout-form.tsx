@@ -105,6 +105,7 @@ export function CheckoutForm({
   esewaEnabled,
   khaltiEnabled,
   user,
+  loyaltySummary,
   paymentMode,
 }: {
   zones: ZoneOption[];
@@ -115,6 +116,13 @@ export function CheckoutForm({
   esewaEnabled: boolean;
   khaltiEnabled: boolean;
   user: CheckoutUser | null;
+  loyaltySummary?: {
+    pointsBalance: number;
+    lifetimePoints: number;
+    pointsToNextReward: number;
+    redemptionPoints: number;
+    redemptionPercent: number;
+  } | null;
   paymentMode: string;
 }) {
   const router = useRouter();
@@ -182,8 +190,10 @@ export function CheckoutForm({
   const saveAddress = useWatch({ control: form.control, name: "saveAddress" });
   const watchedCustomerName = useWatch({ control: form.control, name: "customerName" });
   const watchedLine1 = useWatch({ control: form.control, name: "line1" });
+  const watchedLoyaltyPoints = useWatch({ control: form.control, name: "loyaltyPointsToRedeem" }) ?? 0;
   const zone = zones.find((item) => item.id === zoneId);
   const subtotal = cartSubtotal(items);
+  const loyaltyDiscountAmount = watchedLoyaltyPoints > 0 ? Math.floor((subtotal * 10) / 100) : 0;
   const effectiveCoupon =
     appliedCoupon &&
     (couponInput ?? "").trim().toUpperCase() === appliedCoupon.code
@@ -192,7 +202,7 @@ export function CheckoutForm({
   const totals = calculateOrderTotals({
     subtotal,
     deliveryFee: type === "DELIVERY" ? (zone?.fee ?? 0) : 0,
-    discountAmount: effectiveCoupon?.discount ?? 0,
+    discountAmount: (effectiveCoupon?.discount ?? 0) + loyaltyDiscountAmount,
     taxRate,
     serviceChargeRate,
   });
@@ -786,6 +796,80 @@ export function CheckoutForm({
             ))}
           </ul>
 
+          {/* Loyalty Rewards Section */}
+          <div className="mt-4 border-t pt-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 font-semibold text-primary">
+                  <Sparkles className="size-4 text-gold" />
+                  Loyalty Rewards
+                </span>
+                {loyaltySummary ? (
+                  <Badge variant="outline" className="border-gold/40 text-gold font-medium">
+                    {loyaltySummary.pointsBalance} pts
+                  </Badge>
+                ) : null}
+              </div>
+
+              {user ? (
+                loyaltySummary ? (
+                  <div className="mt-2.5 space-y-2">
+                    <p className="text-muted-foreground text-[11px] leading-relaxed">
+                      {loyaltySummary.pointsBalance >= 200
+                        ? "You have unlocked a 10% loyalty reward! Redeem 200 points on this order."
+                        : `${loyaltySummary.pointsBalance} / 200 points. Earn 1 point per NPR 100 spent.`}
+                    </p>
+                    {loyaltySummary.pointsBalance >= 200 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={watchedLoyaltyPoints > 0 ? "default" : "outline"}
+                        className={`w-full text-xs font-semibold ${
+                          watchedLoyaltyPoints > 0
+                            ? "bg-gold text-primary-foreground hover:bg-gold/90"
+                            : "border-gold/40 text-gold hover:bg-gold/10"
+                        }`}
+                        onClick={() => {
+                          if (watchedLoyaltyPoints > 0) {
+                            form.setValue("loyaltyPointsToRedeem", 0);
+                            toast.info("Loyalty reward removed.");
+                          } else {
+                            if (effectiveCoupon) {
+                              setAppliedCoupon(null);
+                              form.setValue("couponCode", "");
+                              toast.info("Promo code removed to apply loyalty reward.");
+                            }
+                            form.setValue("loyaltyPointsToRedeem", 200);
+                            toast.success("10% Loyalty reward applied!");
+                          }
+                        }}
+                      >
+                        {watchedLoyaltyPoints > 0
+                          ? `10% Reward Applied (Saving ${formatNPR(loyaltyDiscountAmount)}) · Click to remove`
+                          : "Redeem 200 points for 10% off"}
+                      </Button>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground italic">
+                        {loyaltySummary.pointsToNextReward} more points needed to unlock your 10% reward.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Earn 1 reward point for every NPR 100 spent on completed orders.
+                  </p>
+                )
+              ) : (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  <Link href="/login?redirect=/checkout" className="text-primary underline font-medium">
+                    Sign in
+                  </Link>{" "}
+                  as a customer to earn & redeem 10% loyalty reward points.
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="mt-4 border-t pt-4">
             <Label htmlFor="couponCode" className="text-xs">
               Coupon code
@@ -797,6 +881,7 @@ export function CheckoutForm({
                   id="couponCode"
                   placeholder="GARDEN10"
                   className="h-10 pl-8 uppercase"
+                  disabled={watchedLoyaltyPoints > 0}
                   {...form.register("couponCode")}
                 />
               </div>
@@ -806,7 +891,7 @@ export function CheckoutForm({
                 size="sm"
                 className="h-10"
                 onClick={applyCoupon}
-                disabled={couponPending}
+                disabled={couponPending || watchedLoyaltyPoints > 0}
               >
                 {couponPending ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -815,6 +900,11 @@ export function CheckoutForm({
                 )}
               </Button>
             </div>
+            {watchedLoyaltyPoints > 0 ? (
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Remove loyalty reward above to enter a coupon code.
+              </p>
+            ) : null}
             {effectiveCoupon ? (
               <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                 <Percent className="size-3.5" />
@@ -830,10 +920,19 @@ export function CheckoutForm({
               <dt className="text-muted-foreground">Subtotal</dt>
               <dd>{formatNPR(totals.subtotal)}</dd>
             </div>
-            {totals.discountAmount > 0 ? (
+            {loyaltyDiscountAmount > 0 ? (
+              <div className="flex justify-between gap-3 text-gold font-medium">
+                <dt className="flex items-center gap-1">
+                  <Sparkles className="size-3.5 text-gold" />
+                  10% Loyalty Reward (200 pts)
+                </dt>
+                <dd>-{formatNPR(loyaltyDiscountAmount)}</dd>
+              </div>
+            ) : null}
+            {effectiveCoupon && effectiveCoupon.discount > 0 ? (
               <div className="flex justify-between gap-3 text-emerald-700 dark:text-emerald-300">
-                <dt>Coupon discount</dt>
-                <dd>-{formatNPR(totals.discountAmount)}</dd>
+                <dt>Coupon discount ({effectiveCoupon.code})</dt>
+                <dd>-{formatNPR(effectiveCoupon.discount)}</dd>
               </div>
             ) : null}
             {totals.serviceCharge > 0 ? (

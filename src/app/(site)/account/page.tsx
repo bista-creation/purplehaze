@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/security";
 import { formatNPR } from "@/lib/money";
 import { formatDateTime } from "@/lib/utils";
+import { getLoyaltySummary } from "@/lib/services/loyalty.service";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ export default async function AccountOverviewPage() {
     recentOrders,
     nextReservation,
     nextEvent,
+    loyalty,
   ] = await Promise.all([
     prisma.order.count({ where: { userId: user.id } }),
     prisma.address.count({ where: { userId: user.id } }),
@@ -60,10 +62,12 @@ export default async function AccountOverviewPage() {
       orderBy: { eventDate: "asc" },
       include: { venue: true },
     }),
+    getLoyaltySummary(user.id).catch(() => null),
   ]);
 
   const stats = [
     { href: "/account/orders", label: "Orders", value: orderCount, icon: ReceiptText },
+    { href: "#loyalty-rewards", label: "Rewards pts", value: loyalty?.pointsBalance ?? 0, icon: Sparkles },
     { href: "/account/addresses", label: "Addresses", value: addressCount, icon: MapPin },
     { href: "/account/favorites", label: "Favourites", value: favoriteCount, icon: Heart },
     {
@@ -172,6 +176,49 @@ export default async function AccountOverviewPage() {
         </div>
 
         <div className="space-y-5">
+          {/* Loyalty Rewards Card */}
+          <div id="loyalty-rewards" className="rounded-2xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 font-display text-xl font-semibold">
+                <Sparkles className="size-5 text-gold" />
+                Loyalty Rewards
+              </span>
+              <Badge variant="outline" className="border-gold/40 text-gold font-semibold">
+                {loyalty?.pointsBalance ?? 0} pts
+              </Badge>
+            </div>
+            <div className="mt-4 space-y-2.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Reward Tier (200 pts = 10% off)</span>
+                <span className="font-medium">
+                  {Math.min(200, loyalty?.pointsBalance ?? 0)} / 200
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-gold transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, (((loyalty?.pointsBalance ?? 0) / 200) * 100))}%`,
+                  }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {(loyalty?.pointsBalance ?? 0) >= 200
+                  ? "🎉 You have unlocked a 10% discount on your next order! Apply it during checkout."
+                  : `${loyalty?.pointsToNextReward ?? 200} more points needed to unlock 10% off your meal.`}
+              </p>
+              <div className="mt-3 rounded-lg border border-border/60 bg-muted/30 p-2.5 text-[11px] text-muted-foreground">
+                <p className="font-medium text-foreground">How it works:</p>
+                <p className="mt-0.5">Earn 1 point for every NPR 100 spent on completed orders. Redeem 200 points for a flat 10% discount on your entire order.</p>
+              </div>
+            </div>
+            {(loyalty?.pointsBalance ?? 0) >= 200 ? (
+              <Button asChild size="sm" className="mt-4 w-full bg-gold text-primary-foreground hover:bg-gold/90">
+                <Link href="/menu">Order & Redeem Reward</Link>
+              </Button>
+            ) : null}
+          </div>
+
           <div className="rounded-2xl border border-border bg-card p-5">
             <h2 className="font-display text-xl font-semibold">Next table</h2>
             {nextReservation ? (
