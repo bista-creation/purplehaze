@@ -499,6 +499,10 @@ export async function markOrderPaidAction(
         isTest: order.isTest,
       });
 
+      if (order.status === "COMPLETED") {
+        await awardCompletedOrderPoints(tx, order.id);
+      }
+
       return true;
     });
 

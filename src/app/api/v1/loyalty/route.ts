@@ -5,8 +5,8 @@ import { getLoyaltySummary } from "@/lib/services/loyalty.service";
 
 export async function GET(req: NextRequest) {
   const user = await getAuthContext(req);
-  if (!user || user.role !== "CUSTOMER") {
-    return jsonError("UNAUTHORIZED", "Sign in as a customer to view rewards.", 401);
+  if (!user) {
+    return jsonError("UNAUTHORIZED", "Sign in to view rewards.", 401);
   }
 
   try {

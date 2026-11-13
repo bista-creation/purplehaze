@@ -62,15 +62,13 @@ export async function awardCompletedOrderPoints(
       isTest: true,
       subtotal: true,
       discountAmount: true,
-      user: { select: { role: true } },
     },
   });
   if (
     !order ||
     order.status !== "COMPLETED" ||
     order.isTest ||
-    !order.userId ||
-    order.user?.role !== "CUSTOMER"
+    !order.userId
   ) return;
 
   const points = calculateLoyaltyPointsEarned(order.subtotal, order.discountAmount);

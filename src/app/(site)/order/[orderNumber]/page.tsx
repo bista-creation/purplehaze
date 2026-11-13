@@ -31,7 +31,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/orders/status-badge";
-import { OrderTimeline } from "@/components/orders/order-timeline";
 import { RealtimeOrderTracker } from "@/components/orders/realtime-order-tracker";
 import { PaymentPanel } from "@/components/orders/payment-panel";
 import { CancelOrderButton } from "@/components/orders/cancel-order-button";
@@ -268,30 +267,6 @@ export default async function OrderPage({
                   <p className="text-sm font-medium">{order.customerPhone}</p>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-xl font-semibold">
-                Order progress
-              </h2>
-              {active ? (
-                <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <span className="relative flex size-2">
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-                    <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-                  </span>
-                  Live updates
-                </span>
-              ) : null}
-            </div>
-            <div className="mt-5">
-              <OrderTimeline
-                status={order.status}
-                type={order.type}
-                history={order.statusHistory}
-              />
             </div>
           </div>
 

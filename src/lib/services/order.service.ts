@@ -89,8 +89,8 @@ export class OrderService {
     const loyaltyPointsToRedeem = details.loyaltyPointsToRedeem ?? 0;
 
     if (loyaltyPointsToRedeem > 0) {
-      if (!user || user.role !== "CUSTOMER") {
-        return { success: false, message: "Sign in as a customer to redeem loyalty points." };
+      if (!user) {
+        return { success: false, message: "Sign in to redeem loyalty points." };
       }
       if (loyaltyPointsToRedeem !== LOYALTY_REDEMPTION_POINTS) {
         return { success: false, message: `Redeem exactly ${LOYALTY_REDEMPTION_POINTS} points at a time.` };
