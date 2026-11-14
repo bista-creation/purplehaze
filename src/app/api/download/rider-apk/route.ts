@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 // Direct standalone Android APK download artifact URL for Rider App from EAS Build
 export const EAS_RIDER_APK_DIRECT_URL =
-  "https://expo.dev/artifacts/eas/I7TOKYY-zQk4owa5n-ftNzZMtr_em383GoT0jv3d4fo.apk";
+  "https://expo.dev/artifacts/eas/JfSaf-WsMKHg1FWsv6wwtWVLa7MIRKz5ISagOLvgBeU.apk";
 
 // Fallback EAS build page URL for rider
 export const EAS_RIDER_BUILD_PAGE_URL =
