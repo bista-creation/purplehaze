@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
       if (authResult.code === "UNVERIFIED_EMAIL") {
         return jsonError("UNVERIFIED_EMAIL", authResult.message, 403);
       }
+      if (authResult.code === "GOOGLE_AUTH_REQUIRED") {
+        return jsonError("GOOGLE_AUTH_REQUIRED", authResult.message, 400);
+      }
       return jsonError("INVALID_CREDENTIALS", authResult.message, 401);
     }
 

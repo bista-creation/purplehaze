@@ -103,9 +103,22 @@ export class AuthService {
     const emailLower = email.toLowerCase().trim();
     const user = await prisma.user.findUnique({
       where: { email: emailLower },
+      include: { accounts: true },
     });
 
-    if (!user || !user.passwordHash || user.isBlocked) {
+    if (!user || user.isBlocked) {
+      return { success: false, code: "INVALID_CREDENTIALS", message: "Invalid email or password." } as const;
+    }
+
+    if (!user.passwordHash) {
+      const hasGoogle = user.accounts?.some((a) => a.provider === "google");
+      if (hasGoogle) {
+        return {
+          success: false,
+          code: "GOOGLE_AUTH_REQUIRED",
+          message: "This account was created with Google. Please use 'Continue with Google' to sign in.",
+        } as const;
+      }
       return { success: false, code: "INVALID_CREDENTIALS", message: "Invalid email or password." } as const;
     }
 
