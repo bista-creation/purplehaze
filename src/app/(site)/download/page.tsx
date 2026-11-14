@@ -493,14 +493,19 @@ export default function DownloadPage() {
                   <ShieldCheck className="size-6" />
                 </span>
                 <div>
-                  <Badge variant="gold" className="rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider">
-                    Staff &amp; Admin
-                  </Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="gold" className="rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider">
+                      Staff &amp; Admin
+                    </Badge>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+                      v1.1.0 · Smart Alert Engine
+                    </span>
+                  </div>
                   <h2 className="mt-3 font-display text-2xl font-semibold text-foreground sm:text-3xl">
                     Restaurant Operations App
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                    Receive live order alerts, manage kitchen progress, assign riders, and access admin tools. Sign in with your existing staff or administrator account; available controls depend on your role.
+                    Continuous high-priority order alarms, multi-channel Android notification system, smart auto-rearming snooze, foreground haptics, live dispatch board, and full admin controls.
                   </p>
                 </div>
               </div>
