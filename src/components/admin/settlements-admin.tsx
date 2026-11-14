@@ -56,11 +56,9 @@ export interface SettlementsAdminProps {
 }
 
 export function formatRupees(paisa: number): string {
-  const rs = paisa / 100;
-  return rs.toLocaleString("en-IN", {
-    minimumFractionDigits: rs % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  });
+  // Cash settlements in Nepal operate in integer whole Rupees (no fractional paisa coins)
+  const rs = Math.round(paisa / 100);
+  return rs.toLocaleString("en-IN");
 }
 
 export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdminProps) {
@@ -94,14 +92,10 @@ export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdm
 
   const openHandoverModal = (row: SettlementRow) => {
     setSelectedRider(row);
-    // Default to remaining expected COD if any (in Rupees)
+    // Default to remaining expected COD if any (in whole Rupees)
     const remainingPaisa = Math.max(0, row.codExpectedPaisa - row.cashierCountPaisa);
-    const remainingRs = remainingPaisa / 100;
-    setHandoverAmountRs(
-      remainingPaisa > 0
-        ? (remainingRs % 1 === 0 ? remainingRs.toFixed(0) : remainingRs.toFixed(2))
-        : ""
-    );
+    const remainingRs = Math.round(remainingPaisa / 100);
+    setHandoverAmountRs(remainingPaisa > 0 ? remainingRs.toString() : "");
     setHandoverNotes("");
     setHandoverModalOpen(true);
   };
@@ -124,7 +118,7 @@ export function SettlementsAdmin({ initialDate, initialSummary }: SettlementsAdm
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amountPaisa: Math.round(amountRs * 100),
+          amountPaisa: Math.round(amountRs) * 100,
           notes: handoverNotes.trim() || undefined,
         }),
       });

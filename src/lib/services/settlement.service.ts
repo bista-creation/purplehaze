@@ -92,24 +92,39 @@ export const settlementService = {
     
     const getNormalizedCod = (d: (typeof deliveredDeliveries)[0]) => {
       const orderTotal = d.order.total;
-      const cod = d.codAmountPaisa;
+      let cod = d.codAmountPaisa || orderTotal;
       if (cod > orderTotal && orderTotal > 0 && (cod === orderTotal * 100 || cod > orderTotal * 50)) {
-        return orderTotal;
+        cod = orderTotal;
       }
-      return cod || orderTotal;
+      // Cash settlements in Nepal operate strictly in whole Rupees (multiples of 100 paisa)
+      return Math.round(cod / 100) * 100;
     };
 
     const getNormalizedCollected = (d: (typeof deliveredDeliveries)[0]) => {
       const expected = getNormalizedCod(d);
-      const collected = d.cashCollectedPaisa ?? expected;
+      let collected = d.cashCollectedPaisa ?? expected;
       if (collected > d.order.total && d.order.total > 0 && (collected === d.order.total * 100 || collected > d.order.total * 50)) {
-        return d.order.total;
+        collected = d.order.total;
       }
-      return collected;
+      // Cash settlements in Nepal operate strictly in whole Rupees (multiples of 100 paisa)
+      return Math.round(collected / 100) * 100;
     };
 
     const codExpectedPaisa = codDeliveries.reduce((sum, d) => sum + getNormalizedCod(d), 0);
     const riderReportedPaisa = codDeliveries.reduce((sum, d) => sum + getNormalizedCollected(d), 0);
+
+    const existing = await prisma.riderSettlement.findUnique({
+      where: {
+        riderId_settlementDate: {
+          riderId: rider.id,
+          settlementDate: startOfDay,
+        },
+      },
+      select: { cashierCountPaisa: true },
+    });
+    const currentCashier = existing?.cashierCountPaisa ?? 0;
+    const differencePaisa = currentCashier - codExpectedPaisa;
+    const status = codExpectedPaisa === 0 || differencePaisa === 0 ? "RECONCILED" : "PENDING";
 
     // Upsert the RiderSettlement record for today
     const settlement = await prisma.riderSettlement.upsert({
@@ -133,6 +148,8 @@ export const settlementService = {
         ordersDelivered: totalDelivered,
         codExpectedPaisa,
         riderReportedPaisa,
+        differencePaisa,
+        status,
       },
       include: {
         handovers: {
@@ -339,15 +356,15 @@ export const settlementService = {
       const codDeliveries = r.deliveries.filter((d) => d.order.paymentMethod === "COD");
       const codExpectedPaisa = codDeliveries.reduce((sum, d) => {
         const orderTotal = d.order.total;
-        const cod = d.codAmountPaisa;
+        let cod = d.codAmountPaisa || orderTotal;
         if (cod > orderTotal && orderTotal > 0 && (cod === orderTotal * 100 || cod > orderTotal * 50)) {
-          return orderTotal;
+          cod = orderTotal;
         }
-        return cod || orderTotal;
+        return sum + Math.round(cod / 100) * 100;
       }, 0);
       const riderReportedPaisa = codDeliveries.reduce((sum, d) => {
         const orderTotal = d.order.total;
-        let cod = d.codAmountPaisa;
+        let cod = d.codAmountPaisa || orderTotal;
         if (cod > orderTotal && orderTotal > 0 && (cod === orderTotal * 100 || cod > orderTotal * 50)) {
           cod = orderTotal;
         }
@@ -355,7 +372,7 @@ export const settlementService = {
         if (collected > orderTotal && orderTotal > 0 && (collected === orderTotal * 100 || collected > orderTotal * 50)) {
           collected = orderTotal;
         }
-        return sum + collected;
+        return sum + Math.round(collected / 100) * 100;
       }, 0);
 
       const cashierCountPaisa = existingSettlement?.cashierCountPaisa ?? 0;
