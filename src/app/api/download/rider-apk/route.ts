@@ -6,7 +6,7 @@ export const EAS_RIDER_APK_DIRECT_URL =
 
 // Fallback EAS build page URL for rider
 export const EAS_RIDER_BUILD_PAGE_URL =
-  "https://expo.dev/accounts/bistacreations-team/projects/purplehaze-rider/builds/b5a22351-16cd-4aee-b879-7d9d960396d1";
+  "https://expo.dev/accounts/bistacreations-team/projects/purplehaze-rider/builds/af6c56f7-06ff-4ed6-b82e-56dcf09f283d";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
