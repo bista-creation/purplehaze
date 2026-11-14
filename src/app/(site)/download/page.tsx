@@ -130,7 +130,7 @@ const faqs = [
 
 export default function DownloadPage() {
   const expoBuildUrl =
-    "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/19d14bf6-20a9-4247-b880-3dca8d8aec71";
+    "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/0a9c4e41-1f0d-4457-ae53-72edec68adb5";
   const apkDownloadUrl = "/api/download/apk";
   const riderApkDownloadUrl = "/api/download/rider-apk";
   const staffApkDownloadUrl = "/api/download/staff-apk";

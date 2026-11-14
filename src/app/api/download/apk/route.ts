@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 
 // Direct standalone Android APK download artifact URL from EAS Build
 const EAS_APK_DIRECT_URL =
-  "https://expo.dev/artifacts/eas/Qx6-I9b9hty_UtzdpnHSdPqPs0X6saXCJhzqFhMmeY8.apk";
+  "https://expo.dev/artifacts/eas/uJhc7SaVgmsushqrd8EFb5EC5thiV0zjcACDtd9fbkw.apk";
 
 // Fallback EAS build overview page
 const EAS_BUILD_PAGE_URL =
-  "https://expo.dev/accounts/bistacreations-team/projects/purplehaze-mobile/builds/34e9ff8c-705c-4d92-87cf-8108a2a8c5e0";
+  "https://expo.dev/accounts/bistacreation/projects/purplehaze-mobile/builds/0a9c4e41-1f0d-4457-ae53-72edec68adb5";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
