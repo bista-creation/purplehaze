@@ -4,6 +4,8 @@ import { prismaDatasourceUrl } from "./database-url";
 describe("prismaDatasourceUrl", () => {
   it("returns undefined when no database URL is configured", () => {
     expect(prismaDatasourceUrl(undefined)).toBeUndefined();
+    expect(prismaDatasourceUrl("")).toBeUndefined();
+    expect(prismaDatasourceUrl(null)).toBeUndefined();
   });
 
   it("disables named prepared statements for pooled/direct connections", () => {

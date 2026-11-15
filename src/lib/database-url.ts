@@ -7,14 +7,15 @@
  * The flag is harmless on a direct PostgreSQL connection: it only disables
  * named prepared statements. `DIRECT_URL` remains unmodified for migrations.
  */
-export function prismaDatasourceUrl(raw = process.env.DATABASE_URL) {
-  if (!raw) return undefined;
-  if (raw.startsWith("file:")) return raw;
-  if (/[?&]pgbouncer=/i.test(raw)) return raw;
+export function prismaDatasourceUrl(raw?: string | null) {
+  const url = arguments.length > 0 ? (raw ?? undefined) : process.env.DATABASE_URL;
+  if (!url) return undefined;
+  if (url.startsWith("file:")) return url;
+  if (/[?&]pgbouncer=/i.test(url)) return url;
 
-  const hashIndex = raw.indexOf("#");
-  const base = hashIndex === -1 ? raw : raw.slice(0, hashIndex);
-  const hash = hashIndex === -1 ? "" : raw.slice(hashIndex);
+  const hashIndex = url.indexOf("#");
+  const base = hashIndex === -1 ? url : url.slice(0, hashIndex);
+  const hash = hashIndex === -1 ? "" : url.slice(hashIndex);
 
   return `${base}${base.includes("?") ? "&" : "?"}pgbouncer=true${hash}`;
 }
